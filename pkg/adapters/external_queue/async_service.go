@@ -6,11 +6,11 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	sqsType     string = "sqs"
-	kinesisType string = "kinesis"
-	noopType    string = "noop"
-)
+// const (
+// 	sqsType     string = "sqs"
+// 	kinesisType string = "kinesis"
+// 	noopType    string = "noop"
+// )
 
 type ExtQueueWithMetadata interface {
 	uploaders.ExternalQueue

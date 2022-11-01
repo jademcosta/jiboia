@@ -57,6 +57,8 @@ func initializeConfig() *config.Config {
 		panic(fmt.Errorf("error initializing/parsing config: %w", err))
 	}
 
+	c.Version = version
+
 	return c
 }
 

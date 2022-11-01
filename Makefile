@@ -17,7 +17,7 @@ all: help
 ## Test:
 test: ## Run all the tests
 	$(GOCMD) clean -testcache
-	$(GOTEST) -v -race ./...
+	$(GOTEST) -v -race -timeout 60s ./...
 
 # test-fuzz: ## Run fuzzing tests
 # 	$(GOCMD) clean -testcache
@@ -42,9 +42,11 @@ coverage: ## Run the tests of the project and export the coverage
 
 ## Lint:
 lint: ## Run all available linters
-	$(GOCMD) install golang.org/x/lint/golint@latest
+	$(GOCMD) install honnef.co/go/tools/cmd/staticcheck@latest
+# $(GOCMD) install golang.org/x/lint/golint@latest
 	$(GOVET) ./...
-	golint ./...
+	staticcheck ./...
+# golint ./...
 
 ## Fmt:
 fmt: ## Fixes deprecated APIs and formats the code
