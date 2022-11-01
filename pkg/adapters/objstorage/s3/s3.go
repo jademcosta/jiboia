@@ -29,8 +29,9 @@ func New(logger *zap.SugaredLogger, c *config.ObjectStorageConfig) (*S3Bucket, e
 	// LogLevel *LogLevelType
 	// Logger Logger
 	session, err := session.NewSession(&aws.Config{
-		Region:   aws.String(c.Region),
-		Endpoint: aws.String(c.Endpoint),
+		Region:           aws.String(c.Region),
+		Endpoint:         aws.String(c.Endpoint),
+		S3ForcePathStyle: aws.Bool(c.ForcePathStyle),
 	})
 
 	if err != nil {

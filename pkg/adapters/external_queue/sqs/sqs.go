@@ -25,7 +25,8 @@ type sqsRep struct {
 func New(l *zap.SugaredLogger, c *config.ExternalQueueConfig) (*sqsRep, error) {
 	//TODO: session claims to be safe to read concurrently. Can we use a single one?
 	sess, err := session.NewSession(&aws.Config{
-		Region: aws.String(c.Region),
+		Region:   aws.String(c.Region),
+		Endpoint: aws.String(c.Endpoint),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("error creating creating SQS session: %w", err)

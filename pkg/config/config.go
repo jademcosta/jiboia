@@ -51,6 +51,7 @@ type ExternalQueue struct {
 type ExternalQueueConfig struct {
 	URL       string `yaml:"url"`
 	Region    string `yaml:"region"`
+	Endpoint  string `yaml:"endpoint"`
 	AccessKey string `yaml:"access_key"`
 	SecretKey string `yaml:"secret_key"`
 }
@@ -61,11 +62,12 @@ type ObjectStorage struct {
 }
 
 type ObjectStorageConfig struct {
-	Bucket    string `yaml:"bucket"`
-	Region    string `yaml:"region"`
-	Endpoint  string `yaml:"endpoint"`
-	AccessKey string `yaml:"access_key"`
-	SecretKey string `yaml:"secret_key"`
+	Bucket         string `yaml:"bucket"`
+	Region         string `yaml:"region"`
+	Endpoint       string `yaml:"endpoint"`
+	AccessKey      string `yaml:"access_key"`
+	SecretKey      string `yaml:"secret_key"`
+	ForcePathStyle bool   `yaml:"force_path_style"`
 }
 
 func New(confData []byte) (*Config, error) {
