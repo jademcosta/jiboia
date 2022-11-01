@@ -48,7 +48,7 @@ func New(l *zap.SugaredLogger, c *config.ExternalQueueConfig) (*sqsRep, error) {
 }
 
 func (internalSqs *sqsRep) Enqueue(uploadResult *domain.UploadResult) error {
-
+	//TODO: SQS should not know about "uploadResult"
 	message := domain.Message{
 		SchemaVersion: domain.SCHEMA_VERSION,
 		Bucket: domain.Bucket{

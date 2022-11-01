@@ -35,6 +35,38 @@ test-unit: ## Runs only fast tests
 	$(GOCMD) clean -testcache
 	$(GOTEST) -v -short -timeout 20s ./...
 
+test-e2e-local: ## Runs tests against a localstack tool
+	@cd test && docker compose up -d && cd ..
+	@sleep 5
+#@curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+#@unzip awscliv2.zip
+#@sudo ./aws/install
+#@aws --endpoint-url=http://localhost:4566 s3 mb s3://jiboia-local-bucket
+#@aws --endpoint-url=http://localhost:4566 sqs create-queue --queue-name jiboia-local-queue
+	$(GOCMD) run ./test/e2e-setup/main.go -q jiboia-local-queue
+	$(GOCMD) build -o jiboia ./cmd/...
+	@./jiboia --config test/config-localstack.yaml &
+	@curl -d '{"key1":"first-key", "key2":"another-key!!!"}' -H "Content-Type: application/json" -X POST http://localhost:9099/jiboia-flow/async_ingestion
+	$(GOCMD) run ./test/validator/main.go -q http://localhost:4566/000000000000/jiboia-local-queue
+#@cd test && docker compose down && cd ..
+#@killall jiboia
+
+test-e2e-aws-ci: ## Run tests against AWS, on the CI
+# @sed -i "s/<AWS_ACCESS_KEY_ID>/${AWS_ACCESS_KEY_ID}/" ./test/config-aws-ci.yaml
+# @sed -i "s/<AWS_SECRET_ACCESS_KEY>/${AWS_SECRET_ACCESS_KEY}/" ./test/config-aws-ci.yaml
+# @sed -i "s/<JIBOIA_S3_BUCKET>/${JIBOIA_S3_BUCKET}/" ./test/config-aws-ci.yaml
+# echo ${JIBOIA_SQS_URL}
+# echo ${JIBOIA_S3_BUCKET}
+# sed -i "s/<JIBOIA_SQS_URL>/${JIBOIA_SQS_URL}/" ./test/config-aws-ci.yaml
+
+# cat ./test/config-aws-ci.yaml
+
+	$(GOCMD) build -o jiboia ./cmd/...
+	./jiboia --config test/config-aws-ci.yaml &
+	@sleep 3
+	curl -d '{"key1":"first-key", "key2":"another-key!!!"}' -H "Content-Type: application/json" -X POST http://localhost:9099/jiboia-flow/async_ingestion
+	$(GOCMD) run ./test/validator/main.go -q ${JIBOIA_SQS_URL}
+
 coverage: ## Run the tests of the project and export the coverage
 	$(GOCMD) clean -testcache
 	$(GOTEST) -timeout 30s -cover -covermode=count -coverprofile=profile.cov ./...
