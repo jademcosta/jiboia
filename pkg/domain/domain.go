@@ -6,6 +6,7 @@ type UploadResult struct {
 	Bucket      string
 	Region      string
 	Path        string
+	URL         string
 	SizeInBytes int
 }
 
@@ -17,6 +18,7 @@ type Message struct {
 
 type Object struct {
 	Path        string `json:"path"`
+	FullURL     string `json:"full_url"`
 	SizeInBytes int    `json:"size_in_bytes"`
 }
 

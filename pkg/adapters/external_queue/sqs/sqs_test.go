@@ -58,9 +58,10 @@ func TestMessageContainsTheData(t *testing.T) {
 		Bucket:      "my-bucket1",
 		Region:      "region-a",
 		Path:        "filepath",
+		URL:         "some_url",
 		SizeInBytes: 1111})
 
-	jsonMsg := "{\"schema_version\":\"0.0.1\",\"bucket\":{\"name\":\"my-bucket1\",\"region\":\"region-a\"},\"object\":{\"path\":\"filepath\",\"size_in_bytes\":1111}}"
+	jsonMsg := "{\"schema_version\":\"0.0.1\",\"bucket\":{\"name\":\"my-bucket1\",\"region\":\"region-a\"},\"object\":{\"path\":\"filepath\",\"full_url\":\"some_url\",\"size_in_bytes\":1111}}"
 
 	expected := &sqs.SendMessageInput{
 		QueueUrl:    &queueUrl,

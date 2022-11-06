@@ -35,6 +35,14 @@ test-unit: ## Runs only fast tests
 	$(GOCMD) clean -testcache
 	$(GOTEST) -v -short -timeout 20s ./...
 
+test-e2e-aws-ci: ## Run tests against AWS, on the CI
+	envsubst < test/config-aws-ci-without-values.yaml > test/config-aws-ci.yaml
+	$(GOCMD) build -o jiboia ./cmd/...
+	./jiboia --config test/config-aws-ci.yaml &
+	@sleep 3
+	curl -d '{"key1":"first-key", "key2":"another-key!!!"}' -H "Content-Type: application/json" -X POST http://localhost:9099/jiboia-flow/async_ingestion
+	@$(GOCMD) run ./test/validator/main.go -q ${JIBOIA_SQS_URL} -e "{\"key1\":\"first-key\", \"key2\":\"another-key!!!\"}"
+
 coverage: ## Run the tests of the project and export the coverage
 	$(GOCMD) clean -testcache
 	$(GOTEST) -timeout 30s -cover -covermode=count -coverprofile=profile.cov ./...

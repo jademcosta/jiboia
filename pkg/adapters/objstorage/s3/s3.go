@@ -66,7 +66,8 @@ func (bucket *S3Bucket) Upload(workU *domain.WorkUnit) (*domain.UploadResult, er
 	result := &domain.UploadResult{
 		Bucket:      bucket.name,
 		Region:      bucket.region,
-		Path:        uploadInfo.Location,
+		Path:        key,
+		URL:         uploadInfo.Location,
 		SizeInBytes: len(workU.Data),
 	}
 
