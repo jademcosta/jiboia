@@ -29,6 +29,7 @@ flow:
       bucket: some-bucket-name-here
       region: aws-region-here
       endpoint: ""
+      prefix: ""
       access_key: ""
       secret_key: ""
 

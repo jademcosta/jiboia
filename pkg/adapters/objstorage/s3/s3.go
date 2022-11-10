@@ -3,6 +3,7 @@ package s3
 import (
 	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -15,10 +16,11 @@ import (
 const TYPE string = "s3"
 
 type S3Bucket struct {
-	name     string
-	uploader *s3manager.Uploader
-	log      *zap.SugaredLogger
-	region   string
+	name        string
+	region      string
+	fixedPrefix string
+	uploader    *s3manager.Uploader
+	log         *zap.SugaredLogger
 }
 
 func New(logger *zap.SugaredLogger, c *config.ObjectStorageConfig) (*S3Bucket, error) {
@@ -42,14 +44,15 @@ func New(logger *zap.SugaredLogger, c *config.ObjectStorageConfig) (*S3Bucket, e
 	uploader := s3manager.NewUploader(session)
 
 	return &S3Bucket{
-		uploader: uploader,
-		log:      logger,
-		name:     c.Bucket,
-		region:   c.Region}, nil
+		uploader:    uploader,
+		log:         logger,
+		name:        c.Bucket,
+		region:      c.Region,
+		fixedPrefix: c.Prefix}, nil
 }
 
 func (bucket *S3Bucket) Upload(workU *domain.WorkUnit) (*domain.UploadResult, error) {
-	key := fmt.Sprintf("%s%s", workU.Prefix, workU.Filename)
+	key := mergeParts(bucket.fixedPrefix, workU.Prefix, workU.Filename)
 
 	uploadInput := &s3manager.UploadInput{
 		Bucket: &bucket.name,
@@ -80,4 +83,14 @@ func (bucket *S3Bucket) Type() string {
 
 func (bucket *S3Bucket) Name() string {
 	return bucket.name
+}
+
+func mergeParts(fixedPrefix string, dynamicPrefix string, key string) string {
+	//TODO: this is probably not very perf. Explore other ideas.
+	result := strings.Trim(fixedPrefix, "/") + "/" + strings.Trim(dynamicPrefix, "/")
+	result = strings.Trim(result, "/")
+
+	result = "/" + result + "/" + strings.Trim(key, "/")
+
+	return strings.Trim(result, "/")
 }
