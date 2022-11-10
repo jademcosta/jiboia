@@ -67,6 +67,7 @@ type ObjectStorageConfig struct {
 	Endpoint       string `yaml:"endpoint"`
 	AccessKey      string `yaml:"access_key"`
 	SecretKey      string `yaml:"secret_key"`
+	Prefix         string `yaml:"prefix"`
 	ForcePathStyle bool   `yaml:"force_path_style"`
 }
 
