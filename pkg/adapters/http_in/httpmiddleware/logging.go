@@ -12,7 +12,7 @@ type loggingMiddleware struct {
 	next http.Handler
 }
 
-func NewLoggingMiddleware(appName string, l *zap.SugaredLogger) func(next http.Handler) http.Handler {
+func NewLoggingMiddleware(l *zap.SugaredLogger) func(next http.Handler) http.Handler {
 	logging := &loggingMiddleware{
 		l: l,
 	}
