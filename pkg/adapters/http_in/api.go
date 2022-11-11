@@ -34,9 +34,23 @@ func New(l *zap.SugaredLogger, c *config.Config, metricRegistry *prometheus.Regi
 
 	registerDefaultMiddlewares(api, l, metricRegistry)
 
+	sizeHist := prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:      "request_body_size_bytes",
+			Subsystem: "http",
+			Namespace: "jiboia",
+			Help:      "The size in bytes of (received) request body",
+			Buckets:   []float64{0, 1024, 524288, 1048576, 2621440, 5242880, 10485760, 52428800, 104857600},
+			// 0, 1KB, 512KB, 1MB, 2.5MB, 5MB, 10MB, 50MB, 100MB
+		},
+		[]string{"path"},
+	)
+
+	metricRegistry.MustRegister(sizeHist)
+
 	//TODO: I'm using static approach to be able to release it asap. In the future the route naming
 	//creation needs to be dynamic
-	RegisterIngestingRoutes(api, c, flow) //TODO: add middleware that will return syntax error in case a request comes with no body
+	RegisterIngestingRoutes(api, c, sizeHist, flow) //TODO: add middleware that will return syntax error in case a request comes with no body
 	RegisterOperatinalRoutes(api, c, metricRegistry)
 	api.mux.Mount("/debug", middleware.Profiler())
 
@@ -55,7 +69,7 @@ func (api *Api) Shutdown() error {
 
 func registerDefaultMiddlewares(api *Api, l *zap.SugaredLogger, metricRegistry *prometheus.Registry) {
 	//Middlewares on the top wrap the ones in the bottom
-	api.mux.Use(httpmiddleware.NewLoggingMiddleware("jiboia", l))
-	api.mux.Use(httpmiddleware.NewMetricsMiddleware("jiboia", metricRegistry))
+	api.mux.Use(httpmiddleware.NewLoggingMiddleware(l))
+	api.mux.Use(httpmiddleware.NewMetricsMiddleware(metricRegistry))
 	api.mux.Use(httpmiddleware.NewRecoverer(l))
 }
