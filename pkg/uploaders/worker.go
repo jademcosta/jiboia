@@ -83,7 +83,7 @@ func (w *Worker) work(workU *domain.WorkUnit) {
 
 	if err != nil {
 		w.l.Warnw("failed to upload data", "prefix", workU.Prefix, "filename", workU.Filename, "error", err)
-		return //FIXME: add tests for this return
+		return
 	} else {
 		w.l.Debugw("finished uploading object", "prefix", workU.Prefix, "filename", workU.Filename)
 	}

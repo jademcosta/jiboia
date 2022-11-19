@@ -23,18 +23,23 @@ func init() {
 }
 
 type mockObjStorage struct {
-	mu        sync.Mutex
-	wg        *sync.WaitGroup
-	workU     []*domain.WorkUnit
-	returning *domain.UploadResult
+	mu         sync.Mutex
+	wg         *sync.WaitGroup
+	calledWith []*domain.WorkUnit
+	returning  *domain.UploadResult
+	err        error
 }
 
 func (objStorage *mockObjStorage) Upload(workU *domain.WorkUnit) (*domain.UploadResult, error) {
 	objStorage.mu.Lock()
 	defer objStorage.mu.Unlock()
 
-	objStorage.workU = append(objStorage.workU, workU)
+	objStorage.calledWith = append(objStorage.calledWith, workU)
 	objStorage.wg.Done()
+
+	if objStorage.err != nil {
+		return nil, objStorage.err
+	}
 
 	if objStorage.returning != nil {
 		return objStorage.returning, nil
@@ -95,8 +100,8 @@ func TestCallsObjUploaderWithDataPassed(t *testing.T) {
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
 	objStorage := &mockObjStorage{
-		workU: make([]*domain.WorkUnit, 0),
-		wg:    &wg,
+		calledWith: make([]*domain.WorkUnit, 0),
+		wg:         &wg,
 	}
 	queue := &dummyExternalQueue{}
 
@@ -127,8 +132,8 @@ func TestCallsObjUploaderWithDataPassed(t *testing.T) {
 	wg.Wait()
 	objStorage.mu.Lock()
 	defer objStorage.mu.Unlock()
-	assert.Len(t, objStorage.workU, 1, "should have called uploader")
-	assert.Same(t, workU, objStorage.workU[0], "should have called objUploader with the correct data")
+	assert.Len(t, objStorage.calledWith, 1, "should have called uploader")
+	assert.Same(t, workU, objStorage.calledWith[0], "should have called objUploader with the correct data")
 
 	cancel()
 }
@@ -143,9 +148,9 @@ func TestCallsEnqueuerWithUploaderResult(t *testing.T) {
 		Path:        "some/path/file.txt",
 		SizeInBytes: 1234}
 	objStorage := &mockObjStorage{
-		workU:     make([]*domain.WorkUnit, 0),
-		wg:        &wg,
-		returning: uploadResult,
+		calledWith: make([]*domain.WorkUnit, 0),
+		wg:         &wg,
+		returning:  uploadResult,
 	}
 
 	queue := &mockExternalQueue{calledWith: make([]*domain.UploadResult, 0), wg: &wg}
@@ -187,8 +192,8 @@ func TestRegistersItselfForWorkAgainAfterWorking(t *testing.T) {
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
 	objStorage := &mockObjStorage{
-		workU: make([]*domain.WorkUnit, 0),
-		wg:    &wg,
+		calledWith: make([]*domain.WorkUnit, 0),
+		wg:         &wg,
 	}
 	queue := &dummyExternalQueue{}
 	workerQueueChan := make(chan chan *domain.WorkUnit, 1)
@@ -218,7 +223,7 @@ func TestRegistersItselfForWorkAgainAfterWorking(t *testing.T) {
 	wg.Wait()
 	objStorage.mu.Lock()
 	defer objStorage.mu.Unlock()
-	assert.Len(t, objStorage.workU, 11, "should have called uploader")
+	assert.Len(t, objStorage.calledWith, 11, "should have called uploader")
 
 	cancel()
 }
@@ -228,8 +233,8 @@ func TestStopsAcceptingWorkAfterContextIsCancelled(t *testing.T) {
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
 	objStorage := &mockObjStorage{
-		workU: make([]*domain.WorkUnit, 0),
-		wg:    &wg,
+		calledWith: make([]*domain.WorkUnit, 0),
+		wg:         &wg,
 	}
 	queue := &dummyExternalQueue{}
 	workerQueueChan := make(chan chan *domain.WorkUnit, 1)
@@ -278,6 +283,52 @@ func TestStopsAcceptingWorkAfterContextIsCancelled(t *testing.T) {
 
 	objStorage.mu.Lock()
 	defer objStorage.mu.Unlock()
-	assert.Len(t, objStorage.workU, 1, "should have called uploader")
-	assert.Same(t, workU, objStorage.workU[0], "should have called objUploader with the correct data")
+	assert.Len(t, objStorage.calledWith, 1, "should have called uploader")
+	assert.Same(t, workU, objStorage.calledWith[0], "should have called objUploader with the correct data")
+}
+
+func TestDoesNotCallEnqueueWhenObjUploadFails(t *testing.T) {
+	var wg sync.WaitGroup
+	ctx, cancel := context.WithCancel(context.Background())
+
+	objStorage := &mockObjStorage{
+		calledWith: make([]*domain.WorkUnit, 0),
+		wg:         &wg,
+		err:        fmt.Errorf("Some error"),
+	}
+
+	queue := &mockExternalQueue{calledWith: make([]*domain.UploadResult, 0), wg: &wg}
+	workerQueueChan := make(chan chan *domain.WorkUnit, 1)
+
+	sut := uploaders.NewWorker(l, objStorage, queue, workerQueueChan, prometheus.NewRegistry())
+	go sut.Run(ctx)
+
+	var workerChan chan *domain.WorkUnit
+
+	select {
+	case workerChan = <-workerQueueChan:
+		// Success
+	case <-time.After(1 * time.Millisecond):
+		assert.Fail(t, "should register itself on workChannel when Run is called.")
+	}
+
+	workU := &domain.WorkUnit{
+		Filename: "some-filename",
+		Prefix:   "some-prefix",
+		Data:     []byte("some data"),
+	}
+
+	wg.Add(1)
+	workerChan <- workU
+	time.Sleep(1 * time.Millisecond)
+
+	wg.Wait()
+	queue.mu.Lock()
+	defer queue.mu.Unlock()
+	objStorage.mu.Lock()
+	defer objStorage.mu.Unlock()
+	assert.Len(t, objStorage.calledWith, 1, "should have called upload")
+	assert.Len(t, queue.calledWith, 0, "should not have called enqueuer")
+
+	cancel()
 }
