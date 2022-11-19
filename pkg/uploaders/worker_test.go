@@ -269,9 +269,15 @@ func TestStopsAcceptingWorkAfterContextIsCancelled(t *testing.T) {
 
 	time.Sleep(1 * time.Millisecond)
 
+	select {
+	case <-workerQueueChan:
+		assert.Fail(t, "should not register itself on workChannel after cancel is called.")
+	case <-time.After(1 * time.Millisecond):
+		//Success
+	}
+
 	objStorage.mu.Lock()
 	defer objStorage.mu.Unlock()
 	assert.Len(t, objStorage.workU, 1, "should have called uploader")
 	assert.Same(t, workU, objStorage.workU[0], "should have called objUploader with the correct data")
-
 }
