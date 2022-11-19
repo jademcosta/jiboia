@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/domain"
+	"github.com/jademcosta/jiboia/pkg/logger"
 	"go.uber.org/zap"
 )
 
@@ -40,10 +41,10 @@ func New(l *zap.SugaredLogger, c *config.ExternalQueueConfig) (*sqsRep, error) {
 	sqsClient := awsSqs.New(sess)
 
 	return &sqsRep{
-		log:      l,
+		log:      l.With(logger.EXT_QUEUE_TYPE_KEY, "sqs"),
 		client:   sqsClient,
 		queueUrl: queueUrl,
-		alias:    "mainFlow", //TODO: make this dynamic, from config
+		alias:    "mainFlow", //TODO: make this dynamic, from config. This can be the name of the queue
 	}, nil
 }
 
