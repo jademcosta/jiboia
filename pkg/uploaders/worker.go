@@ -83,7 +83,7 @@ func (w *Worker) work(workU *domain.WorkUnit) {
 	uploadResult, err := w.storage.Upload(workU)
 
 	if err != nil {
-		w.l.Warnw("failed to upload data", "prefix", workU.Prefix, "filename", workU.Filename, "error", err)
+		w.l.Warnw("failed to upload object", "prefix", workU.Prefix, "filename", workU.Filename, "error", err)
 		return
 	} else {
 		w.l.Debugw("finished uploading object", "prefix", workU.Prefix, "filename", workU.Filename)
