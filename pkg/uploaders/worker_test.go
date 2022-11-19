@@ -42,6 +42,12 @@ func (objStorage *mockObjStorage) Upload(workU *domain.WorkUnit) (*domain.Upload
 	return &domain.UploadResult{}, nil
 }
 
+type dummyObjStorage struct{}
+
+func (queue *dummyObjStorage) Upload(workU *domain.WorkUnit) (*domain.UploadResult, error) {
+	return nil, nil
+}
+
 type mockExternalQueue struct {
 	calledWith []*domain.UploadResult
 	mu         sync.Mutex
@@ -65,16 +71,11 @@ func (queue *dummyExternalQueue) Enqueue(data *domain.UploadResult) error {
 
 func TestRegistersItsChannelOnStartup(t *testing.T) {
 
-	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
-	objStorage := &mockObjStorage{
-		workU: make([]*domain.WorkUnit, 0),
-		wg:    &wg,
-	}
+	objStorage := &dummyObjStorage{}
 
 	queue := &dummyExternalQueue{}
 
-	wg.Add(1) // FIXME: remove this
 	workerQueueChan := make(chan chan *domain.WorkUnit, 1)
 
 	sut := uploaders.NewWorker(l, objStorage, queue, workerQueueChan, prometheus.NewRegistry())
