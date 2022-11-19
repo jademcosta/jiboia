@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/jademcosta/jiboia/pkg/domain"
+	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 )
@@ -51,7 +52,7 @@ func NewWorker(
 
 	workChan := make(chan *domain.WorkUnit, 1)
 	return &Worker{
-		l:                    l,
+		l:                    l.With(logger.COMPONENT_KEY, "worker"),
 		storage:              storage,
 		queue:                extQueue,
 		workVolunteeringChan: workVolunteeringChan,

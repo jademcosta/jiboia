@@ -6,6 +6,10 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+const (
+	COMPONENT_KEY = "component"
+)
+
 // type Logger *zap.SugaredLogger
 //FIXME: use this instead of zap namespace
 
