@@ -196,14 +196,14 @@ func TestRegistersItselfForWorkAgainAfterWorking(t *testing.T) {
 	sut := uploaders.NewWorker(l, objStorage, queue, workerQueueChan, prometheus.NewRegistry())
 	go sut.Run(ctx)
 
-	wg.Add(20)
+	wg.Add(11)
 	var workerChan chan *domain.WorkUnit
 
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 11; i++ {
 		select {
 		case workerChan = <-workerQueueChan:
 			// Success
-		case <-time.After(1 * time.Millisecond):
+		case <-time.After(10 * time.Millisecond):
 			assert.Fail(t, "should register itself on workChannel when Run is called.")
 		}
 
@@ -218,8 +218,7 @@ func TestRegistersItselfForWorkAgainAfterWorking(t *testing.T) {
 	wg.Wait()
 	objStorage.mu.Lock()
 	defer objStorage.mu.Unlock()
-	assert.Len(t, objStorage.workU, 20, "should have called uploader")
-	//TODO: should we assert the items?
+	assert.Len(t, objStorage.workU, 11, "should have called uploader")
 
 	cancel()
 }
