@@ -1,6 +1,6 @@
 package domain
 
-const SCHEMA_VERSION string = "0.0.1"
+const MESSAGE_SCHEMA_VERSION string = "0.0.1"
 
 type UploadResult struct {
 	Bucket      string
