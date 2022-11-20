@@ -28,7 +28,12 @@ func New(l *zap.SugaredLogger, c *config.ExternalQueueConfig) (*sqsRep, error) {
 	sess, err := session.NewSession(&aws.Config{
 		Region:   aws.String(c.Region),
 		Endpoint: aws.String(c.Endpoint),
+		LogLevel: aws.LogLevel(aws.LogDebug),
+		Logger: aws.LoggerFunc(func(args ...interface{}) {
+			l.Debugw("AWS sdk log", "aws-msg", fmt.Sprint(args))
+		}),
 	})
+
 	if err != nil {
 		return nil, fmt.Errorf("error creating creating SQS session: %w", err)
 	}
