@@ -69,16 +69,24 @@ func (internalSqs *sqsRep) Enqueue(uploadResult *domain.UploadResult) error {
 	}
 
 	bodyAsBytes, err := json.Marshal(message)
-	body := string(bodyAsBytes)
-
 	if err != nil {
 		return err
 	}
 
-	enqueueOutput, err := internalSqs.client.SendMessage(&awsSqs.SendMessageInput{
+	body := string(bodyAsBytes)
+
+	messageInput := &awsSqs.SendMessageInput{
 		MessageBody: &body,
 		QueueUrl:    &internalSqs.queueUrl,
-	}) //TODO: test error case
+	}
+
+	err = messageInput.Validate()
+	if err != nil {
+		return fmt.Errorf("error on SQS message validation: %w", err)
+	}
+
+	internalSqs.log.Debugw("sending SQS message", "queue_url", internalSqs.queueUrl)
+	enqueueOutput, err := internalSqs.client.SendMessage(messageInput) //TODO: test error case
 
 	if err == nil {
 		internalSqs.log.Debug("enqueued message on SQS", "message_id", enqueueOutput.MessageId)
