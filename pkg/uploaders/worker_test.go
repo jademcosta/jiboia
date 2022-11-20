@@ -19,7 +19,7 @@ import (
 var l *zap.SugaredLogger
 
 func init() {
-	l = logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
+	l = logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
 }
 
 type mockObjStorage struct {

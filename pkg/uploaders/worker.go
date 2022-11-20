@@ -83,7 +83,7 @@ func (w *Worker) work(workU *domain.WorkUnit) {
 	uploadResult, err := w.storage.Upload(workU)
 
 	if err != nil {
-		w.l.Warnw("failed to upload object", "prefix", workU.Prefix, "filename", workU.Filename, "error", err)
+		w.l.Errorw("failed to upload object", "prefix", workU.Prefix, "filename", workU.Filename, "error", err)
 		return
 	} else {
 		w.l.Debugw("finished uploading object", "prefix", workU.Prefix, "filename", workU.Filename)
@@ -92,7 +92,7 @@ func (w *Worker) work(workU *domain.WorkUnit) {
 	err = w.queue.Enqueue(uploadResult)
 
 	if err != nil {
-		w.l.Warnw("failed to enqueue data", "object_path", uploadResult.Path, "error", err)
+		w.l.Errorw("failed to enqueue data", "object_path", uploadResult.Path, "error", err)
 	} else {
 		w.l.Debugw("finished enqueueing data", "object_path", uploadResult.Path)
 	}

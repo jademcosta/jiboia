@@ -17,12 +17,13 @@ const (
 var ensureMetricRegisteringOnce sync.Once
 
 type queueWithMetrics struct {
-	wrappedQueue        uploaders.ExternalQueue
-	latencyHistogram    *prometheus.HistogramVec
-	enqueueCounter      *prometheus.CounterVec
-	enqueueErrorCounter *prometheus.CounterVec
-	wrappedType         string
-	wrappedName         string
+	wrappedQueue          uploaders.ExternalQueue
+	latencyHistogram      *prometheus.HistogramVec
+	enqueueCounter        *prometheus.CounterVec
+	enqueueErrorCounter   *prometheus.CounterVec
+	enqueueSuccessCounter *prometheus.CounterVec
+	wrappedType           string
+	wrappedName           string
 }
 
 func NewExternalQueueWithMetrics(queue ExtQueueWithMetadata, metricRegistry *prometheus.Registry) uploaders.ExternalQueue {
@@ -31,8 +32,8 @@ func NewExternalQueueWithMetrics(queue ExtQueueWithMetadata, metricRegistry *pro
 			Name:      "put_latency_seconds",
 			Subsystem: "external_queue",
 			Namespace: "jiboia",
-			Help:      "the time it took to finish the put action to a external queue",
-			Buckets:   []float64{0.25, 0.5, 1.0, 1.5, 2.0, 5.0, 10.0, 30.0, 45.0, 60.0, 90.0, 120.0, 180.0, 240.0, 300.0, 600.0},
+			Help:      "the time it took to finish the put action to a external queue (only successful cases)",
+			Buckets:   []float64{0.25, 0.5, 1.0, 1.5, 2.0, 5.0, 10.0, 30.0, 45.0, 60.0},
 		},
 		[]string{QUEUE_TYPE_LABEL, NAME_LABEL},
 	)
@@ -57,31 +58,43 @@ func NewExternalQueueWithMetrics(queue ExtQueueWithMetadata, metricRegistry *pro
 		[]string{QUEUE_TYPE_LABEL, NAME_LABEL},
 	)
 
+	enqueueSuccessCounter := prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name:      "put_success_total",
+			Namespace: "jiboia",
+			Subsystem: "external_queue",
+			Help:      "count of successes putting to external queue",
+		},
+		[]string{QUEUE_TYPE_LABEL, NAME_LABEL},
+	)
+
 	ensureMetricRegisteringOnce.Do(func() {
-		metricRegistry.MustRegister(latencyHistogram, enqueueCounter, enqueueErrorCounter)
+		metricRegistry.MustRegister(latencyHistogram, enqueueCounter, enqueueErrorCounter, enqueueSuccessCounter)
 	})
 
 	return &queueWithMetrics{
-		wrappedQueue:        queue,
-		latencyHistogram:    latencyHistogram,
-		enqueueCounter:      enqueueCounter,
-		enqueueErrorCounter: enqueueErrorCounter,
-		wrappedType:         queue.Type(),
-		wrappedName:         queue.Name(),
+		wrappedQueue:          queue,
+		latencyHistogram:      latencyHistogram,
+		enqueueCounter:        enqueueCounter,
+		enqueueErrorCounter:   enqueueErrorCounter,
+		enqueueSuccessCounter: enqueueSuccessCounter,
+		wrappedType:           queue.Type(),
+		wrappedName:           queue.Name(),
 	}
 }
 
 func (w *queueWithMetrics) Enqueue(uploadResult *domain.UploadResult) error {
+	w.enqueueCounter.WithLabelValues(w.wrappedType, w.wrappedName).Inc()
 	startTime := time.Now()
 
 	err := w.wrappedQueue.Enqueue(uploadResult)
-
 	elapsepTime := time.Since(startTime).Seconds()
-	w.latencyHistogram.WithLabelValues(w.wrappedType, w.wrappedName).Observe(elapsepTime)
 
-	w.enqueueCounter.WithLabelValues(w.wrappedType, w.wrappedName).Inc()
 	if err != nil {
 		w.enqueueErrorCounter.WithLabelValues(w.wrappedType, w.wrappedName).Inc()
+	} else {
+		w.latencyHistogram.WithLabelValues(w.wrappedType, w.wrappedName).Observe(elapsepTime)
+		w.enqueueSuccessCounter.WithLabelValues(w.wrappedType, w.wrappedName).Inc()
 	}
 
 	return err

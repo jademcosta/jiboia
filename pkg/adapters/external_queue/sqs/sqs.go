@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/domain"
+	"github.com/jademcosta/jiboia/pkg/logger"
 	"go.uber.org/zap"
 )
 
@@ -27,7 +28,12 @@ func New(l *zap.SugaredLogger, c *config.ExternalQueueConfig) (*sqsRep, error) {
 	sess, err := session.NewSession(&aws.Config{
 		Region:   aws.String(c.Region),
 		Endpoint: aws.String(c.Endpoint),
+		LogLevel: aws.LogLevel(aws.LogDebug),
+		Logger: aws.LoggerFunc(func(args ...interface{}) {
+			l.Debugw("AWS sdk log", "aws-msg", fmt.Sprint(args))
+		}),
 	})
+
 	if err != nil {
 		return nil, fmt.Errorf("error creating creating SQS session: %w", err)
 	}
@@ -40,17 +46,17 @@ func New(l *zap.SugaredLogger, c *config.ExternalQueueConfig) (*sqsRep, error) {
 	sqsClient := awsSqs.New(sess)
 
 	return &sqsRep{
-		log:      l,
+		log:      l.With(logger.EXT_QUEUE_TYPE_KEY, "sqs"),
 		client:   sqsClient,
 		queueUrl: queueUrl,
-		alias:    "mainFlow", //TODO: make this dynamic, from config
+		alias:    "mainFlow", //TODO: make this dynamic, from config. This can be the name of the queue
 	}, nil
 }
 
 func (internalSqs *sqsRep) Enqueue(uploadResult *domain.UploadResult) error {
 	//TODO: SQS should not know about "uploadResult"
 	message := domain.Message{
-		SchemaVersion: domain.SCHEMA_VERSION,
+		SchemaVersion: domain.MESSAGE_SCHEMA_VERSION,
 		Bucket: domain.Bucket{
 			Name:   uploadResult.Bucket,
 			Region: uploadResult.Region,
@@ -63,16 +69,24 @@ func (internalSqs *sqsRep) Enqueue(uploadResult *domain.UploadResult) error {
 	}
 
 	bodyAsBytes, err := json.Marshal(message)
-	body := string(bodyAsBytes)
-
 	if err != nil {
 		return err
 	}
 
-	enqueueOutput, err := internalSqs.client.SendMessage(&awsSqs.SendMessageInput{
+	body := string(bodyAsBytes)
+
+	messageInput := &awsSqs.SendMessageInput{
 		MessageBody: &body,
 		QueueUrl:    &internalSqs.queueUrl,
-	}) //TODO: test error case
+	}
+
+	err = messageInput.Validate()
+	if err != nil {
+		return fmt.Errorf("error on SQS message validation: %w", err)
+	}
+
+	internalSqs.log.Debugw("sending SQS message", "queue_url", internalSqs.queueUrl)
+	enqueueOutput, err := internalSqs.client.SendMessage(messageInput) //TODO: test error case
 
 	if err == nil {
 		internalSqs.log.Debug("enqueued message on SQS", "message_id", enqueueOutput.MessageId)
