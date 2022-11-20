@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/jademcosta/jiboia/pkg/domain"
+	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 )
@@ -76,7 +77,7 @@ func New(
 		internalDataChan:   make(chan []byte, queueCapacity),
 		WorkersReady:       make(chan chan *domain.WorkUnit, workersCount),
 		searchForWork:      make(chan struct{}, 1),
-		log:                l,
+		log:                l.With(logger.COMPONENT_KEY, "uploader"),
 		dataDropper:        dataDropper,
 		filePathProvider:   filePathProvider,
 		capacityGauge:      capacityGauge,

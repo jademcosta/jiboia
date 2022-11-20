@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/domain"
+	"github.com/jademcosta/jiboia/pkg/logger"
 	"go.uber.org/zap"
 )
 
@@ -23,7 +24,7 @@ type S3Bucket struct {
 	log         *zap.SugaredLogger
 }
 
-func New(logger *zap.SugaredLogger, c *config.ObjectStorageConfig) (*S3Bucket, error) {
+func New(l *zap.SugaredLogger, c *config.ObjectStorageConfig) (*S3Bucket, error) {
 	//TODO: the session is safe to be read concurrently, can we use a single one?
 
 	// TODO: expore the configs:
@@ -45,7 +46,7 @@ func New(logger *zap.SugaredLogger, c *config.ObjectStorageConfig) (*S3Bucket, e
 
 	return &S3Bucket{
 		uploader:    uploader,
-		log:         logger,
+		log:         l.With(logger.OBJ_STORAGE_TYPE_KEY, "s3"),
 		name:        c.Bucket,
 		region:      c.Region,
 		fixedPrefix: c.Prefix}, nil

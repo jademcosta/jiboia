@@ -10,9 +10,12 @@ import (
 	"github.com/jademcosta/jiboia/pkg/adapters/http_in/httpmiddleware"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/domain"
+	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 )
+
+const API_COMPONENT_TYPE = "api"
 
 type Api struct {
 	mux  *chi.Mux
@@ -27,12 +30,12 @@ func New(l *zap.SugaredLogger, c *config.Config, metricRegistry *prometheus.Regi
 
 	api := &Api{
 		mux:  router,
-		log:  l,
+		log:  l.With(logger.COMPONENT_KEY, API_COMPONENT_TYPE),
 		srv:  &http.Server{Addr: fmt.Sprintf(":%d", c.Api.Port), Handler: router},
 		port: c.Api.Port,
 	}
 
-	registerDefaultMiddlewares(api, l, metricRegistry)
+	registerDefaultMiddlewares(api, l.With(logger.COMPONENT_KEY, API_COMPONENT_TYPE), metricRegistry)
 
 	sizeHist := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
@@ -40,7 +43,8 @@ func New(l *zap.SugaredLogger, c *config.Config, metricRegistry *prometheus.Regi
 			Subsystem: "http",
 			Namespace: "jiboia",
 			Help:      "The size in bytes of (received) request body",
-			Buckets:   []float64{0, 1024, 524288, 1048576, 2621440, 5242880, 10485760, 52428800, 104857600},
+			//TODO: make these buckets configurable
+			Buckets: []float64{0, 1024, 524288, 1048576, 2621440, 5242880, 10485760, 52428800, 104857600},
 			// 0, 1KB, 512KB, 1MB, 2.5MB, 5MB, 10MB, 50MB, 100MB
 		},
 		[]string{"path"},

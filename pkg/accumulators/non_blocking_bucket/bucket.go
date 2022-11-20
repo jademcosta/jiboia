@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/jademcosta/jiboia/pkg/domain"
+	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 )
@@ -89,7 +90,7 @@ func New(
 	capacityGauge.WithLabelValues().Set(float64(queueCapacity))
 
 	return &BucketAccumulator{
-		l:                  l,
+		l:                  l.With(logger.COMPONENT_KEY, "accumulator"),
 		limitOfBytes:       limitOfBytes,
 		separator:          separator,
 		separatorLen:       len(separator),

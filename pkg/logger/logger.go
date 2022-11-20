@@ -7,8 +7,9 @@ import (
 )
 
 const (
-	COMPONENT_KEY      = "component"
-	EXT_QUEUE_TYPE_KEY = "ext_queue_type"
+	COMPONENT_KEY        = "component"
+	EXT_QUEUE_TYPE_KEY   = "ext_queue_type"
+	OBJ_STORAGE_TYPE_KEY = "obj_storage_type"
 )
 
 // type Logger *zap.SugaredLogger
