@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
+	"strings"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -36,6 +38,14 @@ func main() {
 		fmt.Println("You must supply the URL of a queue (-q QUEUE)")
 		os.Exit(1)
 	}
+
+	fmt.Println("Sending POST request...")
+
+	response, err := http.Post("http://localhost:9099/jiboia-flow/async_ingestion", "application/json", strings.NewReader(*expected))
+	if err != nil {
+		os.Exit(1)
+	}
+	defer response.Body.Close()
 
 	fmt.Println("Starting validator...")
 	fmt.Println("Expected content: ", expected)
