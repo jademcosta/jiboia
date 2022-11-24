@@ -40,8 +40,7 @@ test-e2e-aws-ci: ## Run tests against AWS, on the CI
 	$(GOCMD) build -o jiboia ./cmd/...
 	./jiboia --config test/config-aws-ci.yaml &
 	@sleep 3
-	curl -d '{"key1":"first-key", "key2":"another-key!!!"}' -H "Content-Type: application/json" -X POST http://localhost:9099/jiboia-flow/async_ingestion
-	@$(GOCMD) run ./test/validator/main.go -q ${JIBOIA_SQS_URL} -e "{\"key1\":\"first-key\", \"key2\":\"another-key!!!\"}"
+	@$(GOCMD) run ./test/validator/main.go -q ${JIBOIA_SQS_URL}
 
 coverage: ## Run the tests of the project and export the coverage
 	$(GOCMD) clean -testcache

@@ -12,6 +12,10 @@ flow:
   max_concurrent_uploads: 2
   max_retries: 1
   timeout: 30
+  accumulator:
+    size_in_bytes: 50
+    separator: "__n__"
+    queue_capacity: 0
   external_queue:
     type: sqs
     config:
