@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"os"
 	"strings"
@@ -29,9 +30,18 @@ type Bucket struct {
 	Region string `json:"region"`
 }
 
+var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func randSeq(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
+}
+
 func main() {
 	queueURL := flag.String("q", "", "The URL of the queue")
-	expected := flag.String("e", "", "Expected content of the file")
 	flag.Parse()
 
 	if *queueURL == "" {
@@ -39,9 +49,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	expected := randSeq(200)
+
 	fmt.Println("Sending POST request...")
 
-	response, err := http.Post("http://localhost:9099/jiboia-flow/async_ingestion", "application/json", strings.NewReader(*expected))
+	response, err := http.Post("http://localhost:9099/jiboia-flow/async_ingestion", "application/json", strings.NewReader(expected))
 	if err != nil {
 		os.Exit(1)
 	}
@@ -121,8 +133,8 @@ func main() {
 
 	fmt.Println("Downloaded file content: ", string(buf.Bytes()))
 
-	if string(buf.Bytes()) != *expected {
-		fmt.Printf("String inside S3 file is not the expected one. Expected: %s\nGot: %s\n", *expected, string(buf.Bytes()))
+	if string(buf.Bytes()) != expected {
+		fmt.Printf("String inside S3 file is not the expected one. Expected: %s\nGot: %s\n", expected, string(buf.Bytes()))
 		os.Exit(1)
 	} else {
 		fmt.Println("Expected content is correct!")
