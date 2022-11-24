@@ -49,18 +49,24 @@ func main() {
 		os.Exit(1)
 	}
 
-	expected := randSeq(200)
+	expected1 := randSeq(20)
+	expected2 := randSeq(25)
 
 	fmt.Println("Sending POST request...")
 
-	response, err := http.Post("http://localhost:9099/jiboia-flow/async_ingestion", "application/json", strings.NewReader(expected))
+	response, err := http.Post("http://localhost:9099/jiboia-flow/async_ingestion", "application/json", strings.NewReader(expected1))
 	if err != nil {
 		os.Exit(1)
 	}
-	defer response.Body.Close()
+	response.Body.Close()
+
+	response, err = http.Post("http://localhost:9099/jiboia-flow/async_ingestion", "application/json", strings.NewReader(expected2))
+	if err != nil {
+		os.Exit(1)
+	}
+	response.Body.Close()
 
 	fmt.Println("Starting validator...")
-	fmt.Println("Expected content: ", expected)
 	fmt.Println("Important: This test does not works well if running it in parallel other instance of itself. It expects a single message on SQS!")
 
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
@@ -132,6 +138,8 @@ func main() {
 	}
 
 	fmt.Println("Downloaded file content: ", string(buf.Bytes()))
+
+	expected := fmt.Sprint(expected1, "__n__", expected2)
 
 	if string(buf.Bytes()) != expected {
 		fmt.Printf("String inside S3 file is not the expected one. Expected: %s\nGot: %s\n", expected, string(buf.Bytes()))
