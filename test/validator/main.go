@@ -66,6 +66,13 @@ func main() {
 	}
 	response.Body.Close()
 
+	// This is going to be "ignored", as it will stay in memory waiting for more data to flow in
+	response, err = http.Post("http://localhost:9099/jiboia-flow/async_ingestion", "application/json", strings.NewReader(randSeq(2)))
+	if err != nil {
+		os.Exit(1)
+	}
+	response.Body.Close()
+
 	fmt.Println("Starting validator...")
 	fmt.Println("Important: This test does not works well if running it in parallel other instance of itself. It expects a single message on SQS!")
 
