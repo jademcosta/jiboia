@@ -6,6 +6,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/adapters/objstorage/s3"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/uploaders"
+	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 )
@@ -20,7 +21,7 @@ type ObjStorageWithMetadata interface {
 	Name() string
 }
 
-func New(l *zap.SugaredLogger, conf *config.ObjectStorage) (ObjStorageWithMetadata, error) {
+func New(l *zap.SugaredLogger, metricRegistry *prometheus.Registry, conf *config.ObjectStorage) (ObjStorageWithMetadata, error) {
 
 	var objStorage ObjStorageWithMetadata
 	specificConf, err := yaml.Marshal(conf.Config)
@@ -43,7 +44,5 @@ func New(l *zap.SugaredLogger, conf *config.ObjectStorage) (ObjStorageWithMetada
 		objStorage, err = nil, fmt.Errorf("invalid object storage type %s", conf.Type)
 	}
 
-	// BUG: missing the metrics wrapper here
-
-	return objStorage, err
+	return NewStorageWithMetrics(objStorage, metricRegistry), err
 }

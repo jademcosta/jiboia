@@ -26,7 +26,7 @@ type queueWithMetrics struct {
 	wrappedName           string
 }
 
-func NewExternalQueueWithMetrics(queue ExtQueueWithMetadata, metricRegistry *prometheus.Registry) uploaders.ExternalQueue {
+func NewExternalQueueWithMetrics(queue ExtQueueWithMetadata, metricRegistry *prometheus.Registry) ExtQueueWithMetadata {
 	latencyHistogram := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:      "put_latency_seconds",
@@ -98,4 +98,12 @@ func (w *queueWithMetrics) Enqueue(uploadResult *domain.UploadResult) error {
 	}
 
 	return err
+}
+
+func (w *queueWithMetrics) Type() string {
+	return w.wrappedType
+}
+
+func (w *queueWithMetrics) Name() string {
+	return w.wrappedName
 }

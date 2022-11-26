@@ -6,6 +6,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/adapters/external_queue/sqs"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/uploaders"
+	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 )
@@ -22,7 +23,7 @@ type ExtQueueWithMetadata interface {
 	Name() string
 }
 
-func New(l *zap.SugaredLogger, conf *config.ExternalQueue) (ExtQueueWithMetadata, error) {
+func New(l *zap.SugaredLogger, metricRegistry *prometheus.Registry, conf *config.ExternalQueue) (ExtQueueWithMetadata, error) {
 
 	var externalQueue ExtQueueWithMetadata
 	specificConf, err := yaml.Marshal(conf.Config)
@@ -45,7 +46,5 @@ func New(l *zap.SugaredLogger, conf *config.ExternalQueue) (ExtQueueWithMetadata
 		externalQueue, err = nil, fmt.Errorf("invalid external queue type %s", conf.Type)
 	}
 
-	// BUG: missing the metrics wrapper here
-
-	return externalQueue, err
+	return NewExternalQueueWithMetrics(externalQueue, metricRegistry), err
 }

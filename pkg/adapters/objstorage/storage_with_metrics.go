@@ -26,7 +26,7 @@ type storageWithMetrics struct {
 	wrappedName          string
 }
 
-func NewStorageWithMetrics(storage ObjStorageWithMetadata, metricRegistry *prometheus.Registry) uploaders.ObjStorage {
+func NewStorageWithMetrics(storage ObjStorageWithMetadata, metricRegistry *prometheus.Registry) ObjStorageWithMetadata {
 	latencyHistogram := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:      "upload_latency_seconds",
@@ -109,4 +109,12 @@ func (w *storageWithMetrics) Upload(workU *domain.WorkUnit) (*domain.UploadResul
 		w.uploadSuccessCounter.WithLabelValues(w.wrappedType, w.wrappedName).Inc()
 	}
 	return uploadResult, err
+}
+
+func (w *storageWithMetrics) Type() string {
+	return w.wrappedType
+}
+
+func (w *storageWithMetrics) Name() string {
+	return w.wrappedName
 }

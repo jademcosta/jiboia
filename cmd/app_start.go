@@ -121,21 +121,21 @@ func startApps(c *config.Config, l *zap.SugaredLogger) {
 }
 
 func createObjStorage(l *zap.SugaredLogger, c *config.Config, metricRegistry *prometheus.Registry) uploaders.ObjStorage {
-	objStorage, err := objstorage.New(l, &c.Flow.ObjectStorage)
+	objStorage, err := objstorage.New(l, metricRegistry, &c.Flow.ObjectStorage)
 	if err != nil {
 		l.Panic("error creating object storage", "error", err)
 	}
 
-	return objstorage.NewStorageWithMetrics(objStorage, metricRegistry)
+	return objStorage
 }
 
 func createExternalQueue(l *zap.SugaredLogger, c *config.Config, metricRegistry *prometheus.Registry) uploaders.ExternalQueue {
-	externalQueue, err := external_queue.New(l, &c.Flow.ExternalQueue)
+	externalQueue, err := external_queue.New(l, metricRegistry, &c.Flow.ExternalQueue)
 	if err != nil {
 		l.Panic("error creating external queue", "error", err)
 	}
 
-	return external_queue.NewExternalQueueWithMetrics(externalQueue, metricRegistry)
+	return externalQueue
 }
 
 func createAccumulator(l *zap.SugaredLogger, c *config.Accumulator, registry *prometheus.Registry, uploader domain.DataFlow) *non_blocking_bucket.BucketAccumulator {
