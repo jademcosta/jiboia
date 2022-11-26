@@ -9,7 +9,6 @@ import (
 	"github.com/jademcosta/jiboia/pkg/adapters/external_queue/sqs"
 	"github.com/jademcosta/jiboia/pkg/adapters/http_in"
 	"github.com/jademcosta/jiboia/pkg/adapters/objstorage"
-	"github.com/jademcosta/jiboia/pkg/adapters/objstorage/s3"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/datetimeprovider"
 	"github.com/jademcosta/jiboia/pkg/domain"
@@ -124,7 +123,8 @@ func startApps(c *config.Config, l *zap.SugaredLogger) {
 
 func createObjStorage(l *zap.SugaredLogger, c *config.Config, metricRegistry *prometheus.Registry) uploaders.ObjStorage {
 	//TODO: replace with generic factory
-	objStorage, err := s3.New(l, &c.Flow.ObjectStorage.Config)
+	// objStorage, err := s3.New(l, &c.Flow.ObjectStorage.Config)
+	objStorage, err := objstorage.New(l, &c.Flow.ObjectStorage)
 	if err != nil {
 		l.Panic("error creating object storage", "error", err)
 	}

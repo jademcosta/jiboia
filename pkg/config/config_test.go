@@ -89,11 +89,7 @@ flow:
 	assert.Equal(t, "secret 1", conf.Flow.ExternalQueue.Config.SecretKey, "should have parsed the correct flow.external_queue.config.secret_key")
 
 	assert.Equal(t, "s3", conf.Flow.ObjectStorage.Type, "should have parsed the correct flow.object_storage.type")
-	assert.Equal(t, "some-bucket-name-here", conf.Flow.ObjectStorage.Config.Bucket, "should have parsed the correct flow.object_storage.config.bucket")
-	assert.Equal(t, "some-region", conf.Flow.ObjectStorage.Config.Region, "should have parsed the correct flow.object_storage.config.region")
-	assert.Equal(t, "my-endpoint2", conf.Flow.ObjectStorage.Config.Endpoint, "should have parsed the correct flow.object_storage.config.endpoint")
-	assert.Equal(t, "access 2", conf.Flow.ObjectStorage.Config.AccessKey, "should have parsed the correct flow.object_storage.config.access_key")
-	assert.Equal(t, "secret 2", conf.Flow.ObjectStorage.Config.SecretKey, "should have parsed the correct flow.object_storage.config.secret_key")
+	assert.NotNil(t, conf.Flow.ObjectStorage.Config, "should maintain the value of flow.object_storage.config")
 }
 
 func TestValidateLogLevelValues(t *testing.T) {

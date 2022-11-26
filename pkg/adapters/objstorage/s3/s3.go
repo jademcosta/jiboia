@@ -8,13 +8,23 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"go.uber.org/zap"
+	"gopkg.in/yaml.v2"
 )
 
 const TYPE string = "s3"
+
+type Config struct {
+	Bucket         string `yaml:"bucket"`
+	Region         string `yaml:"region"`
+	Endpoint       string `yaml:"endpoint"`
+	AccessKey      string `yaml:"access_key"`
+	SecretKey      string `yaml:"secret_key"`
+	Prefix         string `yaml:"prefix"`
+	ForcePathStyle bool   `yaml:"force_path_style"`
+}
 
 type S3Bucket struct {
 	name        string
@@ -24,7 +34,7 @@ type S3Bucket struct {
 	log         *zap.SugaredLogger
 }
 
-func New(l *zap.SugaredLogger, c *config.ObjectStorageConfig) (*S3Bucket, error) {
+func New(l *zap.SugaredLogger, c *Config) (*S3Bucket, error) {
 	//TODO: the session is safe to be read concurrently, can we use a single one?
 
 	// TODO: expore the configs:
@@ -50,6 +60,17 @@ func New(l *zap.SugaredLogger, c *config.ObjectStorageConfig) (*S3Bucket, error)
 		name:        c.Bucket,
 		region:      c.Region,
 		fixedPrefix: c.Prefix}, nil
+}
+
+func ParseConfig(confData []byte) (*Config, error) {
+	conf := &Config{}
+
+	err := yaml.Unmarshal(confData, conf)
+	if err != nil {
+		return conf, fmt.Errorf("error parsing S3 config: %w", err)
+	}
+
+	return conf, nil
 }
 
 func (bucket *S3Bucket) Upload(workU *domain.WorkUnit) (*domain.UploadResult, error) {

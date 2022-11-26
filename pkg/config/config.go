@@ -57,18 +57,8 @@ type ExternalQueueConfig struct {
 }
 
 type ObjectStorage struct {
-	Type   string              `yaml:"type"`
-	Config ObjectStorageConfig `yaml:"config"`
-}
-
-type ObjectStorageConfig struct {
-	Bucket         string `yaml:"bucket"`
-	Region         string `yaml:"region"`
-	Endpoint       string `yaml:"endpoint"`
-	AccessKey      string `yaml:"access_key"`
-	SecretKey      string `yaml:"secret_key"`
-	Prefix         string `yaml:"prefix"`
-	ForcePathStyle bool   `yaml:"force_path_style"`
+	Type   string      `yaml:"type"`
+	Config interface{} `yaml:"config"`
 }
 
 func New(confData []byte) (*Config, error) {
