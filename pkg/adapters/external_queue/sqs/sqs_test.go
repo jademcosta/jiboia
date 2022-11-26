@@ -12,6 +12,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const configYaml = `
+url: sqs-queue-url-here
+region: aws-sqs-region-here
+access_key: "access sqs!"
+secret_key: "secret sqs!"
+`
+
 type mockedSendMsgs struct {
 	sqsiface.SQSAPI
 	msgs      []*sqs.SendMessageInput
@@ -32,21 +39,14 @@ func (mock *mockedSendMsgs) SendMessage(input *sqs.SendMessageInput) (*sqs.SendM
 }
 func TestMessageContainsTheData(t *testing.T) {
 	queueUrl := "some-queue-url"
-	c := &config.Config{
-		Log: config.LogConfig{Level: "warn", Format: "json"},
-		Flow: config.FlowConfig{
-			ExternalQueue: config.ExternalQueue{
-				Config: config.ExternalQueueConfig{
-					URL:    queueUrl,
-					Region: "us-east-1",
-				},
-			},
-		},
+	c := &Config{
+		URL:    queueUrl,
+		Region: "us-east-1",
 	}
 
-	l := logger.New(c)
+	l := logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
 
-	sut, err := New(l, &c.Flow.ExternalQueue.Config)
+	sut, err := New(l, c)
 	mockSQS := &mockedSendMsgs{msgs: make([]*sqs.SendMessageInput, 0)}
 	sut.client = mockSQS
 
@@ -69,4 +69,14 @@ func TestMessageContainsTheData(t *testing.T) {
 
 	assert.Lenf(t, mockSQS.msgs, 1, "1 message should have been sent to SQS client")
 	assert.Equal(t, expected, mockSQS.msgs[0], "the correct message format should've been enqueued")
+}
+
+func TestParseConfig(t *testing.T) {
+	confResult, err := ParseConfig([]byte(configYaml))
+
+	assert.NoError(t, err, "should not return error from config parsing")
+	assert.Equal(t, "sqs-queue-url-here", confResult.URL, "queue URL doesn't match")
+	assert.Equal(t, "aws-sqs-region-here", confResult.Region, "queue region doesn't match")
+	assert.Equal(t, "access sqs!", confResult.AccessKey, "queue access_key doesn't match")
+	assert.Equal(t, "secret sqs!", confResult.SecretKey, "queue secret_key doesn't match")
 }

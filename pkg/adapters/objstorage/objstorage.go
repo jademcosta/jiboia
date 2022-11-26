@@ -37,11 +37,13 @@ func New(l *zap.SugaredLogger, conf *config.ObjectStorage) (ObjStorageWithMetada
 
 		objStorage, err = s3.New(l, s3Conf)
 		if err != nil {
-			return nil, fmt.Errorf("error creating object storage: %w", err)
+			return nil, fmt.Errorf("error creating S3 object storage: %w", err)
 		}
 	default:
 		objStorage, err = nil, fmt.Errorf("invalid object storage type %s", conf.Type)
 	}
+
+	// BUG: missing the metrics wrapper here
 
 	return objStorage, err
 }

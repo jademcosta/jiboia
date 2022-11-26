@@ -6,7 +6,6 @@ import (
 
 	"github.com/jademcosta/jiboia/pkg/accumulators/non_blocking_bucket"
 	"github.com/jademcosta/jiboia/pkg/adapters/external_queue"
-	"github.com/jademcosta/jiboia/pkg/adapters/external_queue/sqs"
 	"github.com/jademcosta/jiboia/pkg/adapters/http_in"
 	"github.com/jademcosta/jiboia/pkg/adapters/objstorage"
 	"github.com/jademcosta/jiboia/pkg/config"
@@ -131,8 +130,7 @@ func createObjStorage(l *zap.SugaredLogger, c *config.Config, metricRegistry *pr
 }
 
 func createExternalQueue(l *zap.SugaredLogger, c *config.Config, metricRegistry *prometheus.Registry) uploaders.ExternalQueue {
-	externalQueue, err := sqs.New(l, &c.Flow.ExternalQueue.Config)
-	//TODO: replace with generic factory
+	externalQueue, err := external_queue.New(l, &c.Flow.ExternalQueue)
 	if err != nil {
 		l.Panic("error creating external queue", "error", err)
 	}

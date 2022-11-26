@@ -44,16 +44,8 @@ type Accumulator struct {
 }
 
 type ExternalQueue struct {
-	Type   string              `yaml:"type"`
-	Config ExternalQueueConfig `yaml:"config"`
-}
-
-type ExternalQueueConfig struct {
-	URL       string `yaml:"url"`
-	Region    string `yaml:"region"`
-	Endpoint  string `yaml:"endpoint"`
-	AccessKey string `yaml:"access_key"`
-	SecretKey string `yaml:"secret_key"`
+	Type   string      `yaml:"type"`
+	Config interface{} `yaml:"config"`
 }
 
 type ObjectStorage struct {
