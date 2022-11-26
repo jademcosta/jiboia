@@ -8,13 +8,21 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	awsSqs "github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
-	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"go.uber.org/zap"
+	"gopkg.in/yaml.v2"
 )
 
 const TYPE string = "sqs"
+
+type Config struct {
+	URL       string `yaml:"url"`
+	Region    string `yaml:"region"`
+	Endpoint  string `yaml:"endpoint"`
+	AccessKey string `yaml:"access_key"`
+	SecretKey string `yaml:"secret_key"`
+}
 
 type sqsRep struct {
 	log      *zap.SugaredLogger
@@ -23,7 +31,7 @@ type sqsRep struct {
 	alias    string
 }
 
-func New(l *zap.SugaredLogger, c *config.ExternalQueueConfig) (*sqsRep, error) {
+func New(l *zap.SugaredLogger, c *Config) (*sqsRep, error) {
 	//TODO: session claims to be safe to read concurrently. Can we use a single one?
 	sess, err := session.NewSession(&aws.Config{
 		Region:   aws.String(c.Region),
@@ -51,6 +59,17 @@ func New(l *zap.SugaredLogger, c *config.ExternalQueueConfig) (*sqsRep, error) {
 		queueUrl: queueUrl,
 		alias:    "mainFlow", //TODO: make this dynamic, from config. This can be the name of the queue
 	}, nil
+}
+
+func ParseConfig(confData []byte) (*Config, error) {
+	conf := &Config{}
+
+	err := yaml.Unmarshal(confData, conf)
+	if err != nil {
+		return conf, fmt.Errorf("error parsing SQS config: %w", err)
+	}
+
+	return conf, nil
 }
 
 func (internalSqs *sqsRep) Enqueue(uploadResult *domain.UploadResult) error {

@@ -83,10 +83,7 @@ flow:
 	assert.Equal(t, 123, conf.Flow.Accumulator.QueueCapacity, "should have parsed the correct flow.accumulator.queue_capacity")
 
 	assert.Equal(t, "sqs", conf.Flow.ExternalQueue.Type, "should have parsed the correct flow.external_queue.type")
-	assert.Equal(t, "some-url-here", conf.Flow.ExternalQueue.Config.URL, "should have parsed the correct flow.external_queue.config.url")
-	assert.Equal(t, "aws-region-here", conf.Flow.ExternalQueue.Config.Region, "should have parsed the correct flow.external_queue.config.region")
-	assert.Equal(t, "access 1", conf.Flow.ExternalQueue.Config.AccessKey, "should have parsed the correct flow.external_queue.config.access_key")
-	assert.Equal(t, "secret 1", conf.Flow.ExternalQueue.Config.SecretKey, "should have parsed the correct flow.external_queue.config.secret_key")
+	assert.NotNil(t, conf.Flow.ExternalQueue.Config, "should maintain the value of flow.external_queue.config")
 
 	assert.Equal(t, "s3", conf.Flow.ObjectStorage.Type, "should have parsed the correct flow.object_storage.type")
 	assert.NotNil(t, conf.Flow.ObjectStorage.Config, "should maintain the value of flow.object_storage.config")
