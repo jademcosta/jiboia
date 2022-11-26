@@ -122,8 +122,6 @@ func startApps(c *config.Config, l *zap.SugaredLogger) {
 }
 
 func createObjStorage(l *zap.SugaredLogger, c *config.Config, metricRegistry *prometheus.Registry) uploaders.ObjStorage {
-	//TODO: replace with generic factory
-	// objStorage, err := s3.New(l, &c.Flow.ObjectStorage.Config)
 	objStorage, err := objstorage.New(l, &c.Flow.ObjectStorage)
 	if err != nil {
 		l.Panic("error creating object storage", "error", err)
