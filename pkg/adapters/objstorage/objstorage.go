@@ -3,6 +3,7 @@ package objstorage
 import (
 	"fmt"
 
+	"github.com/jademcosta/jiboia/pkg/adapters/objstorage/localstorage"
 	"github.com/jademcosta/jiboia/pkg/adapters/objstorage/s3"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/uploaders"
@@ -12,7 +13,8 @@ import (
 )
 
 const (
-	s3Type string = "s3"
+	s3Type           string = "s3"
+	localStorageType string = "localstorage"
 )
 
 type ObjStorageWithMetadata interface {
@@ -39,6 +41,16 @@ func New(l *zap.SugaredLogger, metricRegistry *prometheus.Registry, conf *config
 		objStorage, err = s3.New(l, s3Conf)
 		if err != nil {
 			return nil, fmt.Errorf("error creating S3 object storage: %w", err)
+		}
+	case localStorageType:
+		localStorageConf, err := localstorage.ParseConfig(specificConf)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing localstorage-specific config: %w", err)
+		}
+
+		objStorage, err = localstorage.New(l, localStorageConf)
+		if err != nil {
+			return nil, fmt.Errorf("error creating localstorage object storage: %w", err)
 		}
 	default:
 		objStorage, err = nil, fmt.Errorf("invalid object storage type %s", conf.Type)

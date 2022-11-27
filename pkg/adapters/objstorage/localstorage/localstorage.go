@@ -70,6 +70,14 @@ func (storage *LocalStorage) Upload(workU *domain.WorkUnit) (*domain.UploadResul
 	}, nil
 }
 
+func (storage *LocalStorage) Type() string {
+	return "localstorage"
+}
+
+func (storage *LocalStorage) Name() string {
+	return "localstorage"
+}
+
 func validateAndFormatPath(path string) (string, error) {
 	pathInfo, err := os.Stat(path)
 	if err != nil {
