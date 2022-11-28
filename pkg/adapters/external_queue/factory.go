@@ -3,6 +3,7 @@ package external_queue
 import (
 	"fmt"
 
+	"github.com/jademcosta/jiboia/pkg/adapters/external_queue/noop_ext_queue"
 	"github.com/jademcosta/jiboia/pkg/adapters/external_queue/sqs"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/uploaders"
@@ -12,9 +13,9 @@ import (
 )
 
 const (
-	sqsType string = "sqs"
+	sqsType  string = "sqs"
+	noopType string = "noop"
 	// kinesisType string = "kinesis"
-	// noopType    string = "noop"
 )
 
 type ExtQueueWithMetadata interface {
@@ -32,6 +33,8 @@ func New(l *zap.SugaredLogger, metricRegistry *prometheus.Registry, conf *config
 	}
 
 	switch conf.Type {
+	case noopType:
+		externalQueue = noop_ext_queue.New(l)
 	case sqsType:
 		c, err := sqs.ParseConfig(specificConf)
 		if err != nil {
