@@ -12,12 +12,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const (
-	sqsType  string = "sqs"
-	noopType string = "noop"
-	// kinesisType string = "kinesis"
-)
-
 type ExtQueueWithMetadata interface {
 	uploaders.ExternalQueue
 	Type() string
@@ -33,9 +27,9 @@ func New(l *zap.SugaredLogger, metricRegistry *prometheus.Registry, conf *config
 	}
 
 	switch conf.Type {
-	case noopType:
+	case noop_ext_queue.TYPE:
 		externalQueue = noop_ext_queue.New(l)
-	case sqsType:
+	case sqs.TYPE:
 		c, err := sqs.ParseConfig(specificConf)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing SQS-specific config: %w", err)

@@ -12,11 +12,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const (
-	s3Type           string = "s3"
-	localStorageType string = "localstorage"
-)
-
 type ObjStorageWithMetadata interface {
 	uploaders.ObjStorage
 	Type() string
@@ -32,7 +27,7 @@ func New(l *zap.SugaredLogger, metricRegistry *prometheus.Registry, conf *config
 	}
 
 	switch conf.Type {
-	case s3Type:
+	case s3.TYPE:
 		s3Conf, err := s3.ParseConfig(specificConf)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing s3-specific config: %w", err)
@@ -42,7 +37,7 @@ func New(l *zap.SugaredLogger, metricRegistry *prometheus.Registry, conf *config
 		if err != nil {
 			return nil, fmt.Errorf("error creating S3 object storage: %w", err)
 		}
-	case localStorageType:
+	case localstorage.TYPE:
 		localStorageConf, err := localstorage.ParseConfig(specificConf)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing localstorage-specific config: %w", err)
