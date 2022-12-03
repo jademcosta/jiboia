@@ -38,7 +38,7 @@ func start(cmd *cobra.Command, args []string) {
 	config := initializeConfig()
 	l := initializeLogger(*config)
 
-	startApps(config, l)
+	New(config, l).start()
 }
 
 func initializeConfig() *config.Config {

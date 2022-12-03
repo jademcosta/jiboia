@@ -63,8 +63,9 @@ func TestApp(t *testing.T) {
 		panic(fmt.Sprintf("error creating the dir to store the data: %v", err))
 	}
 
-	go startApps(conf, l)
-	time.Sleep(1 * time.Second)
+	app := New(conf, l)
+	go app.start()
+	time.Sleep(2 * time.Second)
 
 	produceAndValidate(t, testingPath, 20)
 	// produceAndValidate(t, testingPath, 12, 5)
