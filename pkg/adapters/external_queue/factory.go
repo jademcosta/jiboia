@@ -3,18 +3,13 @@ package external_queue
 import (
 	"fmt"
 
+	"github.com/jademcosta/jiboia/pkg/adapters/external_queue/noop_ext_queue"
 	"github.com/jademcosta/jiboia/pkg/adapters/external_queue/sqs"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/uploaders"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
-)
-
-const (
-	sqsType string = "sqs"
-	// kinesisType string = "kinesis"
-	// noopType    string = "noop"
 )
 
 type ExtQueueWithMetadata interface {
@@ -32,7 +27,9 @@ func New(l *zap.SugaredLogger, metricRegistry *prometheus.Registry, conf *config
 	}
 
 	switch conf.Type {
-	case sqsType:
+	case noop_ext_queue.TYPE:
+		externalQueue = noop_ext_queue.New(l)
+	case sqs.TYPE:
 		c, err := sqs.ParseConfig(specificConf)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing SQS-specific config: %w", err)
