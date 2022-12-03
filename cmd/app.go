@@ -20,21 +20,33 @@ import (
 	"go.uber.org/zap"
 )
 
-func startApps(c *config.Config, l *zap.SugaredLogger) {
+type app struct {
+	conf *config.Config
+	log  *zap.SugaredLogger
+}
+
+func New(c *config.Config, l *zap.SugaredLogger) *app {
+	return &app{
+		conf: c,
+		log:  l,
+	}
+}
+
+func (a *app) start() {
 
 	var g run.Group
 
 	metricRegistry := prometheus.NewRegistry()
 	registerDefaultMetrics(metricRegistry)
 
-	externalQueue := createExternalQueue(l, c, metricRegistry)
-	objStorage := createObjStorage(l, c, metricRegistry)
+	externalQueue := createExternalQueue(a.log, a.conf, metricRegistry)
+	objStorage := createObjStorage(a.log, a.conf, metricRegistry)
 
 	uploader := nonblocking_uploader.New(
-		l,
-		c.Flow.MaxConcurrentUploads,
-		c.Flow.QueueMaxSize,
-		domain.NewObservableDataDropper(l, metricRegistry, "uploader"),
+		a.log,
+		a.conf.Flow.MaxConcurrentUploads,
+		a.conf.Flow.QueueMaxSize,
+		domain.NewObservableDataDropper(a.log, metricRegistry, "uploader"),
 		filepather.New(datetimeprovider.New()),
 		metricRegistry)
 
@@ -47,14 +59,14 @@ func startApps(c *config.Config, l *zap.SugaredLogger) {
 			return nil
 		},
 		func(error) {
-			l.Info("shutting down uploader")
+			a.log.Info("shutting down uploader")
 			uploaderCancel()
 			workersCancel()
 		},
 	)
 
-	for i := 0; i < c.Flow.MaxConcurrentUploads; i++ {
-		worker := uploaders.NewWorker(l, objStorage, externalQueue, uploader.WorkersReady, metricRegistry)
+	for i := 0; i < a.conf.Flow.MaxConcurrentUploads; i++ {
+		worker := uploaders.NewWorker(a.log, objStorage, externalQueue, uploader.WorkersReady, metricRegistry)
 
 		g.Add(
 			func() error {
@@ -69,7 +81,7 @@ func startApps(c *config.Config, l *zap.SugaredLogger) {
 
 	var apiEntrypoint domain.DataFlow
 
-	accumulator := createAccumulator(l, &c.Flow.Accumulator, metricRegistry, uploader)
+	accumulator := createAccumulator(a.log, &a.conf.Flow.Accumulator, metricRegistry, uploader)
 	if accumulator != nil {
 		apiEntrypoint = accumulator
 	} else {
@@ -90,32 +102,32 @@ func startApps(c *config.Config, l *zap.SugaredLogger) {
 	}
 
 	// apiContext, apiCancel := context.WithCancel(context.Background())
-	api := http_in.New(l, c, metricRegistry, apiEntrypoint)
+	api := http_in.New(a.log, a.conf, metricRegistry, apiEntrypoint)
 
 	g.Add(
 		func() error {
 			err := api.ListenAndServe()
 			if err != nil {
-				l.Error("api listening and serving failed", "error", err)
+				a.log.Error("api listening and serving failed", "error", err)
 			}
 			return err
 		},
 		func(error) {
-			l.Info("shutting down api")
+			a.log.Info("shutting down api")
 			//TODO: Improve shutdown? Or oklog already takes care of it for us?
 			//https://stackoverflow.com/questions/39320025/how-to-stop-http-listenandserve
 			// apiCancel() // FIXME: I believe we might not need this
 			if err := api.Shutdown(); err != nil {
-				l.Error("api shutdown failed", "error", err)
+				a.log.Error("api shutdown failed", "error", err)
 			}
 		},
 	)
 
 	err := g.Run()
 	if err != nil {
-		l.Error("something went wrong", "error", err)
+		a.log.Error("something went wrong", "error", err)
 	}
-	l.Info("jiboia exiting")
+	a.log.Info("jiboia exiting")
 
 	//TODO: add actor that listen to termination signals
 }
