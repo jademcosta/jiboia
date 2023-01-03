@@ -10,16 +10,13 @@ import (
 )
 
 type NonBlockingUploader struct {
-	internalDataChan   chan []byte
-	WorkersReady       chan chan *domain.WorkUnit
-	searchForWork      chan struct{}
-	log                *zap.SugaredLogger
-	dataDropper        domain.DataDropper
-	filePathProvider   domain.FilePathProvider
-	capacityGauge      *prometheus.GaugeVec
-	workersCountGauge  *prometheus.GaugeVec
-	enqueueCounter     *prometheus.CounterVec
-	enqueuedItemsGauge *prometheus.GaugeVec
+	internalDataChan chan []byte
+	WorkersReady     chan chan *domain.WorkUnit
+	searchForWork    chan struct{}
+	log              *zap.SugaredLogger
+	dataDropper      domain.DataDropper
+	filePathProvider domain.FilePathProvider
+	metrics          *metricCollector
 }
 
 func New(
@@ -30,67 +27,26 @@ func New(
 	filePathProvider domain.FilePathProvider,
 	metricRegistry *prometheus.Registry) *NonBlockingUploader {
 
-	capacityGauge := prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Namespace: "jiboia",
-			Subsystem: "uploader",
-			Name:      "queue_capacity",
-			Help:      "The total capacity of the internal queue.",
-		},
-		[]string{},
-	)
+	m := NewMetricCollector(metricRegistry)
 
-	workersCountGauge := prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Namespace: "jiboia",
-			Subsystem: "uploader",
-			Name:      "workers_count",
-			Help:      "The total number of workers, meaning how many uploads can happen in parallel.",
-		},
-		[]string{},
-	)
-
-	enqueueCounter := prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: "jiboia",
-			Subsystem: "uploader",
-			Name:      "enqueue_calls_total",
-			Help:      "The total number of times that data was enqueued."},
-		[]string{},
-	)
-
-	enqueuedItemsGauge := prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Namespace: "jiboia",
-			Subsystem: "uploader",
-			Name:      "items_in_queue",
-			Help:      "The count of current items in the internal queue, waiting to be uploaded.",
-		},
-		[]string{},
-	)
-
-	metricRegistry.MustRegister(capacityGauge, workersCountGauge, enqueueCounter, enqueuedItemsGauge)
-	capacityGauge.WithLabelValues().Set(float64(queueCapacity))
-	workersCountGauge.WithLabelValues().Set(float64(workersCount))
+	m.queueCapacity(queueCapacity)
+	m.workersCount(workersCount)
 
 	uploader := &NonBlockingUploader{
-		internalDataChan:   make(chan []byte, queueCapacity),
-		WorkersReady:       make(chan chan *domain.WorkUnit, workersCount),
-		searchForWork:      make(chan struct{}, 1),
-		log:                l.With(logger.COMPONENT_KEY, "uploader"),
-		dataDropper:        dataDropper,
-		filePathProvider:   filePathProvider,
-		capacityGauge:      capacityGauge,
-		workersCountGauge:  workersCountGauge,
-		enqueueCounter:     enqueueCounter,
-		enqueuedItemsGauge: enqueuedItemsGauge,
+		internalDataChan: make(chan []byte, queueCapacity),
+		WorkersReady:     make(chan chan *domain.WorkUnit, workersCount),
+		searchForWork:    make(chan struct{}, 1),
+		log:              l.With(logger.COMPONENT_KEY, "uploader"),
+		dataDropper:      dataDropper,
+		filePathProvider: filePathProvider,
+		metrics:          m,
 	}
 
 	return uploader
 }
 
 func (s *NonBlockingUploader) Enqueue(data []byte) error {
-	s.enqueueCounter.WithLabelValues().Inc()
+	s.metrics.increaseEnqueueCounter()
 
 	select {
 	case s.internalDataChan <- data:
@@ -134,5 +90,5 @@ func (s *NonBlockingUploader) dataDropped(data []byte) {
 
 func (s *NonBlockingUploader) updateEnqueuedItemsMetric() {
 	itemsCount := len(s.internalDataChan)
-	s.enqueuedItemsGauge.WithLabelValues().Set(float64(itemsCount))
+	s.metrics.enqueuedItems(itemsCount)
 }
