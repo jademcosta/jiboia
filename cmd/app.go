@@ -79,13 +79,13 @@ func (a *app) start() {
 		)
 	}
 
-	var apiEntrypoint domain.DataFlow
+	var flowEntrypoint domain.DataFlow
 
 	accumulator := createAccumulator(a.log, &a.conf.Flow.Accumulator, metricRegistry, uploader)
 	if accumulator != nil {
-		apiEntrypoint = accumulator
+		flowEntrypoint = accumulator
 	} else {
-		apiEntrypoint = uploader
+		flowEntrypoint = uploader
 	}
 
 	if accumulator != nil {
@@ -102,7 +102,7 @@ func (a *app) start() {
 	}
 
 	// apiContext, apiCancel := context.WithCancel(context.Background())
-	api := http_in.New(a.log, a.conf, metricRegistry, apiEntrypoint)
+	api := http_in.New(a.log, a.conf, metricRegistry, flowEntrypoint)
 
 	g.Add(
 		func() error {
@@ -166,6 +166,7 @@ func createAccumulator(l *zap.SugaredLogger, c *config.Accumulator, registry *pr
 
 func registerDefaultMetrics(registry *prometheus.Registry) {
 	registry.MustRegister(collectors.NewBuildInfoCollector())
+	// TODO: registry.MustRegister(collectors.NewProcessCollector())
 	registry.MustRegister(collectors.NewGoCollector(
 		collectors.WithGoCollectorRuntimeMetrics(collectors.GoRuntimeMetricsRule{Matcher: regexp.MustCompile("/.*")}),
 	))
