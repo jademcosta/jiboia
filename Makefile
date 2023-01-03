@@ -23,7 +23,7 @@ test: ## Run all the tests
 # 	$(GOCMD) clean -testcache
 # 	$(GOTEST) -v -fuzz=Fuzz -timeout 30s -fuzztime=5s ./...
 
-test-integration: ## Runs only fast tests
+test-integration: ## Runs only slow tests (excludes unit and real-e2e tests)
 	$(GOCMD) clean -testcache
 	$(GOTEST) -v -timeout 30s -race -run Integration ./...
 
