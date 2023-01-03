@@ -48,7 +48,7 @@ var testingPath string = "/tmp/int_test"
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyz")
 
-func TestApp(t *testing.T) {
+func TestAppIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
 	}
