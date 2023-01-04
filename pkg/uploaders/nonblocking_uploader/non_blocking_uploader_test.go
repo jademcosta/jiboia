@@ -74,7 +74,7 @@ func (objStorage *mockObjStorageWithAppend) Upload(workU *domain.WorkUnit) (*dom
 	return &domain.UploadResult{}, nil
 }
 
-func TestWorkSendedDownstreamHasTheCorrectDataInIt(t *testing.T) {
+func TestWorkSentDownstreamHasTheCorrectDataInIt(t *testing.T) {
 	workersCount := 2
 	capacity := 3
 
