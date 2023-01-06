@@ -2,7 +2,8 @@ package non_blocking_bucket
 
 import (
 	"context"
-	"fmt"
+	"errors"
+	"sync"
 
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
@@ -24,6 +25,8 @@ type BucketAccumulator struct {
 	current          [][]byte // TODO: replace this with a linked-list. The trashing of having to reallocate a new array is not worth the simplicity
 	next             domain.DataFlow
 	metrics          *metricCollector
+	shutdownMutex    sync.RWMutex
+	shuttingDown     bool
 }
 
 func New(
@@ -64,6 +67,12 @@ func New(
 }
 
 func (b *BucketAccumulator) Enqueue(data []byte) error {
+	b.shutdownMutex.RLock()
+	defer b.shutdownMutex.RUnlock()
+	if b.shuttingDown {
+		return errors.New("accumulator shutting down")
+	}
+
 	b.metrics.increaseEnqueueCounter()
 
 	select {
@@ -71,7 +80,7 @@ func (b *BucketAccumulator) Enqueue(data []byte) error {
 		b.updateEnqueuedItemsMetric()
 	default:
 		b.dataDropped(data)
-		return fmt.Errorf("enqueueing data to accumulate on bucket failed, queue is full")
+		return errors.New("enqueueing data on the accumulator failed, queue is full")
 	}
 
 	return nil
@@ -87,7 +96,9 @@ func (b *BucketAccumulator) Run(ctx context.Context) {
 			b.append(data)
 			b.updateEnqueuedItemsMetric()
 		case <-ctx.Done():
-			//TODO: implenment graceful shutdown
+			b.l.Debug("accumulator starting shutdown")
+			b.shutdown()
+			b.l.Info("accumulator shutdown finished")
 			return
 		}
 	}
@@ -171,4 +182,27 @@ func (b *BucketAccumulator) dataDropped(data []byte) {
 func (b *BucketAccumulator) updateEnqueuedItemsMetric() {
 	itemsCount := len(b.internalDataChan)
 	b.metrics.enqueuedItems(itemsCount)
+}
+
+func (b *BucketAccumulator) shutdown() {
+	b.setShutdown()
+	close(b.internalDataChan)
+
+	for {
+		data, more := <-b.internalDataChan
+		if !more {
+			break
+		}
+
+		b.append(data)
+		b.updateEnqueuedItemsMetric()
+	}
+
+	b.flush()
+}
+
+func (b *BucketAccumulator) setShutdown() {
+	b.shutdownMutex.Lock()
+	defer b.shutdownMutex.Unlock()
+	b.shuttingDown = true
 }

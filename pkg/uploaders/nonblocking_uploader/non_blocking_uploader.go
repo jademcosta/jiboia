@@ -65,6 +65,7 @@ func (s *NonBlockingUploader) Enqueue(data []byte) error {
 		s.updateEnqueuedItemsMetric()
 	default:
 		s.dataDropped(data)
+		return errors.New("enqueueing data to accumulate on uploader failed, queue is full")
 	}
 
 	return nil
