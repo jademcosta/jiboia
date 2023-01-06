@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"os"
+	"os/signal"
 	"regexp"
+	"syscall"
 
 	"github.com/jademcosta/jiboia/pkg/accumulators/non_blocking_bucket"
 	"github.com/jademcosta/jiboia/pkg/adapters/external_queue"
@@ -21,20 +24,28 @@ import (
 )
 
 type app struct {
-	conf *config.Config
-	log  *zap.SugaredLogger
+	conf     *config.Config
+	log      *zap.SugaredLogger
+	ctx      context.Context
+	stopFunc context.CancelFunc
 }
 
 func New(c *config.Config, l *zap.SugaredLogger) *app {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	return &app{
-		conf: c,
-		log:  l,
+		conf:     c,
+		log:      l,
+		ctx:      ctx,
+		stopFunc: cancel,
 	}
 }
 
 func (a *app) start() {
 
 	var g run.Group
+
+	a.addShutdownRelatedActors(g)
 
 	metricRegistry := prometheus.NewRegistry()
 	registerDefaultMetrics(metricRegistry)
@@ -130,6 +141,37 @@ func (a *app) start() {
 	a.log.Info("jiboia exiting")
 
 	//TODO: add actor that listen to termination signals
+}
+
+func (a *app) addShutdownRelatedActors(g run.Group) {
+	g.Add(
+		func() error {
+			<-a.ctx.Done()
+			return nil
+		},
+		func(error) {
+			a.stopFunc()
+		},
+	)
+
+	signalsCh := make(chan os.Signal, 2)
+	signal.Notify(signalsCh, syscall.SIGINT, syscall.SIGTERM)
+
+	g.Add(func() error {
+		select {
+		case s := <-signalsCh:
+			a.log.Info("received signal, shutting down", "signal", s)
+		case <-a.ctx.Done():
+		}
+		return nil
+	}, func(error) {
+		a.stopFunc()
+	})
+}
+
+func (a *app) stop() {
+	a.log.Debug("app stop called")
+	a.stopFunc()
 }
 
 func createObjStorage(l *zap.SugaredLogger, c *config.Config, metricRegistry *prometheus.Registry) uploaders.ObjStorage {

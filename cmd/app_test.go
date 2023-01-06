@@ -68,6 +68,8 @@ func TestAppIntegration(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	produceAndValidate(t, testingPath, 20)
+	time.Sleep(2 * time.Second)
+	app.stop()
 	// produceAndValidate(t, testingPath, 12, 5)
 	// produceAndValidate(t, testingPath, 18)
 }
