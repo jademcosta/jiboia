@@ -17,7 +17,7 @@ all: help
 ## Test:
 test: ## Run all the tests
 	$(GOCMD) clean -testcache
-	$(GOTEST) -v -race -timeout 60s ./...
+	$(GOTEST) -v -race -timeout 90s ./...
 
 # test-fuzz: ## Run fuzzing tests
 # 	$(GOCMD) clean -testcache

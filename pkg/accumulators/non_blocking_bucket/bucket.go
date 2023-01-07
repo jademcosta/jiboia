@@ -158,7 +158,7 @@ func (b *BucketAccumulator) flush() {
 	}
 
 	b.next.Enqueue(mergedData)
-	b.current = make([][]byte, 0) // TODO: make([][]byte, 0, 2)
+	b.current = make([][]byte, 0)
 	b.metrics.increaseNextCounter()
 }
 
