@@ -45,7 +45,7 @@ func (a *app) start() {
 
 	var g run.Group
 
-	a.addShutdownRelatedActors(g)
+	a.addShutdownRelatedActors(&g)
 
 	metricRegistry := prometheus.NewRegistry()
 	registerDefaultMetrics(metricRegistry)
@@ -143,7 +143,7 @@ func (a *app) start() {
 	//TODO: add actor that listen to termination signals
 }
 
-func (a *app) addShutdownRelatedActors(g run.Group) {
+func (a *app) addShutdownRelatedActors(g *run.Group) {
 	g.Add(
 		func() error {
 			<-a.ctx.Done()
@@ -166,6 +166,7 @@ func (a *app) addShutdownRelatedActors(g run.Group) {
 		return nil
 	}, func(error) {
 		a.stopFunc()
+		signal.Reset(syscall.SIGINT, syscall.SIGTERM)
 	})
 }
 
