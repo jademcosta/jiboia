@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -67,8 +68,12 @@ func (api *Api) ListenAndServe() error {
 }
 
 func (api *Api) Shutdown() error {
-	ctx := context.Background()
-	return api.srv.Shutdown(ctx)
+	//TODO: allow the grace period to be configured
+	shutdownCtx, shutdownCtxRelease := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCtxRelease()
+
+	err := api.srv.Shutdown(shutdownCtx)
+	return err
 }
 
 func registerDefaultMiddlewares(api *Api, l *zap.SugaredLogger, metricRegistry *prometheus.Registry) {
