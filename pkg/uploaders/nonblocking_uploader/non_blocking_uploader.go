@@ -32,10 +32,10 @@ func New(
 	filePathProvider domain.FilePathProvider,
 	metricRegistry *prometheus.Registry) *NonBlockingUploader {
 
-	m := NewMetricCollector(metricRegistry)
+	metrics := NewMetricCollector(metricRegistry)
 
-	m.queueCapacity(queueCapacity)
-	m.workersCount(workersCount)
+	metrics.queueCapacity(queueCapacity)
+	metrics.workersCount(workersCount)
 
 	uploader := &NonBlockingUploader{
 		internalDataChan: make(chan []byte, queueCapacity),
@@ -44,7 +44,7 @@ func New(
 		log:              l.With(logger.COMPONENT_KEY, "uploader"),
 		dataDropper:      dataDropper,
 		filePathProvider: filePathProvider,
-		metrics:          m,
+		metrics:          metrics,
 		workersCount:     workersCount,
 	}
 
