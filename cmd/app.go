@@ -79,10 +79,12 @@ func (a *app) start() {
 
 	g.Add(
 		func() error {
+			uploaderWG.Add(1)
 			err := api.ListenAndServe()
 			if err != nil && !errors.Is(err, http.ErrServerClosed) {
 				a.log.Errorw("api listening and serving failed", "error", err)
 			}
+			uploaderWG.Done()
 			return err
 		},
 		func(error) {
