@@ -203,7 +203,7 @@ func TestUploadersSendAllEnqueueItemsIntegration(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 
-	// time to proccess an upload, workersCount, objectsCount
+	// time to proccess an upload, workersCount, objectsCount, capacity, factoryFn, sleepBetweenProduction
 	testUploader(t, 50*time.Millisecond, 10, 60, 60, New, 0)
 	testUploader(t, 50*time.Millisecond, 1, 30, 30, New, 0)
 	testUploader(t, 50*time.Millisecond, 60, 1, 1, New, 0)
@@ -216,6 +216,7 @@ func TestUploadersSendAllEnqueueItemsIntegration(t *testing.T) {
 	testUploader(t, 10*time.Millisecond, 300, 60, 60, New, 1*time.Millisecond)
 	testUploader(t, 10*time.Millisecond, 1, 30, 30, New, 1*time.Millisecond)
 	testUploader(t, 10*time.Millisecond, 30, 2, 2, New, 1*time.Millisecond)
+	testUploader(t, 10*time.Millisecond, 10, 45, 40, New, 1*time.Millisecond)
 }
 
 func testUploader(
