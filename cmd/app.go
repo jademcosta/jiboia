@@ -135,7 +135,7 @@ func (a *app) start() {
 	if err != nil {
 		a.log.Errorw("something went wrong when running the components", "error", err)
 	}
-	a.log.Info("jiboia exiting")
+	a.log.Info("jiboia stopped")
 }
 
 func (a *app) addShutdownRelatedActors(g *run.Group) {

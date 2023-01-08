@@ -22,6 +22,7 @@ type NonBlockingUploader struct {
 	shutdownMutex    sync.RWMutex
 	shuttingDown     bool
 	workersCount     int
+	ctx              context.Context
 }
 
 func New(
@@ -74,6 +75,7 @@ func (s *NonBlockingUploader) Enqueue(data []byte) error {
 //Run should be called in a new goroutine
 func (s *NonBlockingUploader) Run(ctx context.Context) {
 	s.log.Info("starting non-blocking uploader loop")
+	s.ctx = ctx
 	for {
 		select {
 		case worker := <-s.WorkersReady:
@@ -88,15 +90,20 @@ func (s *NonBlockingUploader) Run(ctx context.Context) {
 }
 
 func (s *NonBlockingUploader) sendWork(worker chan *domain.WorkUnit) {
-	data := <-s.internalDataChan
-	workU := &domain.WorkUnit{
-		Filename: *s.filePathProvider.Filename(),
-		Prefix:   *s.filePathProvider.Prefix(),
-		Data:     data,
-	}
+	select {
+	case <-s.ctx.Done(): //TODO: this is ugly. We shopuldn't need to hear for done on 2 places
+		s.WorkersReady <- worker
+		return
+	case data := <-s.internalDataChan:
+		workU := &domain.WorkUnit{
+			Filename: *s.filePathProvider.Filename(),
+			Prefix:   *s.filePathProvider.Prefix(),
+			Data:     data,
+		}
 
-	worker <- workU
-	s.updateEnqueuedItemsMetric()
+		worker <- workU
+		s.updateEnqueuedItemsMetric()
+	}
 }
 
 func (s *NonBlockingUploader) dataDropped(data []byte) {
