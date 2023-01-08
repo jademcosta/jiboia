@@ -2,7 +2,13 @@ package main
 
 import (
 	"context"
+	"errors"
+	"net/http"
+	"os"
+	"os/signal"
 	"regexp"
+	"sync"
+	"syscall"
 
 	"github.com/jademcosta/jiboia/pkg/accumulators/non_blocking_bucket"
 	"github.com/jademcosta/jiboia/pkg/adapters/external_queue"
@@ -21,26 +27,30 @@ import (
 )
 
 type app struct {
-	conf *config.Config
-	log  *zap.SugaredLogger
+	conf     *config.Config
+	log      *zap.SugaredLogger
+	ctx      context.Context
+	stopFunc context.CancelFunc
 }
 
 func New(c *config.Config, l *zap.SugaredLogger) *app {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	return &app{
-		conf: c,
-		log:  l,
+		conf:     c,
+		log:      l,
+		ctx:      ctx,
+		stopFunc: cancel,
 	}
 }
 
 func (a *app) start() {
-
-	var g run.Group
-
 	metricRegistry := prometheus.NewRegistry()
 	registerDefaultMetrics(metricRegistry)
 
 	externalQueue := createExternalQueue(a.log, a.conf, metricRegistry)
 	objStorage := createObjStorage(a.log, a.conf, metricRegistry)
+	var uploaderWG sync.WaitGroup
 
 	uploader := nonblocking_uploader.New(
 		a.log,
@@ -51,65 +61,30 @@ func (a *app) start() {
 		metricRegistry)
 
 	uploaderContext, uploaderCancel := context.WithCancel(context.Background())
-	workersContext, workersCancel := context.WithCancel(context.Background())
 
-	g.Add(
-		func() error {
-			uploader.Run(uploaderContext)
-			return nil
-		},
-		func(error) {
-			a.log.Info("shutting down uploader")
-			uploaderCancel()
-			workersCancel()
-		},
-	)
-
-	for i := 0; i < a.conf.Flow.MaxConcurrentUploads; i++ {
-		worker := uploaders.NewWorker(a.log, objStorage, externalQueue, uploader.WorkersReady, metricRegistry)
-
-		g.Add(
-			func() error {
-				worker.Run(workersContext)
-				return nil
-			},
-			func(error) {
-				workersCancel()
-			},
-		)
-	}
-
-	var apiEntrypoint domain.DataFlow
-
+	var flowEntrypoint domain.DataFlow
+	flowEntrypoint = uploader
 	accumulator := createAccumulator(a.log, &a.conf.Flow.Accumulator, metricRegistry, uploader)
 	if accumulator != nil {
-		apiEntrypoint = accumulator
-	} else {
-		apiEntrypoint = uploader
+		flowEntrypoint = accumulator
 	}
 
-	if accumulator != nil {
-		accumulatorContext, accumulatorCancel := context.WithCancel(context.Background())
-		g.Add(
-			func() error {
-				accumulator.Run(accumulatorContext)
-				return nil
-			},
-			func(error) {
-				accumulatorCancel()
-			},
-		)
-	}
+	api := http_in.New(a.log, a.conf, metricRegistry, flowEntrypoint)
 
-	// apiContext, apiCancel := context.WithCancel(context.Background())
-	api := http_in.New(a.log, a.conf, metricRegistry, apiEntrypoint)
+	//The shutdown of rungroup seems to be executed from a single goroutine. Meaning that if a
+	//waitgroup is added on some interrupt function, it might hang forever.
+	var g run.Group
+
+	a.addShutdownRelatedActors(&g)
 
 	g.Add(
 		func() error {
+			uploaderWG.Add(1)
 			err := api.ListenAndServe()
-			if err != nil {
-				a.log.Error("api listening and serving failed", "error", err)
+			if err != nil && !errors.Is(err, http.ErrServerClosed) {
+				a.log.Errorw("api listening and serving failed", "error", err)
 			}
+			uploaderWG.Done()
 			return err
 		},
 		func(error) {
@@ -118,18 +93,71 @@ func (a *app) start() {
 			//https://stackoverflow.com/questions/39320025/how-to-stop-http-listenandserve
 			// apiCancel() // FIXME: I believe we might not need this
 			if err := api.Shutdown(); err != nil {
-				a.log.Error("api shutdown failed", "error", err)
+				a.log.Errorw("api shutdown failed", "error", err)
 			}
 		},
 	)
 
+	if accumulator != nil {
+		uploaderWG.Add(1)
+		flowEntrypoint = accumulator
+		accumulatorContext, accumulatorCancel := context.WithCancel(context.Background())
+
+		g.Add(
+			func() error {
+				accumulator.Run(accumulatorContext)
+				uploaderWG.Done()
+				return nil
+			},
+			func(error) {
+				accumulatorCancel()
+			},
+		)
+	}
+
+	g.Add(
+		func() error {
+			uploader.Run(uploaderContext)
+			return nil
+		},
+		func(error) {
+			uploaderWG.Wait()
+			uploaderCancel()
+		},
+	)
+
+	for i := 0; i < a.conf.Flow.MaxConcurrentUploads; i++ {
+		worker := uploaders.NewWorker(a.log, objStorage, externalQueue, uploader.WorkersReady, metricRegistry)
+		go worker.Run(context.Background()) //TODO: we need to make uploader completelly stop the workers, for safety
+	}
+
 	err := g.Run()
 	if err != nil {
-		a.log.Error("something went wrong", "error", err)
+		a.log.Errorw("something went wrong when running the components", "error", err)
 	}
-	a.log.Info("jiboia exiting")
+	a.log.Info("jiboia stopped")
+}
 
-	//TODO: add actor that listen to termination signals
+func (a *app) addShutdownRelatedActors(g *run.Group) {
+	signalsCh := make(chan os.Signal, 2)
+	signal.Notify(signalsCh, syscall.SIGINT, syscall.SIGTERM)
+
+	g.Add(func() error {
+		select {
+		case s := <-signalsCh:
+			a.log.Infow("received signal, shutting down", "signal", s)
+		case <-a.ctx.Done():
+		}
+		return nil
+	}, func(error) {
+		a.stopFunc()
+		signal.Reset(syscall.SIGINT, syscall.SIGTERM)
+	})
+}
+
+func (a *app) stop() {
+	a.log.Debug("app stop called")
+	a.stopFunc()
 }
 
 func createObjStorage(l *zap.SugaredLogger, c *config.Config, metricRegistry *prometheus.Registry) uploaders.ObjStorage {
@@ -166,6 +194,7 @@ func createAccumulator(l *zap.SugaredLogger, c *config.Accumulator, registry *pr
 
 func registerDefaultMetrics(registry *prometheus.Registry) {
 	registry.MustRegister(collectors.NewBuildInfoCollector())
+	// TODO: registry.MustRegister(collectors.NewProcessCollector())
 	registry.MustRegister(collectors.NewGoCollector(
 		collectors.WithGoCollectorRuntimeMetrics(collectors.GoRuntimeMetricsRule{Matcher: regexp.MustCompile("/.*")}),
 	))

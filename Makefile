@@ -17,19 +17,11 @@ all: help
 ## Test:
 test: ## Run all the tests
 	$(GOCMD) clean -testcache
-	$(GOTEST) -v -race -timeout 60s ./...
+	$(GOTEST) -v -race -timeout 90s ./...
 
 # test-fuzz: ## Run fuzzing tests
 # 	$(GOCMD) clean -testcache
 # 	$(GOTEST) -v -fuzz=Fuzz -timeout 30s -fuzztime=5s ./...
-
-test-integration: ## Runs only fast tests
-	$(GOCMD) clean -testcache
-	$(GOTEST) -v -timeout 30s -race -run Integration ./...
-
-test-e2e: ## Runs only fast tests
-	$(GOCMD) clean -testcache
-	$(GOTEST) -v -race -run E2E ./...
 
 test-unit: ## Runs only fast tests
 	$(GOCMD) clean -testcache

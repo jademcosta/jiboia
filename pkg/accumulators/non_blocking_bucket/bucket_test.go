@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"context"
+
 	bucket "github.com/jademcosta/jiboia/pkg/accumulators/non_blocking_bucket"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/logger"
@@ -359,4 +360,105 @@ func TestTheMinimunCapacityIsFixed(t *testing.T) {
 	assert.Lenf(t, ddropper.dataDropped, 2,
 		"should drop messages once the queue capacity is exceeded.")
 	ddropper.mu.Unlock()
+}
+
+func TestSendsPendingDataWhenContextIsCancelled(t *testing.T) {
+	type testCase struct {
+		data [][]byte
+		want [][]byte
+	}
+
+	limitBytes := 10
+	separator := []byte("")
+	queueCapacity := 30
+
+	testCases := []testCase{
+		{
+			data: [][]byte{[]byte("1"), []byte("22"), []byte("333")},
+			want: [][]byte{[]byte("122333")},
+		},
+		{
+			data: [][]byte{[]byte("55555"), []byte("1")},
+			want: [][]byte{[]byte("555551")},
+		},
+		{
+			data: [][]byte{[]byte("55555")},
+			want: [][]byte{[]byte("55555")},
+		},
+		{
+			data: [][]byte{[]byte("999999999")},
+			want: [][]byte{[]byte("999999999")},
+		},
+	}
+
+	for _, tc := range testCases {
+		next := &dataEnqueuerMock{dataWritten: make([][]byte, 0)}
+		ddropper := &mockDataDropper{dataDropped: make([][]byte, 0)}
+		ctx, cancel := context.WithCancel(context.Background())
+
+		sut := bucket.New(l, limitBytes, separator, queueCapacity, ddropper, next, prometheus.NewRegistry())
+		go sut.Run(ctx)
+
+		for _, data := range tc.data {
+			sut.Enqueue(data)
+		}
+
+		next.mu.Lock()
+		assert.Equalf(t, next.callCount, 0,
+			"(before shutdown) should not produce any message. Data: %v.",
+			tc.data)
+		next.mu.Unlock()
+
+		ddropper.mu.Lock()
+		assert.Lenf(t, ddropper.dataDropped, 0,
+			"(before shutdown) should have not dropped any data. Data: %v.",
+			tc.data)
+		ddropper.mu.Unlock()
+
+		cancel()
+		time.Sleep(10 * time.Millisecond)
+
+		ddropper.mu.Lock()
+		assert.Lenf(t, ddropper.dataDropped, 0,
+			"(after shutdown) should have not dropped any data. Data: %v.",
+			tc.data)
+		ddropper.mu.Unlock()
+
+		next.mu.Lock()
+		assert.Equalf(t, next.callCount, len(tc.want),
+			"(after shutdown) should have sent all data. Data: %v.",
+			tc.data)
+		next.mu.Unlock()
+	}
+}
+
+func TestEnqueuesErrorsAfterContextCancelled(t *testing.T) {
+
+	limitBytes := 10
+	separator := []byte("")
+	queueCapacity := 30
+
+	next := &dataEnqueuerMock{dataWritten: make([][]byte, 0)}
+	ddropper := &mockDataDropper{dataDropped: make([][]byte, 0)}
+	ctx, cancel := context.WithCancel(context.Background())
+
+	sut := bucket.New(l, limitBytes, separator, queueCapacity, ddropper, next, prometheus.NewRegistry())
+	go sut.Run(ctx)
+	time.Sleep(1 * time.Millisecond)
+
+	cancel()
+	time.Sleep(10 * time.Millisecond)
+
+	next.mu.Lock()
+	assert.Equalf(t, next.callCount, 0,
+		"should not produce any message.")
+	next.mu.Unlock()
+
+	ddropper.mu.Lock()
+	assert.Lenf(t, ddropper.dataDropped, 0,
+		"should have not dropped any data.")
+	ddropper.mu.Unlock()
+
+	err := sut.Enqueue([]byte("hi"))
+	assert.Error(t, err, "should return error if enqueue is called after a shutdown has started")
 }

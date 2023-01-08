@@ -2,6 +2,8 @@ package nonblocking_uploader
 
 import (
 	"context"
+	"errors"
+	"sync"
 
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
@@ -10,16 +12,17 @@ import (
 )
 
 type NonBlockingUploader struct {
-	internalDataChan   chan []byte
-	WorkersReady       chan chan *domain.WorkUnit
-	searchForWork      chan struct{}
-	log                *zap.SugaredLogger
-	dataDropper        domain.DataDropper
-	filePathProvider   domain.FilePathProvider
-	capacityGauge      *prometheus.GaugeVec
-	workersCountGauge  *prometheus.GaugeVec
-	enqueueCounter     *prometheus.CounterVec
-	enqueuedItemsGauge *prometheus.GaugeVec
+	internalDataChan chan []byte
+	WorkersReady     chan chan *domain.WorkUnit
+	searchForWork    chan struct{}
+	log              *zap.SugaredLogger
+	dataDropper      domain.DataDropper
+	filePathProvider domain.FilePathProvider
+	metrics          *metricCollector
+	shutdownMutex    sync.RWMutex
+	shuttingDown     bool
+	workersCount     int
+	ctx              context.Context
 }
 
 func New(
@@ -30,73 +33,40 @@ func New(
 	filePathProvider domain.FilePathProvider,
 	metricRegistry *prometheus.Registry) *NonBlockingUploader {
 
-	capacityGauge := prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Namespace: "jiboia",
-			Subsystem: "uploader",
-			Name:      "queue_capacity",
-			Help:      "The total capacity of the internal queue.",
-		},
-		[]string{},
-	)
+	metrics := NewMetricCollector(metricRegistry)
 
-	workersCountGauge := prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Namespace: "jiboia",
-			Subsystem: "uploader",
-			Name:      "workers_count",
-			Help:      "The total number of workers, meaning how many uploads can happen in parallel.",
-		},
-		[]string{},
-	)
-
-	enqueueCounter := prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Namespace: "jiboia",
-			Subsystem: "uploader",
-			Name:      "enqueue_calls_total",
-			Help:      "The total number of times that data was enqueued."},
-		[]string{},
-	)
-
-	enqueuedItemsGauge := prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Namespace: "jiboia",
-			Subsystem: "uploader",
-			Name:      "items_in_queue",
-			Help:      "The count of current items in the internal queue, waiting to be uploaded.",
-		},
-		[]string{},
-	)
-
-	metricRegistry.MustRegister(capacityGauge, workersCountGauge, enqueueCounter, enqueuedItemsGauge)
-	capacityGauge.WithLabelValues().Set(float64(queueCapacity))
-	workersCountGauge.WithLabelValues().Set(float64(workersCount))
+	metrics.queueCapacity(queueCapacity)
+	metrics.workersCount(workersCount)
 
 	uploader := &NonBlockingUploader{
-		internalDataChan:   make(chan []byte, queueCapacity),
-		WorkersReady:       make(chan chan *domain.WorkUnit, workersCount),
-		searchForWork:      make(chan struct{}, 1),
-		log:                l.With(logger.COMPONENT_KEY, "uploader"),
-		dataDropper:        dataDropper,
-		filePathProvider:   filePathProvider,
-		capacityGauge:      capacityGauge,
-		workersCountGauge:  workersCountGauge,
-		enqueueCounter:     enqueueCounter,
-		enqueuedItemsGauge: enqueuedItemsGauge,
+		internalDataChan: make(chan []byte, queueCapacity),
+		WorkersReady:     make(chan chan *domain.WorkUnit, workersCount),
+		searchForWork:    make(chan struct{}, 1),
+		log:              l.With(logger.COMPONENT_KEY, "uploader"),
+		dataDropper:      dataDropper,
+		filePathProvider: filePathProvider,
+		metrics:          metrics,
+		workersCount:     workersCount,
 	}
 
 	return uploader
 }
 
 func (s *NonBlockingUploader) Enqueue(data []byte) error {
-	s.enqueueCounter.WithLabelValues().Inc()
+	s.shutdownMutex.RLock()
+	defer s.shutdownMutex.RUnlock()
+	if s.shuttingDown {
+		return errors.New("uploader shutting down")
+	}
+
+	s.metrics.increaseEnqueueCounter()
 
 	select {
 	case s.internalDataChan <- data:
 		s.updateEnqueuedItemsMetric()
 	default:
 		s.dataDropped(data)
+		return errors.New("enqueueing data to accumulate on uploader failed, queue is full")
 	}
 
 	return nil
@@ -104,28 +74,36 @@ func (s *NonBlockingUploader) Enqueue(data []byte) error {
 
 //Run should be called in a new goroutine
 func (s *NonBlockingUploader) Run(ctx context.Context) {
-	s.log.Info("Starting non-blocking uploader loop")
+	s.log.Info("starting non-blocking uploader loop")
+	s.ctx = ctx
 	for {
 		select {
 		case worker := <-s.WorkersReady:
 			s.sendWork(worker)
-			s.updateEnqueuedItemsMetric()
 		case <-ctx.Done():
-			//TODO: implenment graceful shutdown
+			s.log.Debug("uploader starting shutdown")
+			s.shutdown()
+			s.log.Info("uploader shutdown finished")
 			return
 		}
 	}
 }
 
 func (s *NonBlockingUploader) sendWork(worker chan *domain.WorkUnit) {
-	data := <-s.internalDataChan
-	workU := &domain.WorkUnit{
-		Filename: *s.filePathProvider.Filename(),
-		Prefix:   *s.filePathProvider.Prefix(),
-		Data:     data,
-	}
+	select {
+	case <-s.ctx.Done(): //TODO: this is ugly. We shopuldn't need to hear for done on 2 places
+		s.WorkersReady <- worker
+		return
+	case data := <-s.internalDataChan:
+		workU := &domain.WorkUnit{
+			Filename: *s.filePathProvider.Filename(),
+			Prefix:   *s.filePathProvider.Prefix(),
+			Data:     data,
+		}
 
-	worker <- workU
+		worker <- workU
+		s.updateEnqueuedItemsMetric()
+	}
 }
 
 func (s *NonBlockingUploader) dataDropped(data []byte) {
@@ -134,5 +112,38 @@ func (s *NonBlockingUploader) dataDropped(data []byte) {
 
 func (s *NonBlockingUploader) updateEnqueuedItemsMetric() {
 	itemsCount := len(s.internalDataChan)
-	s.enqueuedItemsGauge.WithLabelValues().Set(float64(itemsCount))
+	s.metrics.enqueuedItems(itemsCount)
+}
+
+func (s *NonBlockingUploader) shutdown() {
+	s.setShutdown()
+
+	workerShutdownCounter := 0
+
+	for {
+		worker := <-s.WorkersReady
+		dataPendingExists := len(s.internalDataChan) > 0
+
+		if dataPendingExists {
+			s.sendWork(worker)
+		} else {
+			workerShutdownCounter++
+			allWorkersShutdown := workerShutdownCounter == s.workersCount
+
+			if allWorkersShutdown {
+				// close(s.WorkersReady)
+				// close(s.internalDataChan)
+				//TODO (jademcosta): this throws a race error. The problem is that close() needs
+				// synchronization structures. On the other hand, I don't wanna make workers use a Mutex
+				// right now, so I'm leaving the channels without being closed.
+				return
+			}
+		}
+	}
+}
+
+func (s *NonBlockingUploader) setShutdown() {
+	s.shutdownMutex.Lock()
+	defer s.shutdownMutex.Unlock()
+	s.shuttingDown = true
 }

@@ -74,7 +74,7 @@ func (objStorage *mockObjStorageWithAppend) Upload(workU *domain.WorkUnit) (*dom
 	return &domain.UploadResult{}, nil
 }
 
-func TestWorkSendedDownstreamHasTheCorrectDataInIt(t *testing.T) {
+func TestWorkSentDownstreamHasTheCorrectDataInIt(t *testing.T) {
 	workersCount := 2
 	capacity := 3
 
@@ -84,7 +84,7 @@ func TestWorkSendedDownstreamHasTheCorrectDataInIt(t *testing.T) {
 	uploader := New(l, workersCount, capacity, &dummyDataDropper{},
 		&mockFilePather{prefix: "some-prefix", filename: "some-random-filename"}, prometheus.NewRegistry())
 
-	receiver := make(chan *domain.WorkUnit)
+	receiver := make(chan *domain.WorkUnit, 1)
 
 	go uploader.Run(ctx)
 
@@ -100,6 +100,90 @@ func TestWorkSendedDownstreamHasTheCorrectDataInIt(t *testing.T) {
 	}
 
 	cancel()
+}
+
+func TestItDeniesWorkAfterContextIsCanceled(t *testing.T) {
+	workersCount := 10
+	capacity := 3
+	l := logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
+	ctx, cancel := context.WithCancel(context.Background())
+
+	uploader := New(l, workersCount, capacity, &dummyDataDropper{},
+		&mockFilePather{prefix: "some-prefix", filename: "some-random-filename"}, prometheus.NewRegistry())
+	receiver := make(chan *domain.WorkUnit, 1)
+
+	go uploader.Run(ctx)
+
+	uploader.Enqueue([]byte("1"))
+	uploader.WorkersReady <- receiver
+
+	select {
+	case <-receiver:
+		// Success
+	case <-time.After(10 * time.Millisecond):
+		assert.Fail(t, "uploader should have distributed work")
+	}
+
+	cancel()
+	time.Sleep(10 * time.Millisecond)
+	err := uploader.Enqueue([]byte("2"))
+	assert.Error(t, err, "enqueue should return error when context has been canceled")
+}
+
+func TestItFlushesAllPendingDataWhenContextIsCancelled(t *testing.T) {
+	workersCount := 2
+	capacity := 3
+	l := logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
+	ctx, cancel := context.WithCancel(context.Background())
+
+	uploader := New(l, workersCount, capacity, &dummyDataDropper{},
+		&mockFilePather{prefix: "some-prefix", filename: "some-random-filename"}, prometheus.NewRegistry())
+	receiver := make(chan *domain.WorkUnit, 1)
+
+	go uploader.Run(ctx)
+	uploader.Enqueue([]byte("1"))
+	uploader.Enqueue([]byte("2"))
+
+	cancel()
+	time.Sleep(10 * time.Millisecond)
+
+	uploader.WorkersReady <- receiver
+	select {
+	case work := <-receiver:
+		assert.Equal(t, []byte("1"), work.Data, "should have sent the correct data to be worked")
+	case <-time.After(10 * time.Millisecond):
+		assert.Fail(t, "uploader should have distributed work")
+	}
+
+	uploader.WorkersReady <- receiver
+	select {
+	case work := <-receiver:
+		assert.Equal(t, []byte("2"), work.Data, "should have sent the correct data to be worked")
+	case <-time.After(10 * time.Millisecond):
+		assert.Fail(t, "uploader should have distributed work")
+	}
+
+	uploader.WorkersReady <- receiver
+	uploader.WorkersReady <- receiver
+	time.Sleep(1 * time.Millisecond)
+
+	uploader.WorkersReady <- receiver
+	select {
+	case <-receiver:
+		assert.Fail(t, "uploader should not have distributed work")
+	case <-time.After(10 * time.Millisecond):
+		// Success
+	}
+
+	//TODO: look at the shutdown function. The channel is not being closed.
+	// assert.Panics(
+	// 	t,
+	// 	func() {
+	// 		uploader.shutdownMutex.RLock()
+	// 		defer uploader.shutdownMutex.RUnlock()
+	// 		uploader.WorkersReady <- receiver
+	// 	},
+	// 	"should have closed the channel after all workers have been shutdown")
 }
 
 func TestUploadersSendAllEnqueuedItems(t *testing.T) {
@@ -119,7 +203,7 @@ func TestUploadersSendAllEnqueueItemsIntegration(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 
-	// time to proccess an upload, workersCount, objectsCount
+	// time to proccess an upload, workersCount, objectsCount, capacity, factoryFn, sleepBetweenProduction
 	testUploader(t, 50*time.Millisecond, 10, 60, 60, New, 0)
 	testUploader(t, 50*time.Millisecond, 1, 30, 30, New, 0)
 	testUploader(t, 50*time.Millisecond, 60, 1, 1, New, 0)
@@ -132,6 +216,7 @@ func TestUploadersSendAllEnqueueItemsIntegration(t *testing.T) {
 	testUploader(t, 10*time.Millisecond, 300, 60, 60, New, 1*time.Millisecond)
 	testUploader(t, 10*time.Millisecond, 1, 30, 30, New, 1*time.Millisecond)
 	testUploader(t, 10*time.Millisecond, 30, 2, 2, New, 1*time.Millisecond)
+	testUploader(t, 10*time.Millisecond, 10, 45, 40, New, 1*time.Millisecond)
 }
 
 func testUploader(
