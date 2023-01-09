@@ -91,6 +91,7 @@ func testWithBatchSize(t *testing.T, path string, conf *config.Config, l *zap.Su
 		assert.NoError(t, err, "enqueueing items should not return error")
 		assert.Equal(t, 200, response.StatusCode, "data enqueueing should have been successful")
 		response.Body.Close()
+		time.Sleep(1 * time.Millisecond)
 	}
 	time.Sleep(10 * time.Millisecond)
 

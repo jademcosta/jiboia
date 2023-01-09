@@ -1,6 +1,7 @@
 package non_blocking_bucket
 
 import (
+	"container/list"
 	"context"
 	"errors"
 	"sync"
@@ -22,11 +23,12 @@ type BucketAccumulator struct {
 	separatorLen     int
 	internalDataChan chan []byte //TODO: should we expose this for a distributor to be able to run a select on multiple channels?
 	dataDropper      domain.DataDropper
-	current          [][]byte // TODO: replace this with a linked-list. The trashing of having to reallocate a new array is not worth the simplicity
-	next             domain.DataFlow
-	metrics          *metricCollector
-	shutdownMutex    sync.RWMutex
-	shuttingDown     bool
+	// current          [][]byte // TODO: replace this with a linked-list. The trashing of having to reallocate a new array is not worth the simplicity
+	currentList   *list.List
+	next          domain.DataFlow
+	metrics       *metricCollector
+	shutdownMutex sync.RWMutex
+	shuttingDown  bool
 }
 
 func New(
@@ -60,9 +62,10 @@ func New(
 		separatorLen:     len(separator),
 		internalDataChan: make(chan []byte, queueCapacity),
 		dataDropper:      dataDropper,
-		current:          make([][]byte, 0), // TODO: make([][]byte, 0, 2)
-		next:             next,
-		metrics:          metrics,
+		// current:          make([][]byte, 0), // TODO: make([][]byte, 0, 2)
+		next:        next,
+		metrics:     metrics,
+		currentList: list.New(),
 	}
 }
 
@@ -130,7 +133,8 @@ func (b *BucketAccumulator) append(data []byte) {
 		b.flush()
 	}
 
-	b.current = append(b.current, data)
+	// b.current = append(b.current, data)
+	b.currentList.PushBack(data)
 
 	if bufferLenAfterAppend == b.limitOfBytes {
 		b.flush()
@@ -138,27 +142,29 @@ func (b *BucketAccumulator) append(data []byte) {
 }
 
 func (b *BucketAccumulator) flush() {
-	chunksCount := len(b.current)
+	chunksCount := b.currentList.Len()
 	if chunksCount == 0 {
 		return
 	}
 
 	mergedDataLen := b.currentBufferLen()
-	mergedData := make([]byte, mergedDataLen)
+	mergedData := make([]byte, mergedDataLen) //TODO: use len as cap instead of len
 
 	var position int
-	var isLastChunk bool
-	for i := 0; i < chunksCount; i++ {
-		position += copy(mergedData[position:], b.current[i])
-
-		isLastChunk = i >= (chunksCount - 1)
-		if !isLastChunk {
+	isFirstChunk := true
+	for elem := b.currentList.Front(); elem != nil; elem = elem.Next() {
+		if isFirstChunk {
+			isFirstChunk = false
+		} else {
 			position += copy(mergedData[position:], b.separator)
 		}
+
+		data := elem.Value.([]byte)
+		position += copy(mergedData[position:], data)
 	}
 
 	b.next.Enqueue(mergedData)
-	b.current = make([][]byte, 0)
+	b.currentList.Init()
 	b.metrics.increaseNextCounter()
 }
 
@@ -166,11 +172,11 @@ func (b *BucketAccumulator) currentBufferLen() int {
 	// TODO: save this result in a variable so we don't call it multiple times?
 	separatorLen := b.separatorLen
 	var total int
-
-	for _, data := range b.current {
-		total += len(data)
+	for elem := b.currentList.Front(); elem != nil; elem = elem.Next() {
+		total += len(elem.Value.([]byte))
 		total += separatorLen
 	}
+
 	total -= separatorLen
 	return total
 }
