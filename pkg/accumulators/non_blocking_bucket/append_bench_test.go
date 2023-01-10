@@ -1,5 +1,8 @@
 package non_blocking_bucket
 
+// This test is to be used in case we need to improve the algorithm of the accumulator
+// internal storage, used to accumulate data.
+
 import (
 	"fmt"
 	"math/rand"
