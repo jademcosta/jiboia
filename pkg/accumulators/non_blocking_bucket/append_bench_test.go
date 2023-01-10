@@ -17,8 +17,6 @@ import (
 var letters = []rune("abcdefghijklmnopqrstuvwxyz")
 var r1 *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
 
-var holder []byte
-
 var inputTable = []struct {
 	payloadSize int
 }{
