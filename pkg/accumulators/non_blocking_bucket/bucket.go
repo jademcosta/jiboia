@@ -60,7 +60,7 @@ func New(
 		separatorLen:     len(separator),
 		internalDataChan: make(chan []byte, queueCapacity),
 		dataDropper:      dataDropper,
-		current:          make([][]byte, 0), // TODO: make([][]byte, 0, 2)
+		current:          make([][]byte, 0, 1024), // TODO: make([][]byte, 0, 2)
 		next:             next,
 		metrics:          metrics,
 	}
@@ -158,7 +158,7 @@ func (b *BucketAccumulator) flush() {
 	}
 
 	b.next.Enqueue(mergedData)
-	b.current = make([][]byte, 0)
+	b.current = b.current[:0]
 	b.metrics.increaseNextCounter()
 }
 
