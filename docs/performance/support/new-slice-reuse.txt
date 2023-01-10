@@ -1,0 +1,10 @@
+goos: darwin
+goarch: amd64
+pkg: github.com/jademcosta/jiboia/pkg/accumulators/non_blocking_bucket
+cpu: Intel(R) Core(TM) i7-7660U CPU @ 2.50GHz
+BenchmarkAccumulatorAppend/input_size_100-4         	    1440	    777895 ns/op	 2258310 B/op	   11113 allocs/op
+BenchmarkAccumulatorAppend/input_size_1000-4        	     331	   3717196 ns/op	20769561 B/op	   11113 allocs/op
+BenchmarkAccumulatorAppend/input_size_74382-4       	       4	 256584642 ns/op	1565894432 B/op	   11132 allocs/op
+BenchmarkAccumulatorAppend/input_size_382399-4      	       1	1262744424 ns/op	7683813168 B/op	   11152 allocs/op
+PASS
+ok  	github.com/jademcosta/jiboia/pkg/accumulators/non_blocking_bucket	7.063s

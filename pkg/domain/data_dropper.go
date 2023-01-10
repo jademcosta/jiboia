@@ -44,5 +44,5 @@ func NewObservableDataDropper(l *zap.SugaredLogger, metricRegistry *prometheus.R
 
 func (dropper *ObservableDataDropper) Drop(data []byte) {
 	dropper.counter.WithLabelValues(dropper.componentOwner).Inc()
-	dropper.l.Warn("data has just been dropped", "size_in_bytes", len(data), "subject", dropper.componentOwner)
+	dropper.l.Warnw("data has just been dropped", "size_in_bytes", len(data), "subject", dropper.componentOwner)
 }

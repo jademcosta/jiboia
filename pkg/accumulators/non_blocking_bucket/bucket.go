@@ -22,7 +22,7 @@ type BucketAccumulator struct {
 	separatorLen     int
 	internalDataChan chan []byte //TODO: should we expose this for a distributor to be able to run a select on multiple channels?
 	dataDropper      domain.DataDropper
-	current          [][]byte // TODO: replace this with a linked-list. The trashing of having to reallocate a new array is not worth the simplicity
+	current          [][]byte
 	next             domain.DataFlow
 	metrics          *metricCollector
 	shutdownMutex    sync.RWMutex
@@ -60,7 +60,7 @@ func New(
 		separatorLen:     len(separator),
 		internalDataChan: make(chan []byte, queueCapacity),
 		dataDropper:      dataDropper,
-		current:          make([][]byte, 0), // TODO: make([][]byte, 0, 2)
+		current:          make([][]byte, 0, 1024), //TODO: create the initial size based on the capacity
 		next:             next,
 		metrics:          metrics,
 	}
@@ -158,7 +158,7 @@ func (b *BucketAccumulator) flush() {
 	}
 
 	b.next.Enqueue(mergedData)
-	b.current = make([][]byte, 0)
+	b.current = b.current[:0]
 	b.metrics.increaseNextCounter()
 }
 
