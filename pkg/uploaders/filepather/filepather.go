@@ -30,6 +30,6 @@ func (fp *FilePather) Filename() *string {
 
 //TODO: turn this into an []string so we have space to other file systems separators (other than "/")
 func (fp *FilePather) Prefix() *string {
-	prefix := fmt.Sprintf("%s/%s/%s/", fp.dtProvider.Date(), fp.dtProvider.Hour(), fp.randomPrefix)
+	prefix := fmt.Sprintf("date=%s/hour=%s/%s/", fp.dtProvider.Date(), fp.dtProvider.Hour(), fp.randomPrefix)
 	return &prefix
 }

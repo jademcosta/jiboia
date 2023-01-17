@@ -47,7 +47,12 @@ func TestRandomFilename(t *testing.T) {
 
 	// String format is f1f9ef42-324b-40c2-bb1e-eddadfeef330
 	for _, current := range results {
-		assert.Regexp(t, regexp.MustCompile("[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}"), current)
+		assert.Regexp(
+			t,
+			regexp.MustCompile("[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}"),
+			current,
+			"should return a string with a UUID format",
+		)
 	}
 }
 
@@ -58,7 +63,7 @@ func TestPrefixContainsDateAndHour(t *testing.T) {
 	prefix := *sut.Prefix()
 
 	// Last chunck format is f1f9ef42-324b-40c2-bb1e-eddadfeef330
-	assert.Regexp(t, regexp.MustCompile("2022-02-20/23/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}"),
+	assert.Regexp(t, regexp.MustCompile("date=2022-02-20/hour=23/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}"),
 		prefix, "prefix should contain datime information")
 }
 
@@ -77,7 +82,7 @@ func TestPrefixLastChunkIsFixed(t *testing.T) {
 	// Last chunck format is f1f9ef42-324b-40c2-bb1e-eddadfeef330
 
 	for _, prefix := range prefixes {
-		assert.Equal(t, fmt.Sprintf("2022-02-20/23/%s/", lastChunk),
+		assert.Equal(t, fmt.Sprintf("date=2022-02-20/hour=23/%s/", lastChunk),
 			prefix, "prefix should contain always the same random UUID as last chunk")
 	}
 }
