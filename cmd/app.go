@@ -57,7 +57,7 @@ func (a *app) start() {
 		a.conf.Flow.MaxConcurrentUploads,
 		a.conf.Flow.QueueMaxSize,
 		domain.NewObservableDataDropper(a.log, metricRegistry, "uploader"),
-		filepather.New(datetimeprovider.New()),
+		filepather.New(datetimeprovider.New(), 1),
 		metricRegistry)
 
 	uploaderContext, uploaderCancel := context.WithCancel(context.Background())
