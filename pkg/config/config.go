@@ -28,6 +28,7 @@ type FlowConfig struct {
 	Type                 string `yaml:"type"`
 	QueueMaxSize         int    `yaml:"in_memory_queue_max_size"`
 	MaxConcurrentUploads int    `yaml:"max_concurrent_uploads"`
+	PathPrefixCount      int    `yaml:"path_prefix_count"`
 	//TODO: Use it on workers.
 	MaxRetries int `yaml:"max_retries"`
 	//TODO: Use it on workers.
@@ -53,6 +54,12 @@ type ObjectStorage struct {
 	Config interface{} `yaml:"config"`
 }
 
+func init() {
+	allowedVals = map[string][]string{
+		"log.level": {"debug", "info", "warn", "error"},
+	}
+}
+
 func New(confData []byte) (*Config, error) {
 	c := &Config{
 		Log: LogConfig{
@@ -67,6 +74,7 @@ func New(confData []byte) (*Config, error) {
 		Flow: FlowConfig{
 			Timeout:              30,
 			MaxConcurrentUploads: 500,
+			PathPrefixCount:      1,
 		},
 	}
 
@@ -101,10 +109,5 @@ func allowed(group []string, elem string) bool {
 }
 
 func allowedValues(key string) []string {
-	if len(allowedVals) == 0 {
-		allowedVals = map[string][]string{
-			"log.level": {"debug", "info", "warn", "error"},
-		}
-	}
 	return allowedVals[key]
 }

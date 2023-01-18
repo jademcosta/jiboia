@@ -12,6 +12,9 @@ flow:
   max_concurrent_uploads: 50
   max_retries: 3
   timeout: 120
+  # This is used on the object storage. It tells how many different dynamic prefixes it will use.
+  # Increase it in case you are receiving too many rate-limits.
+  path_prefix_count: 1
   accumulator:
     size_in_bytes: 2097152 # 2MB
     separator: "__n__"
