@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager/s3manageriface"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"go.uber.org/zap"
@@ -34,7 +35,7 @@ type S3Bucket struct {
 	region          string
 	fixedPrefix     string
 	timeoutInMillis int64
-	uploader        *s3manager.Uploader
+	uploader        s3manageriface.UploaderAPI
 	log             *zap.SugaredLogger
 }
 
