@@ -21,7 +21,6 @@ func TestDefaultValues(t *testing.T) {
 	assert.Equal(t, 9010, conf.Api.Port, "default for api.port config doesn't match")
 	assert.Equal(t, 500, conf.Flow.MaxConcurrentUploads, "default for flow.max_concurrent_uploads config doesn't match")
 	assert.Equal(t, 0, conf.Flow.MaxRetries, "default for flow.max_retries config doesn't match")
-	assert.Equal(t, 30, conf.Flow.Timeout, "default for flow.timeout config doesn't match")
 	assert.Equal(t, 1, conf.Flow.PathPrefixCount, "default value for flow path_prefix_count should be 1")
 }
 
@@ -41,7 +40,6 @@ flow:
   max_concurrent_uploads: 50
   max_retries: 3
   path_prefix_count: 7
-  timeout: 120
   accumulator:
     size_in_bytes: 2097152 # 2MB
     separator: "_a_"
@@ -78,7 +76,6 @@ flow:
 	assert.Equal(t, 1000, conf.Flow.QueueMaxSize, "should have parsed the correct flow.in_memory_queue_max_size")
 	assert.Equal(t, 50, conf.Flow.MaxConcurrentUploads, "should have parsed the correct flow.max_concurrent_uploads")
 	assert.Equal(t, 3, conf.Flow.MaxRetries, "should have parsed the correct flow.max_retries")
-	assert.Equal(t, 120, conf.Flow.Timeout, "should have parsed the correct flow.timeout")
 	assert.Equal(t, 7, conf.Flow.PathPrefixCount, "should have parsed the correct flow.path_prefix_count")
 
 	assert.Equal(t, 2097152, conf.Flow.Accumulator.SizeInBytes, "should have parsed the correct flow.accumulator.size_in_bytes")

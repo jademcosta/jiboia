@@ -30,9 +30,7 @@ type FlowConfig struct {
 	MaxConcurrentUploads int    `yaml:"max_concurrent_uploads"`
 	PathPrefixCount      int    `yaml:"path_prefix_count"`
 	//TODO: Use it on workers.
-	MaxRetries int `yaml:"max_retries"`
-	//TODO: Use it on workers.
-	Timeout       int           `yaml:"timeout"` // TODO: allow this to have a unity
+	MaxRetries    int           `yaml:"max_retries"`
 	Accumulator   Accumulator   `yaml:"accumulator"`
 	ExternalQueue ExternalQueue `yaml:"external_queue"`
 	ObjectStorage ObjectStorage `yaml:"object_storage"`
@@ -72,7 +70,6 @@ func New(confData []byte) (*Config, error) {
 		},
 
 		Flow: FlowConfig{
-			Timeout:              30,
 			MaxConcurrentUploads: 500,
 			PathPrefixCount:      1,
 		},
