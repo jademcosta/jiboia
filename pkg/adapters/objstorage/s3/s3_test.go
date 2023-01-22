@@ -1,6 +1,7 @@
 package s3
 
 import (
+	"io/ioutil"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -28,7 +29,7 @@ func (mock *mockedAWSS3Uploader) UploadWithContext(ctx aws.Context, input *s3man
 
 func TestItParsesWorkUnitIntoUploadInput(t *testing.T) {
 	l := logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
-	c := &Config{}
+	c := &Config{Bucket: "some_bucket_name"}
 
 	sut, err := New(l, c)
 	assert.NoError(t, err, "should not error on New")
@@ -43,6 +44,14 @@ func TestItParsesWorkUnitIntoUploadInput(t *testing.T) {
 
 	sut.Upload(workU)
 
-	assert.Len(t, mockUploader.calledWith, 1, "should have called the uploader with 1")
+	assert.Len(t, mockUploader.calledWith, 1, "should have called the uploader with 1 workUnit")
+	input := mockUploader.calledWith[0]
 
+	buf, err := ioutil.ReadAll(input.Body)
+	assert.NoError(t, err, "reading the sent body should not error")
+	assert.Equal(t, workU.Data, buf, "the data sent to S3 should be equals to the one in workUnit")
+
+	assert.Equal(t, workU.Prefix+"/"+workU.Filename, *input.Key, "the file key should be built using prefixes and filename from work unit")
+
+	assert.Equal(t, c.Bucket, *input.Bucket, "the bucket name should be the same from config")
 }
