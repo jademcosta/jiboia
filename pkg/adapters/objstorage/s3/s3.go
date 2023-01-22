@@ -91,7 +91,7 @@ func (bucket *S3Bucket) Upload(workU *domain.WorkUnit) (*domain.UploadResult, er
 
 	uploadInfo, err := bucket.doUpload(uploadInput)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error when uploading to S3: %w", err)
 	}
 
 	result := &domain.UploadResult{
