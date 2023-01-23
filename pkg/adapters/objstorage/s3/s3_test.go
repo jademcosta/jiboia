@@ -18,12 +18,17 @@ type mockedAWSS3Uploader struct {
 	calledWith []*s3manager.UploadInput
 	location   string
 	err        error
+	answer     *s3manager.UploadOutput
 }
 
 func (mock *mockedAWSS3Uploader) Upload(input *s3manager.UploadInput, opts ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error) {
 	mock.calledWith = append(mock.calledWith, input)
 	if mock.err != nil {
 		return nil, mock.err
+	}
+
+	if mock.answer != nil {
+		return mock.answer, nil
 	}
 	return &s3manager.UploadOutput{Location: mock.location}, nil
 }
@@ -32,6 +37,10 @@ func (mock *mockedAWSS3Uploader) UploadWithContext(ctx aws.Context, input *s3man
 	mock.calledWith = append(mock.calledWith, input)
 	if mock.err != nil {
 		return nil, mock.err
+	}
+
+	if mock.answer != nil {
+		return mock.answer, nil
 	}
 	return &s3manager.UploadOutput{Location: mock.location}, nil
 }
@@ -146,3 +155,37 @@ func TestReturnsTheUploadError(t *testing.T) {
 	assert.ErrorIs(t, err, uploadErr, "should return the error the S3 dependency returned, wrapped")
 	assert.ErrorContains(t, err, "some random error", "should return the error the S3 dependency returned, wrapped")
 }
+
+func TestReturnsDataBasedOnUploadReturn(t *testing.T) {
+	l := logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
+	c := &Config{Bucket: "some_bucket_name", Region: "my_region", Prefix: "mypref"}
+
+	mockUploader := &mockedAWSS3Uploader{
+		calledWith: make([]*s3manager.UploadInput, 0),
+		answer:     &s3manager.UploadOutput{Location: "some_location"},
+	}
+
+	sut, err := New(l, c)
+	assert.NoError(t, err, "should not error on New")
+
+	sut.uploader = mockUploader
+
+	workU := &domain.WorkUnit{
+		Filename: "my_filename",
+		Prefix:   "a/rand/om/prefix",
+		Data:     []byte("A data for input"),
+	}
+
+	upResult, err := sut.Upload(workU)
+
+	assert.Len(t, mockUploader.calledWith, 1, "should have called the uploader with 1 workUnit")
+	assert.NoError(t, err, "should not return an error")
+
+	assert.Equal(t, "some_location", upResult.URL, "should have the uploadOutput Location field as URL field")
+	assert.Equal(t, "my_region", upResult.Region, "should have the region we provide in config as upload output region")
+	assert.Equal(t, "some_bucket_name", upResult.Bucket, "should have the bucket name we provide in config as upload bucket")
+	assert.Equal(t, 16, upResult.SizeInBytes, "should calculate the size in bytes based on the data we passed to Upload")
+	assert.Equal(t, "mypref/a/rand/om/prefix/my_filename", upResult.Path, "should return the same path the object was uploaded to")
+}
+
+// TODO: Test the timeout
