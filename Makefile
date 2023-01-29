@@ -1,5 +1,5 @@
 GOCMD=go
-GOTEST=$(GOCMD) test
+GOTEST=gotestsum --format pkgname --
 GOVET=$(GOCMD) vet
 BINARY_NAME=jiboia
 VERSION?=0.0.0
@@ -17,7 +17,7 @@ all: help
 ## Test:
 test: ## Run all the tests
 	$(GOCMD) clean -testcache
-	$(GOTEST) -v -race -timeout 90s ./...
+	$(GOTEST) -race -timeout 90s ./...
 
 # test-fuzz: ## Run fuzzing tests
 # 	$(GOCMD) clean -testcache
@@ -25,7 +25,7 @@ test: ## Run all the tests
 
 test-unit: ## Runs only fast tests
 	$(GOCMD) clean -testcache
-	$(GOTEST) -v -short -timeout 20s ./...
+	$(GOTEST) -short -timeout 20s ./...
 
 test-e2e-aws-ci: ## Run tests against AWS, on the CI
 	envsubst < test/config-aws-ci-without-values.yaml > test/config-aws-ci.yaml
@@ -38,6 +38,9 @@ coverage: ## Run the tests of the project and export the coverage
 	$(GOCMD) clean -testcache
 	$(GOTEST) -timeout 30s -cover -covermode=count -coverprofile=profile.cov ./...
 	$(GOCMD) tool cover -func profile.cov
+
+install-test-tools:
+	$(GOCMD) install gotest.tools/gotestsum@latest
 
 ## Lint:
 lint: ## Run all available linters
