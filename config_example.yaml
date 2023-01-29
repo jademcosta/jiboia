@@ -6,19 +6,34 @@ api:
   port: 9099
 
 flow:
+  # The name of the flow. This will be used on logs/metrics and on the URL to intest
+  # data on this flow
   name: "my-flow"
+  # Only async works for now
   type: async
+  # The amount of items in memory, waiting to be uploaded. If this queue is full,
+  # data starts to be dropped (lost).
   in_memory_queue_max_size: 1000
+  # How many workers will exist to upload files, in parallel. Each worker uploads only 1
+  # file at a time (before asking for more work)
   max_concurrent_uploads: 50
+  # Unused for now
   max_retries: 3
   # This is used on the object storage. It tells how many different dynamic prefixes it will use.
-  # Increase it in case you are receiving too many rate-limits.
+  # Increase it in case you are receiving too many rate-limit errors.
   path_prefix_count: 1
+  # Optional. This component merges data into memory until a user defined limit, and then sends
+  # it forward to be uploaded into S3
   accumulator:
+    # The size it will accumulate in memory before sending the merge data to be uploaded
     size_in_bytes: 2097152 # 2MB
+    # [Optional] The separator it will use to merge the chuncks of data
     separator: "__n__"
+    # The internal queue of this component. This serves as a buffer for data yet to be merged.
+    # The minimum allowed is 30 (if you put less than this it will get overwritten)
     queue_capacity: 0
   external_queue:
+    # Available values: noop, sqs. noop is for when you don't want to use any queue.
     type: sqs
     config:
       url: "queue-url"
@@ -26,6 +41,7 @@ flow:
       access_key: ""
       secret_key: ""
   object_storage:
+    # Available values: s3, localstorage.
     type: s3
     config:
       # How much time to wait before considering that the upload failed and canceling it.
@@ -37,46 +53,3 @@ flow:
       prefix: ""
       access_key: ""
       secret_key: ""
-
-#tracing config
-
-
-# type: S3
-# config:
-#   bucket: ""
-#   endpoint: ""
-#   region: ""
-#   aws_sdk_auth: false
-#   access_key: ""
-#   insecure: false
-#   signature_version2: false
-#   secret_key: ""
-#   put_user_metadata: {}
-#   http_config:
-#     idle_conn_timeout: 1m30s
-#     response_header_timeout: 2m
-#     insecure_skip_verify: false
-#     tls_handshake_timeout: 10s
-#     expect_continue_timeout: 1s
-#     max_idle_conns: 100
-#     max_idle_conns_per_host: 100
-#     max_conns_per_host: 0
-#     tls_config:
-#       ca_file: ""
-#       cert_file: ""
-#       key_file: ""
-#       server_name: ""
-#       insecure_skip_verify: false
-#     disable_compression: false
-#   trace:
-#     enable: false
-#   list_objects_version: ""
-#   bucket_lookup_type: auto
-#   part_size: 67108864
-#   sse_config:
-#     type: ""
-#     kms_key_id: ""
-#     kms_encryption_context: {}
-#     encryption_key: ""
-#   sts_endpoint: ""
-# prefix: ""
