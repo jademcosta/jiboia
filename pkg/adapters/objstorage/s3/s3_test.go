@@ -1,10 +1,12 @@
 package s3
 
 import (
+	"context"
 	"errors"
 	"io/ioutil"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
@@ -15,10 +17,11 @@ import (
 )
 
 type mockedAWSS3Uploader struct {
-	calledWith []*s3manager.UploadInput
-	location   string
-	err        error
-	answer     *s3manager.UploadOutput
+	calledWith        []*s3manager.UploadInput
+	calledWithContext []context.Context
+	location          string
+	err               error
+	answer            *s3manager.UploadOutput
 }
 
 func (mock *mockedAWSS3Uploader) Upload(input *s3manager.UploadInput, opts ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error) {
@@ -35,6 +38,10 @@ func (mock *mockedAWSS3Uploader) Upload(input *s3manager.UploadInput, opts ...fu
 
 func (mock *mockedAWSS3Uploader) UploadWithContext(ctx aws.Context, input *s3manager.UploadInput, opts ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error) {
 	mock.calledWith = append(mock.calledWith, input)
+	if ctx != nil {
+		mock.calledWithContext = append(mock.calledWithContext, ctx)
+	}
+
 	if mock.err != nil {
 		return nil, mock.err
 	}
@@ -188,4 +195,34 @@ func TestReturnsDataBasedOnUploadReturn(t *testing.T) {
 	assert.Equal(t, "mypref/a/rand/om/prefix/my_filename", upResult.Path, "should return the same path the object was uploaded to")
 }
 
-// TODO: Test the timeout
+func TestBuildsAContextWithTimeoutAndSendItForward(t *testing.T) {
+	l := logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
+	c := &Config{Bucket: "some_bucket_name", Region: "my_region", Prefix: "mypref", TimeoutInMillis: 1000}
+
+	mockUploader := &mockedAWSS3Uploader{
+		calledWith:        make([]*s3manager.UploadInput, 0),
+		calledWithContext: make([]context.Context, 0),
+		answer:            &s3manager.UploadOutput{Location: "some_location"},
+	}
+
+	sut, err := New(l, c)
+	assert.NoError(t, err, "should not error on New")
+
+	sut.uploader = mockUploader
+
+	workU := &domain.WorkUnit{
+		Filename: "my_filename",
+		Prefix:   "a/rand/om/prefix",
+		Data:     []byte("A data for input"),
+	}
+
+	_, _ = sut.Upload(workU)
+
+	assert.Len(t, mockUploader.calledWith, 1, "should have called the uploader with 1 workUnit")
+	assert.Len(t, mockUploader.calledWithContext, 1, "should have called the uploader with 1 context")
+
+	ctx := mockUploader.calledWithContext[0]
+	deadline, ok := ctx.Deadline()
+	assert.True(t, ok, "context used should have a deadline")
+	assert.InDelta(t, float64(time.Now().Unix()), float64(deadline.Unix()), float64(2), "context should have deadline of now+1sec")
+}
