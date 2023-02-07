@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"fmt"
@@ -78,7 +78,7 @@ func testWithBatchSize(t *testing.T, path string, conf *config.Config, l *zap.Su
 	createDir(t, testingPath)
 
 	app := New(conf, l)
-	go app.start()
+	go app.Start()
 	time.Sleep(2 * time.Second)
 
 	generatedValues := make([]string, 0, len(stringExemplarSizes))
