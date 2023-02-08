@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/jademcosta/jiboia/pkg/app"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/spf13/cobra"
@@ -38,7 +39,7 @@ func start(cmd *cobra.Command, args []string) {
 	config := initializeConfig()
 	l := initializeLogger(*config)
 
-	New(config, l).start()
+	app.New(config, l).Start()
 }
 
 func initializeConfig() *config.Config {

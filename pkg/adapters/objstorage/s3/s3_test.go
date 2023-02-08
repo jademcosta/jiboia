@@ -3,7 +3,7 @@ package s3
 import (
 	"context"
 	"errors"
-	"io/ioutil"
+	"io"
 	"strings"
 	"testing"
 	"time"
@@ -72,7 +72,7 @@ func TestItParsesWorkUnitIntoUploadInput(t *testing.T) {
 	assert.Len(t, mockUploader.calledWith, 1, "should have called the uploader with 1 workUnit")
 	input := mockUploader.calledWith[0]
 
-	buf, err := ioutil.ReadAll(input.Body)
+	buf, err := io.ReadAll(input.Body)
 	assert.NoError(t, err, "reading the sent body should not error")
 	assert.Equal(t, workU.Data, buf, "the data sent to S3 should be equals to the one in workUnit")
 
