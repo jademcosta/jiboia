@@ -37,9 +37,9 @@ func TestPassesDataFlow(t *testing.T) {
 	l := logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
 	c := &config.Config{
 		Api: config.ApiConfig{Port: 9111},
-		Flow: config.FlowConfig{
+		Flows: []config.FlowConfig{config.FlowConfig{
 			Name: "flow-1",
-		},
+		}},
 	}
 
 	mockDF := &mockDataFlow{
@@ -66,9 +66,9 @@ func TestAnswersAnErrorIfNoBodyIsSent(t *testing.T) {
 	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
 	c := &config.Config{
 		Api: config.ApiConfig{Port: 9111},
-		Flow: config.FlowConfig{
+		Flows: []config.FlowConfig{config.FlowConfig{
 			Name: "flow-1",
-		},
+		}},
 	}
 
 	mockDF := &mockDataFlow{
@@ -93,9 +93,9 @@ func TestAnswersErrorIfEnqueueingFails(t *testing.T) {
 	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
 	c := &config.Config{
 		Api: config.ApiConfig{Port: 9111},
-		Flow: config.FlowConfig{
+		Flows: []config.FlowConfig{config.FlowConfig{
 			Name: "flow-1",
-		},
+		}},
 	}
 
 	mockDF := &dummyAlwaysFailDataFlow{}
@@ -118,9 +118,9 @@ func TestVersionEndpointInformsTheVersion(t *testing.T) {
 	c := &config.Config{
 		Version: "some-version!",
 		Api:     config.ApiConfig{Port: 9111},
-		Flow: config.FlowConfig{
+		Flows: []config.FlowConfig{config.FlowConfig{
 			Name: "flow-1",
-		},
+		}},
 	}
 
 	mockDF := &dummyAlwaysFailDataFlow{}

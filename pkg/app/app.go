@@ -54,17 +54,17 @@ func (a *App) Start() {
 
 	uploader := nonblocking_uploader.New(
 		a.logger,
-		a.conf.Flow.MaxConcurrentUploads,
-		a.conf.Flow.QueueMaxSize,
+		a.conf.Flows[0].MaxConcurrentUploads,
+		a.conf.Flows[0].QueueMaxSize,
 		domain.NewObservableDataDropper(a.logger, metricRegistry, "uploader"),
-		filepather.New(datetimeprovider.New(), a.conf.Flow.PathPrefixCount),
+		filepather.New(datetimeprovider.New(), a.conf.Flows[0].PathPrefixCount),
 		metricRegistry)
 
 	uploaderContext, uploaderCancel := context.WithCancel(context.Background())
 
 	var flowEntrypoint domain.DataFlow
 	flowEntrypoint = uploader
-	accumulator := createAccumulator(a.logger, &a.conf.Flow.Accumulator, metricRegistry, uploader)
+	accumulator := createAccumulator(a.logger, &a.conf.Flows[0].Accumulator, metricRegistry, uploader)
 	if accumulator != nil {
 		flowEntrypoint = accumulator
 	}
@@ -126,7 +126,7 @@ func (a *App) Start() {
 		},
 	)
 
-	for i := 0; i < a.conf.Flow.MaxConcurrentUploads; i++ {
+	for i := 0; i < a.conf.Flows[0].MaxConcurrentUploads; i++ {
 		worker := uploaders.NewWorker(a.logger, objStorage, externalQueue, uploader.WorkersReady, metricRegistry)
 		go worker.Run(context.Background()) //TODO: we need to make uploader completelly stop the workers, for safety
 	}
@@ -169,7 +169,7 @@ func registerDefaultMetrics(registry *prometheus.Registry) {
 }
 
 func createObjStorage(l *zap.SugaredLogger, c *config.Config, metricRegistry *prometheus.Registry) uploaders.ObjStorage {
-	objStorage, err := objstorage.New(l, metricRegistry, &c.Flow.ObjectStorage)
+	objStorage, err := objstorage.New(l, metricRegistry, &c.Flows[0].ObjectStorage)
 	if err != nil {
 		l.Panic("error creating object storage", "error", err)
 	}
@@ -178,7 +178,7 @@ func createObjStorage(l *zap.SugaredLogger, c *config.Config, metricRegistry *pr
 }
 
 func createExternalQueue(l *zap.SugaredLogger, c *config.Config, metricRegistry *prometheus.Registry) uploaders.ExternalQueue {
-	externalQueue, err := external_queue.New(l, metricRegistry, &c.Flow.ExternalQueue)
+	externalQueue, err := external_queue.New(l, metricRegistry, &c.Flows[0].ExternalQueue)
 	if err != nil {
 		l.Panic("error creating external queue", "error", err)
 	}

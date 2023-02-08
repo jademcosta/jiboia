@@ -5,51 +5,51 @@ log:
 api:
   port: 9099
 
-flow:
-  # The name of the flow. This will be used on logs/metrics and on the URL to intest
-  # data on this flow
-  name: "my-flow"
-  # Only async works for now
-  type: async
-  # The amount of items in memory, waiting to be uploaded. If this queue is full,
-  # data starts to be dropped (lost).
-  in_memory_queue_max_size: 1000
-  # How many workers will exist to upload files, in parallel. Each worker uploads only 1
-  # file at a time (before asking for more work)
-  max_concurrent_uploads: 50
-  # Unused for now
-  max_retries: 3
-  # This is used on the object storage. It tells how many different dynamic prefixes it will use.
-  # Increase it in case you are receiving too many rate-limit errors.
-  path_prefix_count: 1
-  # Optional. This component merges data into memory until a user defined limit, and then sends
-  # it forward to be uploaded into S3
-  accumulator:
-    # The size it will accumulate in memory before sending the merge data to be uploaded
-    size_in_bytes: 2097152 # 2MB
-    # [Optional] The separator it will use to merge the chuncks of data
-    separator: "__n__"
-    # The internal queue of this component. This serves as a buffer for data yet to be merged.
-    # The minimum allowed is 30 (if you put less than this it will get overwritten)
-    queue_capacity: 0
-  external_queue:
-    # Available values: noop, sqs. noop is for when you don't want to use any queue.
-    type: sqs
-    config:
-      url: "queue-url"
-      region: aws-region-here
-      access_key: ""
-      secret_key: ""
-  object_storage:
-    # Available values: s3, localstorage.
-    type: s3
-    config:
-      # How much time to wait before considering that the upload failed and canceling it.
-      # Zero means no timeout.
-      timeout_milliseconds: 120000 #120sec
-      bucket: some-bucket-name-here
-      region: aws-region-here
-      endpoint: ""
-      prefix: ""
-      access_key: ""
-      secret_key: ""
+flows:
+    # The name of the flow. This will be used on logs/metrics and on the URL to insert
+    # data on this flow
+  - name: "my-flow"
+    # Only async works for now
+    type: async
+    # The amount of items in memory, waiting to be uploaded. If this queue is full,
+    # data starts to be dropped (lost).
+    in_memory_queue_max_size: 1000
+    # How many workers will exist to upload files, in parallel. Each worker uploads only 1
+    # file at a time (before asking for more work)
+    max_concurrent_uploads: 50
+    # Unused for now
+    max_retries: 3
+    # This is used on the object storage. It tells how many different dynamic prefixes it will use.
+    # Increase it in case you are receiving too many rate-limit errors.
+    path_prefix_count: 1
+    # Optional. This component merges data into memory until a user defined limit, and then sends
+    # it forward to be uploaded into S3
+    accumulator:
+      # The size it will accumulate in memory before sending the merge data to be uploaded
+      size_in_bytes: 2097152 # 2MB
+      # [Optional] The separator it will use to merge the chuncks of data
+      separator: "__n__"
+      # The internal queue of this component. This serves as a buffer for data yet to be merged.
+      # The minimum allowed is 30 (if you put less than this it will get overwritten)
+      queue_capacity: 0
+    external_queue:
+      # Available values: noop, sqs. noop is for when you don't want to use any queue.
+      type: sqs
+      config:
+        url: "queue-url"
+        region: aws-region-here
+        access_key: ""
+        secret_key: ""
+    object_storage:
+      # Available values: s3, localstorage.
+      type: s3
+      config:
+        # How much time to wait before considering that the upload failed and canceling it.
+        # Zero means no timeout.
+        timeout_milliseconds: 120000 #120sec
+        bucket: some-bucket-name-here
+        region: aws-region-here
+        endpoint: ""
+        prefix: ""
+        access_key: ""
+        secret_key: ""

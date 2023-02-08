@@ -9,10 +9,10 @@ import (
 var allowedVals map[string][]string
 
 type Config struct {
-	Log     LogConfig  `yaml:"log"`
-	Version string     `yaml:"version"` //FIXME: fill the version
-	Api     ApiConfig  `yaml:"api"`
-	Flow    FlowConfig `yaml:"flow"`
+	Log     LogConfig    `yaml:"log"`
+	Version string       `yaml:"version"` //FIXME: fill the version
+	Api     ApiConfig    `yaml:"api"`
+	Flows   []FlowConfig `yaml:"flows"`
 }
 
 type LogConfig struct {
@@ -68,11 +68,6 @@ func New(confData []byte) (*Config, error) {
 		Api: ApiConfig{
 			Port: 9010,
 		},
-
-		Flow: FlowConfig{
-			MaxConcurrentUploads: 500,
-			PathPrefixCount:      1,
-		},
 	}
 
 	err := yaml.Unmarshal(confData, &c)
@@ -85,6 +80,8 @@ func New(confData []byte) (*Config, error) {
 		return nil, err
 	}
 
+	fillDefaults(c)
+
 	return c, nil
 }
 
@@ -92,6 +89,10 @@ func validateConfig(c *Config) error {
 
 	if !allowed(allowedValues("log.level"), c.Log.Level) {
 		panic(fmt.Sprintf("log level should be one of %v", allowedValues("log.level")))
+	}
+
+	if len(c.Flows) == 0 {
+		panic("at least one flow should be declared")
 	}
 	return nil
 }
@@ -107,4 +108,17 @@ func allowed(group []string, elem string) bool {
 
 func allowedValues(key string) []string {
 	return allowedVals[key]
+}
+
+func fillDefaults(c *Config) {
+
+	for i := 0; i < len(c.Flows); i++ {
+		if c.Flows[i].MaxConcurrentUploads == 0 {
+			c.Flows[i].MaxConcurrentUploads = 500
+		}
+
+		if c.Flows[i].PathPrefixCount == 0 {
+			c.Flows[i].PathPrefixCount = 1
+		}
+	}
 }

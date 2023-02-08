@@ -17,7 +17,7 @@ func RegisterIngestingRoutes(
 	sizeHistogram *prometheus.HistogramVec,
 	flow domain.DataFlow,
 ) {
-	api.mux.Post(fmt.Sprintf("/%s/async_ingestion", c.Flow.Name), asyncIngestion(api.log, sizeHistogram, flow))
+	api.mux.Post(fmt.Sprintf("/%s/async_ingestion", c.Flows[0].Name), asyncIngestion(api.log, sizeHistogram, flow))
 }
 
 func asyncIngestion(l *zap.SugaredLogger, sizeHistogram *prometheus.HistogramVec, flow domain.DataFlow) http.HandlerFunc {
