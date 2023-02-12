@@ -1,9 +1,50 @@
 package flow
 
-type Flow struct {
-	Name string
+import (
+	"context"
+
+	"github.com/jademcosta/jiboia/pkg/domain"
+	"github.com/jademcosta/jiboia/pkg/uploaders"
+)
+
+type Runnable interface {
+	Run(context.Context)
 }
 
-func New() *Flow {
-	return &Flow{}
+type RunnableFlow interface {
+	domain.DataFlow
+	Runnable
+}
+
+type Flow struct {
+	Name          string
+	objStorage    uploaders.ObjStorage
+	externalQueue uploaders.ExternalQueue
+	Uploader      RunnableFlow
+	Accumulator   RunnableFlow
+	Entrypoint    domain.DataFlow
+	Workers       []Runnable
+}
+
+func New(objStorage uploaders.ObjStorage,
+	externalQueue uploaders.ExternalQueue,
+	uploader RunnableFlow,
+	accumulator RunnableFlow,
+	workers []Runnable) *Flow {
+
+	var entryPoint domain.DataFlow
+	if accumulator == nil {
+		entryPoint = uploader
+	} else {
+		entryPoint = accumulator
+	}
+
+	return &Flow{
+		objStorage:    objStorage,
+		externalQueue: externalQueue,
+		Uploader:      uploader,
+		Accumulator:   accumulator,
+		Entrypoint:    entryPoint,
+		Workers:       workers,
+	}
 }

@@ -21,7 +21,7 @@ type ObservableDataDropper struct {
 	counter        *prometheus.CounterVec
 }
 
-func NewObservableDataDropper(l *zap.SugaredLogger, metricRegistry *prometheus.Registry, owner string) DataDropper {
+func NewObservableDataDropper(l *zap.SugaredLogger, metricRegistry *prometheus.Registry, owner string) *ObservableDataDropper {
 	dropCounter := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name:      "dropped_packages_total",

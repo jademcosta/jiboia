@@ -81,15 +81,15 @@ flows:
 	assert.Equal(t, 3, conf.Flows[0].MaxRetries, "should have parsed the correct flow.max_retries")
 	assert.Equal(t, 7, conf.Flows[0].PathPrefixCount, "should have parsed the correct flow.path_prefix_count")
 
-	// assert.Equal(t, 2097152, conf.Flow.Accumulator.SizeInBytes, "should have parsed the correct flow.accumulator.size_in_bytes")
-	// assert.Equal(t, "_a_", conf.Flow.Accumulator.Separator, "should have parsed the correct flow.accumulator.separator")
-	// assert.Equal(t, 123, conf.Flow.Accumulator.QueueCapacity, "should have parsed the correct flow.accumulator.queue_capacity")
+	assert.Equal(t, 2097152, conf.Flows[0].Accumulator.SizeInBytes, "should have parsed the correct flow.accumulator.size_in_bytes")
+	assert.Equal(t, "_a_", conf.Flows[0].Accumulator.Separator, "should have parsed the correct flow.accumulator.separator")
+	assert.Equal(t, 123, conf.Flows[0].Accumulator.QueueCapacity, "should have parsed the correct flow.accumulator.queue_capacity")
 
-	// assert.Equal(t, "sqs", conf.Flow.ExternalQueue.Type, "should have parsed the correct flow.external_queue.type")
-	// assert.NotNil(t, conf.Flow.ExternalQueue.Config, "should maintain the value of flow.external_queue.config")
+	assert.Equal(t, "sqs", conf.Flows[0].ExternalQueue.Type, "should have parsed the correct flow.external_queue.type")
+	assert.NotNil(t, conf.Flows[0].ExternalQueue.Config, "should maintain the value of flow.external_queue.config")
 
-	// assert.Equal(t, "s3", conf.Flow.ObjectStorage.Type, "should have parsed the correct flow.object_storage.type")
-	// assert.NotNil(t, conf.Flow.ObjectStorage.Config, "should maintain the value of flow.object_storage.config")
+	assert.Equal(t, "s3", conf.Flows[0].ObjectStorage.Type, "should have parsed the correct flow.object_storage.type")
+	assert.NotNil(t, conf.Flows[0].ObjectStorage.Config, "should maintain the value of flow.object_storage.config")
 }
 
 func TestValidateLogLevelValues(t *testing.T) {

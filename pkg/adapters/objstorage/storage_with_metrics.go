@@ -26,7 +26,7 @@ type storageWithMetrics struct {
 	wrappedName          string
 }
 
-func NewStorageWithMetrics(storage ObjStorageWithMetadata, metricRegistry *prometheus.Registry) ObjStorageWithMetadata {
+func NewStorageWithMetrics(storage ObjStorageWithMetadata, metricRegistry *prometheus.Registry) *storageWithMetrics {
 	latencyHistogram := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:      "upload_latency_seconds",

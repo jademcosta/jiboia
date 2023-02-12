@@ -26,7 +26,7 @@ type queueWithMetrics struct {
 	wrappedName           string
 }
 
-func NewExternalQueueWithMetrics(queue ExtQueueWithMetadata, metricRegistry *prometheus.Registry) ExtQueueWithMetadata {
+func NewExternalQueueWithMetrics(queue ExtQueueWithMetadata, metricRegistry *prometheus.Registry) *queueWithMetrics {
 	latencyHistogram := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:      "put_latency_seconds",

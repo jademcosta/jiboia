@@ -72,7 +72,7 @@ func (s *NonBlockingUploader) Enqueue(data []byte) error {
 	return nil
 }
 
-//Run should be called in a new goroutine
+// Run should be called in a new goroutine
 func (s *NonBlockingUploader) Run(ctx context.Context) {
 	s.log.Info("starting non-blocking uploader loop")
 	s.ctx = ctx

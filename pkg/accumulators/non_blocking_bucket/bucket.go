@@ -86,7 +86,7 @@ func (b *BucketAccumulator) Enqueue(data []byte) error {
 	return nil
 }
 
-//Run should be called in a new goroutine
+// Run should be called in a new goroutine
 func (b *BucketAccumulator) Run(ctx context.Context) {
 	// TODO: add flush based on time
 	b.l.Info("Starting non-blocking accumulator")

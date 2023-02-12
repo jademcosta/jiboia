@@ -10,7 +10,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jademcosta/jiboia/pkg/adapters/http_in/httpmiddleware"
 	"github.com/jademcosta/jiboia/pkg/config"
-	"github.com/jademcosta/jiboia/pkg/domain"
+	"github.com/jademcosta/jiboia/pkg/domain/flow"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
@@ -25,7 +25,7 @@ type Api struct {
 	port int
 }
 
-func New(l *zap.SugaredLogger, c *config.Config, metricRegistry *prometheus.Registry, flow domain.DataFlow) *Api {
+func New(l *zap.SugaredLogger, c *config.Config, metricRegistry *prometheus.Registry, flows []*flow.Flow) *Api {
 
 	router := chi.NewRouter()
 
