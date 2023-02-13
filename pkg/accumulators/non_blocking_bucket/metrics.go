@@ -1,6 +1,10 @@
 package non_blocking_bucket
 
-import "github.com/prometheus/client_golang/prometheus"
+import (
+	"sync"
+
+	"github.com/prometheus/client_golang/prometheus"
+)
 
 type metricCollector struct {
 	enqueueCounter     *prometheus.CounterVec
@@ -8,6 +12,8 @@ type metricCollector struct {
 	capacityGauge      *prometheus.GaugeVec
 	enqueuedItemsGauge *prometheus.GaugeVec
 }
+
+var ensureMetricRegisteringOnce sync.Once
 
 func NewMetricCollector(metricRegistry *prometheus.Registry) *metricCollector {
 	enqueueCounter := prometheus.NewCounterVec(
@@ -46,7 +52,9 @@ func NewMetricCollector(metricRegistry *prometheus.Registry) *metricCollector {
 		[]string{},
 	)
 
-	metricRegistry.MustRegister(enqueueCounter, nextCounter, capacityGauge, enqueuedItemsGauge)
+	ensureMetricRegisteringOnce.Do(func() {
+		metricRegistry.MustRegister(enqueueCounter, nextCounter, capacityGauge, enqueuedItemsGauge)
+	})
 
 	return &metricCollector{
 		enqueueCounter:     enqueueCounter,
