@@ -1,5 +1,5 @@
 GOCMD=go
-GOTEST=gotestsum --format pkgname --
+GOTEST=$(GOCMD) test
 GOVET=$(GOCMD) vet
 BINARY_NAME=jiboia
 VERSION?=0.0.0
