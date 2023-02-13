@@ -43,11 +43,26 @@ flows:
       type: localstorage
       config:
         path: "/tmp/int_test"
+  - name: "flow_without_accumulator"
+    type: async
+    in_memory_queue_max_size: 4
+    max_concurrent_uploads: 2
+    max_retries: 3
+    timeout: 120
+    external_queue:
+      type: noop
+      config: ""
+    object_storage:
+      type: localstorage
+      config:
+        path: "/tmp/int_test2"
 `
+
+var testingPath2 string = "/tmp/int_test2"
 
 var testingPath string = "/tmp/int_test"
 
-var letters = []rune("abcdefghijklmnopqrstuvwxyz")
+var characters = []rune("abcdefghijklmnopqrstuvwxyz")
 
 func TestAppIntegration(t *testing.T) {
 	if testing.Short() {
@@ -59,6 +74,7 @@ func TestAppIntegration(t *testing.T) {
 	l := logger.New(conf)
 
 	deleteDir(t, testingPath)
+	deleteDir(t, testingPath2)
 
 	testWithBatchSize(t, testingPath, conf, l, 21)
 	testWithBatchSize(t, testingPath, conf, l, 20)
@@ -75,7 +91,10 @@ func testWithBatchSize(t *testing.T, path string, conf *config.Config, l *zap.Su
 	stringExemplarSizes ...int) {
 
 	deleteDir(t, testingPath)
+	deleteDir(t, testingPath2)
+
 	createDir(t, testingPath)
+	createDir(t, testingPath2)
 
 	app := New(conf, l)
 	go app.Start()
@@ -111,13 +130,13 @@ func randSeq(n int) string {
 	b := make([]rune, n)
 
 	for i := range b {
-		b[i] = letters[r1.Intn(len(letters))]
+		b[i] = characters[r1.Intn(len(characters))]
 	}
 	return string(b)
 }
 
 func deleteDir(t *testing.T, dir string) {
-	err := os.RemoveAll(testingPath)
+	err := os.RemoveAll(dir)
 	assert.NoError(t, err, "should clear the subdir where we will store data")
 	if err != nil {
 		panic(fmt.Sprintf("error deleting the dir where stored data is: %v", err))
@@ -125,7 +144,7 @@ func deleteDir(t *testing.T, dir string) {
 }
 
 func createDir(t *testing.T, dir string) {
-	err := os.MkdirAll(testingPath, os.ModePerm)
+	err := os.MkdirAll(dir, os.ModePerm)
 	assert.NoError(t, err, "should create subdir to store data")
 	if err != nil {
 		panic(fmt.Sprintf("error creating the dir to store the data: %v", err))
@@ -134,7 +153,7 @@ func createDir(t *testing.T, dir string) {
 
 func readFilesFromDir(t *testing.T, dir string) []string {
 	resultingValues := make([]string, 0)
-	err := filepath.WalkDir(testingPath, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() {
 			return err
 		}

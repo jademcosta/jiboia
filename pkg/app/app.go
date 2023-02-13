@@ -53,7 +53,10 @@ func (a *App) Start() {
 	var uploaderShutdownWG sync.WaitGroup
 
 	for _, flowConf := range a.conf.Flows {
-		f := createFlow(a.logger, metricRegistry, flowConf)
+		f, err := createFlow(a.logger, metricRegistry, flowConf)
+		if err != nil {
+			a.logger.Panicf("error creating flow", "error", err)
+		}
 		a.flows = append(a.flows, f)
 	}
 
@@ -87,13 +90,14 @@ func (a *App) Start() {
 
 	for _, flow := range a.flows {
 
-		if flow.Accumulator != nil {
+		flowCopy := flow
+		if flowCopy.Accumulator != nil {
 			uploaderShutdownWG.Add(1)
 			accumulatorContext, accumulatorCancel := context.WithCancel(context.Background())
 
 			g.Add(
 				func() error {
-					flow.Accumulator.Run(accumulatorContext)
+					flowCopy.Accumulator.Run(accumulatorContext)
 					uploaderShutdownWG.Done()
 					return nil
 				},
@@ -107,7 +111,7 @@ func (a *App) Start() {
 
 		g.Add(
 			func() error {
-				flow.Uploader.Run(uploaderContext)
+				flowCopy.Uploader.Run(uploaderContext)
 				return nil
 			},
 			func(error) {
@@ -116,8 +120,9 @@ func (a *App) Start() {
 			},
 		)
 
-		for _, worker := range flow.Workers {
-			go worker.Run(context.Background()) //TODO: we need to make uploader completelly stop the workers, for safety
+		for _, worker := range flowCopy.Workers {
+			workerCopy := worker
+			go workerCopy.Run(context.Background()) //TODO: we need to make uploader completelly stop the workers, for safety
 		}
 	}
 
@@ -177,7 +182,7 @@ func createExternalQueue(l *zap.SugaredLogger, metricRegistry *prometheus.Regist
 }
 
 func createFlow(logger *zap.SugaredLogger, metricRegistry *prometheus.Registry,
-	flowConf config.FlowConfig) *flow.Flow {
+	flowConf config.FlowConfig) (*flow.Flow, error) {
 	externalQueue := createExternalQueue(logger, metricRegistry, flowConf.ExternalQueue)
 	objStorage := createObjStorage(logger, metricRegistry, flowConf.ObjectStorage)
 
