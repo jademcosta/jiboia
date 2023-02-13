@@ -17,7 +17,8 @@ func RegisterIngestingRoutes(
 ) {
 
 	for _, cFlow := range flows {
-		api.mux.Post(fmt.Sprintf("/%s/async_ingestion", cFlow.Name), asyncIngestion(api.log, api.sizeMetric, cFlow.Entrypoint))
+		flowCopy := cFlow
+		api.mux.Post(fmt.Sprintf("/%s/async_ingestion", flowCopy.Name), asyncIngestion(api.log, api.sizeMetric, flowCopy.Entrypoint))
 	}
 }
 
