@@ -60,9 +60,9 @@ flows:
 `
 
 var testingPath2 string = "/tmp/int_test2"
-
 var testingPath string = "/tmp/int_test"
 
+var l *zap.SugaredLogger
 var characters = []rune("abcdefghijklmnopqrstuvwxyz")
 
 func TestAppIntegration(t *testing.T) {
@@ -72,23 +72,23 @@ func TestAppIntegration(t *testing.T) {
 
 	conf, err := config.New([]byte(confWithAccumulator))
 	assert.NoError(t, err, "should initialize config")
-	l := logger.New(conf)
+	l = logger.New(conf)
 
 	deleteDir(t, testingPath)
 	deleteDir(t, testingPath2)
 
-	testWithBatchSize(t, testingPath, conf, l, 21)
-	testWithBatchSize(t, testingPath, conf, l, 20)
-	testWithBatchSize(t, testingPath, conf, l, 11, 5)
-	testWithBatchSize(t, testingPath, conf, l, 12, 5)
-	testWithBatchSize(t, testingPath, conf, l, 13, 5)
-	testWithBatchSize(t, testingPath, conf, l, 10)
-	testWithBatchSize(t, testingPath, conf, l, 18)
-	testWithBatchSize(t, testingPath, conf, l,
+	testWithBatchSize(t, testingPath, conf, 21)
+	testWithBatchSize(t, testingPath, conf, 20)
+	testWithBatchSize(t, testingPath, conf, 11, 5)
+	testWithBatchSize(t, testingPath, conf, 12, 5)
+	testWithBatchSize(t, testingPath, conf, 13, 5)
+	testWithBatchSize(t, testingPath, conf, 10)
+	testWithBatchSize(t, testingPath, conf, 18)
+	testWithBatchSize(t, testingPath, conf,
 		1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21)
 }
 
-func testWithBatchSize(t *testing.T, path string, conf *config.Config, l *zap.SugaredLogger,
+func testWithBatchSize(t *testing.T, path string, conf *config.Config,
 	stringExemplarSizes ...int) {
 
 	deleteDir(t, testingPath)
@@ -111,7 +111,6 @@ func testWithBatchSize(t *testing.T, path string, conf *config.Config, l *zap.Su
 		assert.NoError(t, err, "enqueueing items should not return error")
 		assert.Equal(t, 200, response.StatusCode, "data enqueueing should have been successful")
 		response.Body.Close()
-		time.Sleep(1 * time.Millisecond)
 	}
 	time.Sleep(10 * time.Millisecond)
 
