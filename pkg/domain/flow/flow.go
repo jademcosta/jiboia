@@ -30,8 +30,10 @@ func New(objStorage uploaders.ObjStorage,
 	externalQueue uploaders.ExternalQueue,
 	uploader RunnableFlow,
 	accumulator RunnableFlow,
-	workers []Runnable) *Flow {
+	workers []Runnable,
+	name string) *Flow {
 
+	// FIXME: this needs tests
 	var entryPoint domain.DataFlow
 	if accumulator == nil {
 		entryPoint = uploader
@@ -46,5 +48,6 @@ func New(objStorage uploaders.ObjStorage,
 		Accumulator:   accumulator,
 		Entrypoint:    entryPoint,
 		Workers:       workers,
+		Name:          name,
 	}
 }

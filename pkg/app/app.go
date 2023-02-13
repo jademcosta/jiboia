@@ -176,7 +176,8 @@ func createExternalQueue(l *zap.SugaredLogger, metricRegistry *prometheus.Regist
 	return externalQueue
 }
 
-func createFlow(logger *zap.SugaredLogger, metricRegistry *prometheus.Registry, flowConf config.FlowConfig) *flow.Flow {
+func createFlow(logger *zap.SugaredLogger, metricRegistry *prometheus.Registry,
+	flowConf config.FlowConfig) *flow.Flow {
 	externalQueue := createExternalQueue(logger, metricRegistry, flowConf.ExternalQueue)
 	objStorage := createObjStorage(logger, metricRegistry, flowConf.ObjectStorage)
 
@@ -205,5 +206,5 @@ func createFlow(logger *zap.SugaredLogger, metricRegistry *prometheus.Registry, 
 		workers = append(workers, uploaders.NewWorker(logger, objStorage, externalQueue, uploader.WorkersReady, metricRegistry))
 	}
 
-	return flow.New(objStorage, externalQueue, uploader, accumulator, workers)
+	return flow.New(objStorage, externalQueue, uploader, accumulator, workers, flowConf.Name)
 }
