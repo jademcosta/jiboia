@@ -150,7 +150,7 @@ func (a *App) setupShutdownRelatedActors(g *run.Group) {
 	})
 }
 
-func (a *App) stop() {
+func (a *App) Stop() {
 	a.logger.Debug("app stop called")
 	a.stopFunc()
 }

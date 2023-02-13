@@ -1,4 +1,4 @@
-package app
+package app_test
 
 import (
 	"fmt"
@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jademcosta/jiboia/pkg/app"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/stretchr/testify/assert"
@@ -96,8 +97,8 @@ func testWithBatchSize(t *testing.T, path string, conf *config.Config, l *zap.Su
 	createDir(t, testingPath)
 	createDir(t, testingPath2)
 
-	app := New(conf, l)
-	go app.Start()
+	sut := app.New(conf, l)
+	go sut.Start()
 	time.Sleep(2 * time.Second)
 
 	generatedValues := make([]string, 0, len(stringExemplarSizes))
@@ -114,7 +115,7 @@ func testWithBatchSize(t *testing.T, path string, conf *config.Config, l *zap.Su
 	}
 	time.Sleep(10 * time.Millisecond)
 
-	app.stop()
+	sut.Stop()
 	time.Sleep(1 * time.Second)
 
 	resultingValues := readFilesFromDir(t, testingPath)
