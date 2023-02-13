@@ -19,12 +19,14 @@ import (
 const API_COMPONENT_TYPE = "api"
 
 type Api struct {
-	mux  *chi.Mux
-	log  *zap.SugaredLogger
-	srv  *http.Server
-	port int
+	mux        *chi.Mux
+	log        *zap.SugaredLogger
+	srv        *http.Server
+	port       int
+	sizeMetric *prometheus.HistogramVec
 }
 
+// TODO: remove the full config dep
 func New(l *zap.SugaredLogger, c *config.Config, metricRegistry *prometheus.Registry, flows []*flow.Flow) *Api {
 
 	router := chi.NewRouter()
@@ -36,9 +38,9 @@ func New(l *zap.SugaredLogger, c *config.Config, metricRegistry *prometheus.Regi
 		port: c.Api.Port,
 	}
 
-	registerDefaultMiddlewares(api, l.With(logger.COMPONENT_KEY, API_COMPONENT_TYPE), metricRegistry)
+	registerDefaultMiddlewares(api, metricRegistry)
 
-	sizeHist := prometheus.NewHistogramVec(
+	api.sizeMetric = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:      "request_body_size_bytes",
 			Subsystem: "http",
@@ -51,11 +53,9 @@ func New(l *zap.SugaredLogger, c *config.Config, metricRegistry *prometheus.Regi
 		[]string{"path"},
 	)
 
-	metricRegistry.MustRegister(sizeHist)
+	metricRegistry.MustRegister(api.sizeMetric)
 
-	//TODO: I'm using static approach to be able to release it asap. In the future the route naming
-	//creation needs to be dynamic
-	RegisterIngestingRoutes(api, c, sizeHist, flow) //TODO: add middleware that will return syntax error in case a request comes with no body
+	RegisterIngestingRoutes(api, flows) //TODO: add middleware that will return syntax error in case a request comes with no body
 	RegisterOperatinalRoutes(api, c, metricRegistry)
 	api.mux.Mount("/debug", middleware.Profiler())
 
@@ -76,9 +76,9 @@ func (api *Api) Shutdown() error {
 	return err
 }
 
-func registerDefaultMiddlewares(api *Api, l *zap.SugaredLogger, metricRegistry *prometheus.Registry) {
+func registerDefaultMiddlewares(api *Api, metricRegistry *prometheus.Registry) {
 	//Middlewares on the top wrap the ones in the bottom
-	api.mux.Use(httpmiddleware.NewLoggingMiddleware(l))
+	api.mux.Use(httpmiddleware.NewLoggingMiddleware(api.log))
 	api.mux.Use(httpmiddleware.NewMetricsMiddleware(metricRegistry))
-	api.mux.Use(httpmiddleware.NewRecoverer(l))
+	api.mux.Use(httpmiddleware.NewRecoverer(api.log))
 }

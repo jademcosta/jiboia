@@ -9,10 +9,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func RegisterOperatinalRoutes(api *Api, c *config.Config, metricRegistry *prometheus.Registry) {
+func RegisterOperatinalRoutes(api *Api, conf *config.Config, metricRegistry *prometheus.Registry) {
 	metricHandler := promhttp.HandlerFor(metricRegistry, promhttp.HandlerOpts{Registry: metricRegistry})
 
-	api.mux.Get("/version", versionHandler(c))
+	api.mux.Get("/version", versionHandler(conf))
 	api.mux.Handle("/metrics", metricHandler)
 
 	api.mux.Get("/healthy", func(w http.ResponseWriter, r *http.Request) {
