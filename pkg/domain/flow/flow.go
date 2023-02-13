@@ -2,6 +2,7 @@ package flow
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/uploaders"
@@ -31,9 +32,12 @@ func New(objStorage uploaders.ObjStorage,
 	uploader RunnableFlow,
 	accumulator RunnableFlow,
 	workers []Runnable,
-	name string) *Flow {
+	name string) (*Flow, error) {
 
-	// FIXME: this needs tests
+	if uploader == nil {
+		return nil, fmt.Errorf("uploader cannot be nil")
+	}
+
 	var entryPoint domain.DataFlow
 	if accumulator == nil {
 		entryPoint = uploader
@@ -49,5 +53,5 @@ func New(objStorage uploaders.ObjStorage,
 		Entrypoint:    entryPoint,
 		Workers:       workers,
 		Name:          name,
-	}
+	}, nil
 }
