@@ -60,15 +60,33 @@ func TestAppIntegration(t *testing.T) {
 
 	deleteDir(t, testingPath)
 
-	testWithBatchSize(t, testingPath, conf, l, 21)
-	testWithBatchSize(t, testingPath, conf, l, 20)
-	testWithBatchSize(t, testingPath, conf, l, 11, 5)
-	testWithBatchSize(t, testingPath, conf, l, 12, 5)
-	testWithBatchSize(t, testingPath, conf, l, 13, 5)
-	testWithBatchSize(t, testingPath, conf, l, 10)
-	testWithBatchSize(t, testingPath, conf, l, 18)
-	testWithBatchSize(t, testingPath, conf, l,
-		1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21)
+	t.Run("with not enough data to hit the limit", func(t *testing.T) {
+		testWithBatchSize(t, testingPath, conf, l, 1)
+		testWithBatchSize(t, testingPath, conf, l, 1, 2)
+		testWithBatchSize(t, testingPath, conf, l, 1, 1, 1)
+	})
+
+	t.Run("single entry", func(t *testing.T) {
+		testWithBatchSize(t, testingPath, conf, l, 10)
+		testWithBatchSize(t, testingPath, conf, l, 18)
+		testWithBatchSize(t, testingPath, conf, l, 19)
+		testWithBatchSize(t, testingPath, conf, l, 20)
+		testWithBatchSize(t, testingPath, conf, l, 21)
+	})
+
+	t.Run("dual entries", func(t *testing.T) {
+		testWithBatchSize(t, testingPath, conf, l, 11, 5)
+		testWithBatchSize(t, testingPath, conf, l, 11, 6)
+		testWithBatchSize(t, testingPath, conf, l, 10, 6)
+		testWithBatchSize(t, testingPath, conf, l, 12, 5)
+		testWithBatchSize(t, testingPath, conf, l, 13, 5)
+	})
+
+	t.Run("multiple entries", func(t *testing.T) {
+		testWithBatchSize(t, testingPath, conf, l,
+			1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22)
+	})
+
 }
 
 func testWithBatchSize(t *testing.T, path string, conf *config.Config, l *zap.SugaredLogger,
