@@ -77,18 +77,41 @@ func TestAppIntegration(t *testing.T) {
 	deleteDir(t, testingPath)
 	deleteDir(t, testingPath2)
 
-	testWithBatchSize(t, testingPath, conf, 21)
-	testWithBatchSize(t, testingPath, conf, 20)
-	testWithBatchSize(t, testingPath, conf, 11, 5)
-	testWithBatchSize(t, testingPath, conf, 12, 5)
-	testWithBatchSize(t, testingPath, conf, 13, 5)
-	testWithBatchSize(t, testingPath, conf, 10)
-	testWithBatchSize(t, testingPath, conf, 18)
-	testWithBatchSize(t, testingPath, conf,
-		1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21)
+	t.Run("with size bigger than accumulator limit", func(t *testing.T) {
+		testWithBatchSize(t, conf, 21)
+	})
+
+	t.Run("with size exactly with the accumulator limit", func(t *testing.T) {
+		testWithBatchSize(t, conf, 20)
+	})
+
+	t.Run("with size below the accumulator limit", func(t *testing.T) {
+		testWithBatchSize(t, conf, 18)
+	})
+
+	t.Run("with size way below the accumulator limit", func(t *testing.T) {
+		testWithBatchSize(t, conf, 10)
+	})
+
+	t.Run("with 2 items smaller than accumulator limit", func(t *testing.T) {
+		testWithBatchSize(t, conf, 11, 5)
+	})
+
+	t.Run("with 2 items which result in exactly the accumulator limit", func(t *testing.T) {
+		testWithBatchSize(t, conf, 12, 5)
+	})
+
+	t.Run("with 2 items which result in above the accumulator limit", func(t *testing.T) {
+		testWithBatchSize(t, conf, 13, 5)
+	})
+
+	t.Run("with multiple items", func(t *testing.T) {
+		testWithBatchSize(t, conf,
+			1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21)
+	})
 }
 
-func testWithBatchSize(t *testing.T, path string, conf *config.Config,
+func testWithBatchSize(t *testing.T, conf *config.Config,
 	stringExemplarSizes ...int) {
 
 	deleteDir(t, testingPath)
@@ -111,16 +134,23 @@ func testWithBatchSize(t *testing.T, path string, conf *config.Config,
 		assert.NoError(t, err, "enqueueing items should not return error")
 		assert.Equal(t, 200, response.StatusCode, "data enqueueing should have been successful")
 		response.Body.Close()
+
+		response, err = http.Post("http://localhost:9099/flow_without_accumulator/async_ingestion", "application/json", strings.NewReader(expected))
+		assert.NoError(t, err, "enqueueing items should not return error")
+		assert.Equal(t, 200, response.StatusCode, "data enqueueing should have been successful")
+		response.Body.Close()
 	}
 	time.Sleep(10 * time.Millisecond)
 
 	sut.Stop()
 	time.Sleep(1 * time.Second)
 
-	resultingValues := readFilesFromDir(t, testingPath)
+	resultingValuesFlow1 := readFilesFromDir(t, testingPath)
+	resultingValuesFlow2 := readFilesFromDir(t, testingPath2)
 	expectedValues := assembleResult(20, "_n_", generatedValues)
 
-	assert.ElementsMatch(t, expectedValues, resultingValues, "all the data sent should have been found on the disk")
+	assert.ElementsMatch(t, expectedValues, resultingValuesFlow1, "all the data from first flow should have been found on the disk")
+	assert.ElementsMatch(t, generatedValues, resultingValuesFlow2, "all the data from second flow should have been found on the disk")
 
 	deleteDir(t, testingPath)
 }
