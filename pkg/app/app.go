@@ -17,6 +17,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/datetimeprovider"
 	"github.com/jademcosta/jiboia/pkg/domain"
+	"github.com/jademcosta/jiboia/pkg/domain/flow"
 	"github.com/jademcosta/jiboia/pkg/uploaders"
 	"github.com/jademcosta/jiboia/pkg/uploaders/filepather"
 	"github.com/jademcosta/jiboia/pkg/uploaders/nonblocking_uploader"
@@ -48,28 +49,11 @@ func (a *App) Start() {
 	metricRegistry := prometheus.NewRegistry()
 	registerDefaultMetrics(metricRegistry)
 
-	externalQueue := createExternalQueue(a.logger, a.conf, metricRegistry)
-	objStorage := createObjStorage(a.logger, a.conf, metricRegistry)
+	f := createFlow(a.logger, metricRegistry, a.conf.Flow)
+
 	var uploaderWG sync.WaitGroup
 
-	uploader := nonblocking_uploader.New(
-		a.logger,
-		a.conf.Flow.MaxConcurrentUploads,
-		a.conf.Flow.QueueMaxSize,
-		domain.NewObservableDataDropper(a.logger, metricRegistry, "uploader"),
-		filepather.New(datetimeprovider.New(), a.conf.Flow.PathPrefixCount),
-		metricRegistry)
-
-	uploaderContext, uploaderCancel := context.WithCancel(context.Background())
-
-	var flowEntrypoint domain.DataFlow
-	flowEntrypoint = uploader
-	accumulator := createAccumulator(a.logger, &a.conf.Flow.Accumulator, metricRegistry, uploader)
-	if accumulator != nil {
-		flowEntrypoint = accumulator
-	}
-
-	api := http_in.New(a.logger, a.conf, metricRegistry, flowEntrypoint)
+	api := http_in.New(a.logger, a.conf, metricRegistry, f.Entrypoint)
 
 	//The shutdown of rungroup seems to be executed from a single goroutine. Meaning that if a
 	//waitgroup is added on some interrupt function, it might hang forever.
@@ -98,14 +82,13 @@ func (a *App) Start() {
 		},
 	)
 
-	if accumulator != nil {
+	if f.Accumulator != nil {
 		uploaderWG.Add(1)
-		flowEntrypoint = accumulator
 		accumulatorContext, accumulatorCancel := context.WithCancel(context.Background())
 
 		g.Add(
 			func() error {
-				accumulator.Run(accumulatorContext)
+				f.Accumulator.Run(accumulatorContext)
 				uploaderWG.Done()
 				return nil
 			},
@@ -115,9 +98,10 @@ func (a *App) Start() {
 		)
 	}
 
+	uploaderContext, uploaderCancel := context.WithCancel(context.Background())
 	g.Add(
 		func() error {
-			uploader.Run(uploaderContext)
+			f.Uploader.Run(uploaderContext)
 			return nil
 		},
 		func(error) {
@@ -126,9 +110,9 @@ func (a *App) Start() {
 		},
 	)
 
-	for i := 0; i < a.conf.Flow.MaxConcurrentUploads; i++ {
-		worker := uploaders.NewWorker(a.logger, objStorage, externalQueue, uploader.WorkersReady, metricRegistry)
-		go worker.Run(context.Background()) //TODO: we need to make uploader completelly stop the workers, for safety
+	for _, worker := range f.UploadWorkers {
+		workerCopy := worker
+		go workerCopy.Run(context.Background()) //TODO: we need to make uploader completelly stop the workers, for safety
 	}
 
 	err := g.Run()
@@ -168,8 +152,8 @@ func registerDefaultMetrics(registry *prometheus.Registry) {
 	))
 }
 
-func createObjStorage(l *zap.SugaredLogger, c *config.Config, metricRegistry *prometheus.Registry) uploaders.ObjStorage {
-	objStorage, err := objstorage.New(l, metricRegistry, &c.Flow.ObjectStorage)
+func createObjStorage(l *zap.SugaredLogger, c config.ObjectStorage, metricRegistry *prometheus.Registry) uploaders.ObjStorage {
+	objStorage, err := objstorage.New(l, metricRegistry, &c)
 	if err != nil {
 		l.Panic("error creating object storage", "error", err)
 	}
@@ -177,8 +161,8 @@ func createObjStorage(l *zap.SugaredLogger, c *config.Config, metricRegistry *pr
 	return objStorage
 }
 
-func createExternalQueue(l *zap.SugaredLogger, c *config.Config, metricRegistry *prometheus.Registry) uploaders.ExternalQueue {
-	externalQueue, err := external_queue.New(l, metricRegistry, &c.Flow.ExternalQueue)
+func createExternalQueue(l *zap.SugaredLogger, c config.ExternalQueue, metricRegistry *prometheus.Registry) uploaders.ExternalQueue {
+	externalQueue, err := external_queue.New(l, metricRegistry, &c)
 	if err != nil {
 		l.Panic("error creating external queue", "error", err)
 	}
@@ -186,7 +170,7 @@ func createExternalQueue(l *zap.SugaredLogger, c *config.Config, metricRegistry 
 	return externalQueue
 }
 
-func createAccumulator(l *zap.SugaredLogger, c *config.Accumulator, registry *prometheus.Registry, uploader domain.DataFlow) *non_blocking_bucket.BucketAccumulator {
+func createAccumulator(l *zap.SugaredLogger, c config.Accumulator, registry *prometheus.Registry, uploader domain.DataFlow) *non_blocking_bucket.BucketAccumulator {
 	//TODO: use generic factory
 	if c.SizeInBytes > 0 {
 		return non_blocking_bucket.New(
@@ -198,4 +182,39 @@ func createAccumulator(l *zap.SugaredLogger, c *config.Accumulator, registry *pr
 			uploader, registry)
 	}
 	return nil
+}
+
+func createFlow(logger *zap.SugaredLogger, metricRegistry *prometheus.Registry, conf config.FlowConfig) *flow.Flow {
+	externalQueue := createExternalQueue(logger, conf.ExternalQueue, metricRegistry)
+	objStorage := createObjStorage(logger, conf.ObjectStorage, metricRegistry)
+
+	uploader := nonblocking_uploader.New(
+		logger,
+		conf.MaxConcurrentUploads,
+		conf.QueueMaxSize,
+		domain.NewObservableDataDropper(logger, metricRegistry, "uploader"),
+		filepather.New(datetimeprovider.New(), conf.PathPrefixCount),
+		metricRegistry)
+
+	accumulator := createAccumulator(logger, conf.Accumulator, metricRegistry, uploader)
+
+	f := &flow.Flow{
+		ObjStorage:    objStorage,
+		ExternalQueue: externalQueue,
+		Uploader:      uploader,
+		Accumulator:   accumulator,
+		UploadWorkers: make([]flow.Runnable, 0, conf.MaxConcurrentUploads),
+	}
+
+	for i := 0; i < conf.MaxConcurrentUploads; i++ {
+		worker := uploaders.NewWorker(logger, objStorage, externalQueue, uploader.WorkersReady, metricRegistry)
+		f.UploadWorkers = append(f.UploadWorkers, worker)
+	}
+
+	f.Entrypoint = uploader
+	if accumulator != nil {
+		f.Entrypoint = accumulator
+	}
+
+	return f
 }
