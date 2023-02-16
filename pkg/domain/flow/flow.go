@@ -17,6 +17,7 @@ type DataFlowRunnable interface {
 }
 
 type Flow struct {
+	Name          string
 	ObjStorage    uploaders.ObjStorage
 	ExternalQueue uploaders.ExternalQueue
 	Entrypoint    domain.DataFlow

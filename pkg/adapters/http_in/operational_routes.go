@@ -4,15 +4,14 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func RegisterOperatinalRoutes(api *Api, c *config.Config, metricRegistry *prometheus.Registry) {
+func RegisterOperatinalRoutes(api *Api, version string, metricRegistry *prometheus.Registry) {
 	metricHandler := promhttp.HandlerFor(metricRegistry, promhttp.HandlerOpts{Registry: metricRegistry})
 
-	api.mux.Get("/version", versionHandler(c))
+	api.mux.Get("/version", versionHandler(version))
 	api.mux.Handle("/metrics", metricHandler)
 
 	api.mux.Get("/healthy", func(w http.ResponseWriter, r *http.Request) {
@@ -25,11 +24,11 @@ func RegisterOperatinalRoutes(api *Api, c *config.Config, metricRegistry *promet
 	})
 }
 
-func versionHandler(c *config.Config) http.HandlerFunc {
+func versionHandler(version string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		versionResponse := make(map[string]string)
-		versionResponse["version"] = c.Version
+		versionResponse["version"] = version
 
 		response, err := json.Marshal(versionResponse)
 		if err != nil {

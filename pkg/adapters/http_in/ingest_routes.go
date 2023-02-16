@@ -5,22 +5,20 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/jademcosta/jiboia/pkg/config"
-	"github.com/jademcosta/jiboia/pkg/domain"
+	"github.com/jademcosta/jiboia/pkg/domain/flow"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 )
 
 func RegisterIngestingRoutes(
 	api *Api,
-	c *config.Config,
 	sizeHistogram *prometheus.HistogramVec,
-	flow domain.DataFlow,
+	f *flow.Flow,
 ) {
-	api.mux.Post(fmt.Sprintf("/%s/async_ingestion", c.Flow.Name), asyncIngestion(api.log, sizeHistogram, flow))
+	api.mux.Post(fmt.Sprintf("/%s/async_ingestion", f.Name), asyncIngestion(api.log, sizeHistogram, f))
 }
 
-func asyncIngestion(l *zap.SugaredLogger, sizeHistogram *prometheus.HistogramVec, flow domain.DataFlow) http.HandlerFunc {
+func asyncIngestion(l *zap.SugaredLogger, sizeHistogram *prometheus.HistogramVec, f *flow.Flow) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		//TODO: implement the "with" on the logger and add the "ingestion_type": "async" here on this fn
 
@@ -52,7 +50,7 @@ func asyncIngestion(l *zap.SugaredLogger, sizeHistogram *prometheus.HistogramVec
 
 		l.Debug("data received on async handler", "length", dataLen)
 
-		err = flow.Enqueue(data)
+		err = f.Entrypoint.Enqueue(data)
 		if err != nil {
 			l.Warn("failed while enqueueing data from http request", "error", err)
 			w.Header().Set("Content-Type", "application/json")

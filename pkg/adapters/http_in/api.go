@@ -10,7 +10,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jademcosta/jiboia/pkg/adapters/http_in/httpmiddleware"
 	"github.com/jademcosta/jiboia/pkg/config"
-	"github.com/jademcosta/jiboia/pkg/domain"
+	"github.com/jademcosta/jiboia/pkg/domain/flow"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
@@ -25,15 +25,16 @@ type Api struct {
 	port int
 }
 
-func New(l *zap.SugaredLogger, c *config.Config, metricRegistry *prometheus.Registry, flow domain.DataFlow) *Api {
+func New(l *zap.SugaredLogger, c config.ApiConfig, metricRegistry *prometheus.Registry,
+	appVersion string, f *flow.Flow) *Api {
 
 	router := chi.NewRouter()
 
 	api := &Api{
 		mux:  router,
 		log:  l.With(logger.COMPONENT_KEY, API_COMPONENT_TYPE),
-		srv:  &http.Server{Addr: fmt.Sprintf(":%d", c.Api.Port), Handler: router},
-		port: c.Api.Port,
+		srv:  &http.Server{Addr: fmt.Sprintf(":%d", c.Port), Handler: router},
+		port: c.Port,
 	}
 
 	registerDefaultMiddlewares(api, l.With(logger.COMPONENT_KEY, API_COMPONENT_TYPE), metricRegistry)
@@ -55,8 +56,8 @@ func New(l *zap.SugaredLogger, c *config.Config, metricRegistry *prometheus.Regi
 
 	//TODO: I'm using static approach to be able to release it asap. In the future the route naming
 	//creation needs to be dynamic
-	RegisterIngestingRoutes(api, c, sizeHist, flow) //TODO: add middleware that will return syntax error in case a request comes with no body
-	RegisterOperatinalRoutes(api, c, metricRegistry)
+	RegisterIngestingRoutes(api, sizeHist, f) //TODO: add middleware that will return syntax error in case a request comes with no body
+	RegisterOperatinalRoutes(api, appVersion, metricRegistry)
 	api.mux.Mount("/debug", middleware.Profiler())
 
 	return api
