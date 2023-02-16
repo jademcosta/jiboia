@@ -171,17 +171,13 @@ func createExternalQueue(l *zap.SugaredLogger, c config.ExternalQueue, metricReg
 }
 
 func createAccumulator(l *zap.SugaredLogger, c config.Accumulator, registry *prometheus.Registry, uploader domain.DataFlow) *non_blocking_bucket.BucketAccumulator {
-	//TODO: use generic factory
-	if c.SizeInBytes > 0 {
-		return non_blocking_bucket.New(
-			l,
-			c.SizeInBytes,
-			[]byte(c.Separator),
-			c.QueueCapacity,
-			domain.NewObservableDataDropper(l, registry, "accumulator"),
-			uploader, registry)
-	}
-	return nil
+	return non_blocking_bucket.New(
+		l,
+		c.SizeInBytes,
+		[]byte(c.Separator),
+		c.QueueCapacity,
+		domain.NewObservableDataDropper(l, registry, "accumulator"),
+		uploader, registry)
 }
 
 func createFlow(logger *zap.SugaredLogger, metricRegistry *prometheus.Registry, conf config.FlowConfig) *flow.Flow {
@@ -196,14 +192,15 @@ func createFlow(logger *zap.SugaredLogger, metricRegistry *prometheus.Registry, 
 		filepather.New(datetimeprovider.New(), conf.PathPrefixCount),
 		metricRegistry)
 
-	accumulator := createAccumulator(logger, conf.Accumulator, metricRegistry, uploader)
-
 	f := &flow.Flow{
 		ObjStorage:    objStorage,
 		ExternalQueue: externalQueue,
 		Uploader:      uploader,
-		Accumulator:   accumulator,
 		UploadWorkers: make([]flow.Runnable, 0, conf.MaxConcurrentUploads),
+	}
+
+	if conf.Accumulator.SizeInBytes > 0 {
+		f.Accumulator = createAccumulator(logger, conf.Accumulator, metricRegistry, uploader)
 	}
 
 	for i := 0; i < conf.MaxConcurrentUploads; i++ {
@@ -212,8 +209,8 @@ func createFlow(logger *zap.SugaredLogger, metricRegistry *prometheus.Registry, 
 	}
 
 	f.Entrypoint = uploader
-	if accumulator != nil {
-		f.Entrypoint = accumulator
+	if f.Accumulator != nil {
+		f.Entrypoint = f.Accumulator
 	}
 
 	return f
