@@ -45,11 +45,35 @@ flow:
       path: "/tmp/int_test"
 `
 
+const confWithoutAccumulator = `
+log:
+  level: warn
+  format: json
+
+api:
+  port: 9099
+
+flow:
+  name: "integration_flow"
+  type: async
+  in_memory_queue_max_size: 4
+  max_concurrent_uploads: 3
+  max_retries: 3
+  timeout: 120
+  external_queue:
+    type: noop
+    config: ""
+  object_storage:
+    type: localstorage
+    config:
+      path: "/tmp/int_test"
+`
+
 var testingPath string = "/tmp/int_test"
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyz")
 
-func TestAppIntegration(t *testing.T) {
+func TestAppIntegrationWithAccumulator(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
 	}
@@ -60,19 +84,81 @@ func TestAppIntegration(t *testing.T) {
 
 	deleteDir(t, testingPath)
 
-	testWithBatchSize(t, testingPath, conf, l, 21)
-	testWithBatchSize(t, testingPath, conf, l, 20)
-	testWithBatchSize(t, testingPath, conf, l, 11, 5)
-	testWithBatchSize(t, testingPath, conf, l, 12, 5)
-	testWithBatchSize(t, testingPath, conf, l, 13, 5)
-	testWithBatchSize(t, testingPath, conf, l, 10)
-	testWithBatchSize(t, testingPath, conf, l, 18)
-	testWithBatchSize(t, testingPath, conf, l,
-		1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21)
+	t.Run("with not enough data to hit the limit", func(t *testing.T) {
+		testWithBatchSize(t, testingPath, conf, l, true, 1)
+		testWithBatchSize(t, testingPath, conf, l, true, 1, 2)
+		testWithBatchSize(t, testingPath, conf, l, true, 1, 1, 1)
+	})
+
+	t.Run("single entry", func(t *testing.T) {
+		testWithBatchSize(t, testingPath, conf, l, true, 10)
+		testWithBatchSize(t, testingPath, conf, l, true, 18)
+		testWithBatchSize(t, testingPath, conf, l, true, 19)
+		testWithBatchSize(t, testingPath, conf, l, true, 20)
+		testWithBatchSize(t, testingPath, conf, l, true, 21)
+		testWithBatchSize(t, testingPath, conf, l, true, 55)
+	})
+
+	t.Run("dual entries", func(t *testing.T) {
+		testWithBatchSize(t, testingPath, conf, l, true, 11, 5)
+		testWithBatchSize(t, testingPath, conf, l, true, 11, 6)
+		testWithBatchSize(t, testingPath, conf, l, true, 10, 6)
+		testWithBatchSize(t, testingPath, conf, l, true, 12, 5)
+		testWithBatchSize(t, testingPath, conf, l, true, 13, 5)
+		testWithBatchSize(t, testingPath, conf, l, true, 55, 66)
+	})
+
+	t.Run("multiple entries", func(t *testing.T) {
+		testWithBatchSize(t, testingPath, conf, l, true,
+			1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22)
+	})
+
+}
+
+func TestAppIntegrationWithoutAccumulator(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	conf, err := config.New([]byte(confWithoutAccumulator))
+	assert.NoError(t, err, "should initialize config")
+	l := logger.New(conf)
+
+	deleteDir(t, testingPath)
+
+	t.Run("small data", func(t *testing.T) {
+		testWithBatchSize(t, testingPath, conf, l, false, 1)
+		testWithBatchSize(t, testingPath, conf, l, false, 1, 2)
+		testWithBatchSize(t, testingPath, conf, l, false, 1, 1, 1)
+	})
+
+	t.Run("single entry", func(t *testing.T) {
+		testWithBatchSize(t, testingPath, conf, l, false, 10)
+		testWithBatchSize(t, testingPath, conf, l, false, 18)
+		testWithBatchSize(t, testingPath, conf, l, false, 19)
+		testWithBatchSize(t, testingPath, conf, l, false, 20)
+		testWithBatchSize(t, testingPath, conf, l, false, 21)
+		testWithBatchSize(t, testingPath, conf, l, false, 55)
+	})
+
+	t.Run("dual entries", func(t *testing.T) {
+		testWithBatchSize(t, testingPath, conf, l, false, 11, 5)
+		testWithBatchSize(t, testingPath, conf, l, false, 11, 6)
+		testWithBatchSize(t, testingPath, conf, l, false, 10, 6)
+		testWithBatchSize(t, testingPath, conf, l, false, 12, 5)
+		testWithBatchSize(t, testingPath, conf, l, false, 13, 5)
+		testWithBatchSize(t, testingPath, conf, l, false, 55, 66)
+	})
+
+	t.Run("multiple entries", func(t *testing.T) {
+		testWithBatchSize(t, testingPath, conf, l, false,
+			1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22)
+	})
+
 }
 
 func testWithBatchSize(t *testing.T, path string, conf *config.Config, l *zap.SugaredLogger,
-	stringExemplarSizes ...int) {
+	hasAccumulator bool, stringExemplarSizes ...int) {
 
 	deleteDir(t, testingPath)
 	createDir(t, testingPath)
@@ -99,7 +185,12 @@ func testWithBatchSize(t *testing.T, path string, conf *config.Config, l *zap.Su
 	time.Sleep(1 * time.Second)
 
 	resultingValues := readFilesFromDir(t, testingPath)
-	expectedValues := assembleResult(20, "_n_", generatedValues)
+	var expectedValues []string
+	if hasAccumulator {
+		expectedValues = assembleResult(20, "_n_", generatedValues)
+	} else {
+		expectedValues = generatedValues
+	}
 
 	assert.ElementsMatch(t, expectedValues, resultingValues, "all the data sent should have been found on the disk")
 
