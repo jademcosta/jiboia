@@ -53,7 +53,7 @@ func (a *App) Start() {
 
 	var uploaderWG sync.WaitGroup
 
-	api := http_in.New(a.logger, a.conf, metricRegistry, f.Entrypoint)
+	api := http_in.New(a.logger, a.conf.Api, metricRegistry, a.conf.Version, f)
 
 	//The shutdown of rungroup seems to be executed from a single goroutine. Meaning that if a
 	//waitgroup is added on some interrupt function, it might hang forever.
@@ -180,7 +180,9 @@ func createAccumulator(l *zap.SugaredLogger, c config.Accumulator, registry *pro
 		uploader, registry)
 }
 
-func createFlow(logger *zap.SugaredLogger, metricRegistry *prometheus.Registry, conf config.FlowConfig) *flow.Flow {
+func createFlow(logger *zap.SugaredLogger, metricRegistry *prometheus.Registry,
+	conf config.FlowConfig) *flow.Flow {
+
 	externalQueue := createExternalQueue(logger, conf.ExternalQueue, metricRegistry)
 	objStorage := createObjStorage(logger, conf.ObjectStorage, metricRegistry)
 
@@ -193,6 +195,7 @@ func createFlow(logger *zap.SugaredLogger, metricRegistry *prometheus.Registry, 
 		metricRegistry)
 
 	f := &flow.Flow{
+		Name:          conf.Name,
 		ObjStorage:    objStorage,
 		ExternalQueue: externalQueue,
 		Uploader:      uploader,

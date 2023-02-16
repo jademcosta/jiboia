@@ -10,10 +10,13 @@ import (
 	"testing"
 
 	"github.com/jademcosta/jiboia/pkg/config"
+	"github.com/jademcosta/jiboia/pkg/domain/flow"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 )
+
+const version string = "0.0.0"
 
 type mockDataFlow struct {
 	calledWith [][]byte
@@ -35,18 +38,18 @@ func (mockDF *dummyAlwaysFailDataFlow) Enqueue(data []byte) error {
 
 func TestPassesDataFlow(t *testing.T) {
 	l := logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
-	c := &config.Config{
-		Api: config.ApiConfig{Port: 9111},
-		Flow: config.FlowConfig{
-			Name: "flow-1",
-		},
-	}
+	c := config.ApiConfig{Port: 9111}
 
 	mockDF := &mockDataFlow{
 		calledWith: make([][]byte, 0),
 	}
 
-	api := New(l, c, prometheus.NewRegistry(), mockDF)
+	f := &flow.Flow{
+		Name:       "flow-1",
+		Entrypoint: mockDF,
+	}
+
+	api := New(l, c, prometheus.NewRegistry(), version, f)
 	srvr := httptest.NewServer(api.mux)
 	defer srvr.Close()
 
@@ -64,18 +67,18 @@ func TestPassesDataFlow(t *testing.T) {
 
 func TestAnswersAnErrorIfNoBodyIsSent(t *testing.T) {
 	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
-	c := &config.Config{
-		Api: config.ApiConfig{Port: 9111},
-		Flow: config.FlowConfig{
-			Name: "flow-1",
-		},
-	}
+	c := config.ApiConfig{Port: 9111}
 
 	mockDF := &mockDataFlow{
 		calledWith: make([][]byte, 0),
 	}
 
-	api := New(l, c, prometheus.NewRegistry(), mockDF)
+	f := &flow.Flow{
+		Name:       "flow-1",
+		Entrypoint: mockDF,
+	}
+
+	api := New(l, c, prometheus.NewRegistry(), version, f)
 	srvr := httptest.NewServer(api.mux)
 	defer srvr.Close()
 
@@ -91,16 +94,16 @@ func TestAnswersAnErrorIfNoBodyIsSent(t *testing.T) {
 
 func TestAnswersErrorIfEnqueueingFails(t *testing.T) {
 	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
-	c := &config.Config{
-		Api: config.ApiConfig{Port: 9111},
-		Flow: config.FlowConfig{
-			Name: "flow-1",
-		},
-	}
+	c := config.ApiConfig{Port: 9111}
 
 	mockDF := &dummyAlwaysFailDataFlow{}
 
-	api := New(l, c, prometheus.NewRegistry(), mockDF)
+	f := &flow.Flow{
+		Name:       "flow-1",
+		Entrypoint: mockDF,
+	}
+
+	api := New(l, c, prometheus.NewRegistry(), version, f)
 	srvr := httptest.NewServer(api.mux)
 	defer srvr.Close()
 
@@ -115,17 +118,16 @@ func TestAnswersErrorIfEnqueueingFails(t *testing.T) {
 
 func TestVersionEndpointInformsTheVersion(t *testing.T) {
 	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
-	c := &config.Config{
-		Version: "some-version!",
-		Api:     config.ApiConfig{Port: 9111},
-		Flow: config.FlowConfig{
-			Name: "flow-1",
-		},
-	}
+	c := config.ApiConfig{Port: 9111}
 
 	mockDF := &dummyAlwaysFailDataFlow{}
 
-	api := New(l, c, prometheus.NewRegistry(), mockDF)
+	f := &flow.Flow{
+		Name:       "flow-1",
+		Entrypoint: mockDF,
+	}
+
+	api := New(l, c, prometheus.NewRegistry(), version, f)
 	srvr := httptest.NewServer(api.mux)
 	defer srvr.Close()
 
@@ -141,7 +143,7 @@ func TestVersionEndpointInformsTheVersion(t *testing.T) {
 	body := buf.String()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be Ok(200)")
-	assert.Equal(t, fmt.Sprintf("{\"version\":\"%s\"}", c.Version), body, "version informed should be the current one")
+	assert.Equal(t, fmt.Sprintf("{\"version\":\"%s\"}", version), body, "version informed should be the current one")
 }
 
 //TODO: test the graceful shutdown
