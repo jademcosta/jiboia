@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const version = "0.0.1"
+const version = "0.0.1" //FIXME: automatize this
 
 var configPath *string
 
@@ -47,10 +47,6 @@ func initializeConfig() *config.Config {
 	confData, err := os.ReadFile(*configPath)
 	if err != nil {
 		panic(fmt.Errorf("error reading config file: %w", err))
-	}
-
-	if err != nil {
-		panic(err)
 	}
 
 	c, err := config.New(confData)
