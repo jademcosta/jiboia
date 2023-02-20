@@ -25,24 +25,24 @@ log:
 api:
   port: 9099
 
-flow:
-  name: "integration_flow"
-  type: async
-  in_memory_queue_max_size: 4
-  max_concurrent_uploads: 2
-  max_retries: 3
-  timeout: 120
-  accumulator:
-    size_in_bytes: 20
-    separator: "_n_"
-    queue_capacity: 10
-  external_queue:
-    type: noop
-    config: ""
-  object_storage:
-    type: localstorage
-    config:
-      path: "/tmp/int_test"
+flows:
+  - name: "integration_flow"
+    type: async
+    in_memory_queue_max_size: 4
+    max_concurrent_uploads: 2
+    max_retries: 3
+    timeout: 120
+    accumulator:
+      size_in_bytes: 20
+      separator: "_n_"
+      queue_capacity: 10
+    external_queue:
+      type: noop
+      config: ""
+    object_storage:
+      type: localstorage
+      config:
+        path: "/tmp/int_test"
 `
 
 const confWithoutAccumulator = `
@@ -53,20 +53,20 @@ log:
 api:
   port: 9099
 
-flow:
-  name: "integration_flow"
-  type: async
-  in_memory_queue_max_size: 4
-  max_concurrent_uploads: 3
-  max_retries: 3
-  timeout: 120
-  external_queue:
-    type: noop
-    config: ""
-  object_storage:
-    type: localstorage
-    config:
-      path: "/tmp/int_test"
+flows:
+  - name: "integration_flow"
+    type: async
+    in_memory_queue_max_size: 4
+    max_concurrent_uploads: 3
+    max_retries: 3
+    timeout: 120
+    external_queue:
+      type: noop
+      config: ""
+    object_storage:
+      type: localstorage
+      config:
+        path: "/tmp/int_test"
 `
 
 var testingPath string = "/tmp/int_test"

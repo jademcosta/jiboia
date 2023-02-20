@@ -44,12 +44,14 @@ func TestPassesDataFlow(t *testing.T) {
 		calledWith: make([][]byte, 0),
 	}
 
-	f := &flow.Flow{
-		Name:       "flow-1",
-		Entrypoint: mockDF,
+	flws := []flow.Flow{
+		{
+			Name:       "flow-1",
+			Entrypoint: mockDF,
+		},
 	}
 
-	api := New(l, c, prometheus.NewRegistry(), version, f)
+	api := New(l, c, prometheus.NewRegistry(), version, flws)
 	srvr := httptest.NewServer(api.mux)
 	defer srvr.Close()
 
@@ -73,12 +75,14 @@ func TestAnswersAnErrorIfNoBodyIsSent(t *testing.T) {
 		calledWith: make([][]byte, 0),
 	}
 
-	f := &flow.Flow{
-		Name:       "flow-1",
-		Entrypoint: mockDF,
+	flws := []flow.Flow{
+		{
+			Name:       "flow-1",
+			Entrypoint: mockDF,
+		},
 	}
 
-	api := New(l, c, prometheus.NewRegistry(), version, f)
+	api := New(l, c, prometheus.NewRegistry(), version, flws)
 	srvr := httptest.NewServer(api.mux)
 	defer srvr.Close()
 
@@ -98,12 +102,14 @@ func TestAnswersErrorIfEnqueueingFails(t *testing.T) {
 
 	mockDF := &dummyAlwaysFailDataFlow{}
 
-	f := &flow.Flow{
-		Name:       "flow-1",
-		Entrypoint: mockDF,
+	flws := []flow.Flow{
+		{
+			Name:       "flow-1",
+			Entrypoint: mockDF,
+		},
 	}
 
-	api := New(l, c, prometheus.NewRegistry(), version, f)
+	api := New(l, c, prometheus.NewRegistry(), version, flws)
 	srvr := httptest.NewServer(api.mux)
 	defer srvr.Close()
 
@@ -122,12 +128,14 @@ func TestVersionEndpointInformsTheVersion(t *testing.T) {
 
 	mockDF := &dummyAlwaysFailDataFlow{}
 
-	f := &flow.Flow{
-		Name:       "flow-1",
-		Entrypoint: mockDF,
+	flws := []flow.Flow{
+		{
+			Name:       "flow-1",
+			Entrypoint: mockDF,
+		},
 	}
 
-	api := New(l, c, prometheus.NewRegistry(), version, f)
+	api := New(l, c, prometheus.NewRegistry(), version, flws)
 	srvr := httptest.NewServer(api.mux)
 	defer srvr.Close()
 

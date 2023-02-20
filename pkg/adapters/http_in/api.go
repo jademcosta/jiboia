@@ -26,7 +26,7 @@ type Api struct {
 }
 
 func New(l *zap.SugaredLogger, c config.ApiConfig, metricRegistry *prometheus.Registry,
-	appVersion string, f *flow.Flow) *Api {
+	appVersion string, f []flow.Flow) *Api {
 
 	router := chi.NewRouter()
 
@@ -56,7 +56,9 @@ func New(l *zap.SugaredLogger, c config.ApiConfig, metricRegistry *prometheus.Re
 
 	//TODO: I'm using static approach to be able to release it asap. In the future the route naming
 	//creation needs to be dynamic
-	RegisterIngestingRoutes(api, sizeHist, f) //TODO: add middleware that will return syntax error in case a request comes with no body
+	singleflow := f[0] // FIXME: this is temporary
+	RegisterIngestingRoutes(api, sizeHist, &singleflow)
+	//TODO: add middleware that will return syntax error in case a request comes with no body
 	RegisterOperatinalRoutes(api, appVersion, metricRegistry)
 	api.mux.Mount("/debug", middleware.Profiler())
 

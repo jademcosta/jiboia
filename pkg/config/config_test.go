@@ -270,3 +270,7 @@ flows:
 func TestErrorOnInvalidLogFormat(t *testing.T) {
 	//TODO: implement me
 }
+
+func TestErrorWhenAccumulatorSizeIsZero(t *testing.T) {
+	//TODO: implement me
+}

@@ -49,11 +49,11 @@ func (a *App) Start() {
 	metricRegistry := prometheus.NewRegistry()
 	registerDefaultMetrics(metricRegistry)
 
-	f := createFlow(a.logger, metricRegistry, a.conf.Flow)
+	flows := createFlows(a.logger, metricRegistry, a.conf.Flows)
 
-	var uploaderWG sync.WaitGroup
+	var apiWG sync.WaitGroup // TODO: Switch for channel and close()
 
-	api := http_in.New(a.logger, a.conf.Api, metricRegistry, a.conf.Version, f)
+	api := http_in.New(a.logger, a.conf.Api, metricRegistry, a.conf.Version, flows)
 
 	//The shutdown of rungroup seems to be executed from a single goroutine. Meaning that if a
 	//waitgroup is added on some interrupt function, it might hang forever.
@@ -63,12 +63,12 @@ func (a *App) Start() {
 
 	g.Add(
 		func() error {
-			uploaderWG.Add(1)
+			apiWG.Add(1)
 			err := api.ListenAndServe()
 			if err != nil && !errors.Is(err, http.ErrServerClosed) {
 				a.logger.Errorw("api listening and serving failed", "error", err)
 			}
-			uploaderWG.Done()
+			apiWG.Done() // FIXME: defer this
 			return err
 		},
 		func(error) {
@@ -82,37 +82,8 @@ func (a *App) Start() {
 		},
 	)
 
-	if f.Accumulator != nil {
-		uploaderWG.Add(1)
-		accumulatorContext, accumulatorCancel := context.WithCancel(context.Background())
-
-		g.Add(
-			func() error {
-				f.Accumulator.Run(accumulatorContext)
-				uploaderWG.Done()
-				return nil
-			},
-			func(error) {
-				accumulatorCancel()
-			},
-		)
-	}
-
-	uploaderContext, uploaderCancel := context.WithCancel(context.Background())
-	g.Add(
-		func() error {
-			f.Uploader.Run(uploaderContext)
-			return nil
-		},
-		func(error) {
-			uploaderWG.Wait()
-			uploaderCancel()
-		},
-	)
-
-	for _, worker := range f.UploadWorkers {
-		workerCopy := worker
-		go workerCopy.Run(context.Background()) //TODO: we need to make uploader completelly stop the workers, for safety
+	for _, flw := range flows {
+		addFlowActorToRunGroup(&g, &apiWG, &flw)
 	}
 
 	err := g.Run()
@@ -142,6 +113,45 @@ func (a *App) addShutdownRelatedActors(g *run.Group) {
 func (a *App) stop() {
 	a.logger.Debug("app stop called")
 	a.stopFunc()
+}
+
+func addFlowActorToRunGroup(g *run.Group, apiWG *sync.WaitGroup, flw *flow.Flow) {
+	var uploaderWG sync.WaitGroup // TODO: Switch for channel and close()
+
+	if flw.Accumulator != nil {
+		uploaderWG.Add(1)
+		accumulatorContext, accumulatorCancel := context.WithCancel(context.Background())
+
+		g.Add(
+			func() error {
+				flw.Accumulator.Run(accumulatorContext)
+				uploaderWG.Done()
+				return nil
+			},
+			func(error) {
+				apiWG.Wait()
+				accumulatorCancel()
+			},
+		)
+	}
+
+	uploaderContext, uploaderCancel := context.WithCancel(context.Background())
+	g.Add(
+		func() error {
+			flw.Uploader.Run(uploaderContext)
+			return nil
+		},
+		func(error) {
+			apiWG.Wait()
+			uploaderWG.Wait()
+			uploaderCancel()
+		},
+	)
+
+	for _, worker := range flw.UploadWorkers {
+		workerCopy := worker
+		go workerCopy.Run(context.Background()) //TODO: we need to make uploader completelly stop the workers, for safety
+	}
 }
 
 func registerDefaultMetrics(registry *prometheus.Registry) {
@@ -180,41 +190,48 @@ func createAccumulator(l *zap.SugaredLogger, c config.Accumulator, registry *pro
 		uploader, registry)
 }
 
-func createFlow(logger *zap.SugaredLogger, metricRegistry *prometheus.Registry,
-	conf config.FlowConfig) *flow.Flow {
+func createFlows(logger *zap.SugaredLogger, metricRegistry *prometheus.Registry,
+	confs []config.FlowConfig) []flow.Flow {
 
-	externalQueue := createExternalQueue(logger, conf.ExternalQueue, metricRegistry)
-	objStorage := createObjStorage(logger, conf.ObjectStorage, metricRegistry)
+	flows := make([]flow.Flow, 0, len(confs))
 
-	uploader := nonblocking_uploader.New(
-		logger,
-		conf.MaxConcurrentUploads,
-		conf.QueueMaxSize,
-		domain.NewObservableDataDropper(logger, metricRegistry, "uploader"),
-		filepather.New(datetimeprovider.New(), conf.PathPrefixCount),
-		metricRegistry)
+	for _, conf := range confs {
+		externalQueue := createExternalQueue(logger, conf.ExternalQueue, metricRegistry)
+		objStorage := createObjStorage(logger, conf.ObjectStorage, metricRegistry)
 
-	f := &flow.Flow{
-		Name:          conf.Name,
-		ObjStorage:    objStorage,
-		ExternalQueue: externalQueue,
-		Uploader:      uploader,
-		UploadWorkers: make([]flow.Runnable, 0, conf.MaxConcurrentUploads),
+		uploader := nonblocking_uploader.New(
+			logger,
+			conf.MaxConcurrentUploads,
+			conf.QueueMaxSize,
+			domain.NewObservableDataDropper(logger, metricRegistry, "uploader"),
+			filepather.New(datetimeprovider.New(), conf.PathPrefixCount),
+			metricRegistry)
+
+		f := flow.Flow{
+			Name:          conf.Name,
+			ObjStorage:    objStorage,
+			ExternalQueue: externalQueue,
+			Uploader:      uploader,
+			UploadWorkers: make([]flow.Runnable, 0, conf.MaxConcurrentUploads),
+		}
+
+		hasAccumulatorDeclared := conf.Accumulator.SizeInBytes > 0
+		if hasAccumulatorDeclared {
+			f.Accumulator = createAccumulator(logger, conf.Accumulator, metricRegistry, uploader)
+		}
+
+		for i := 0; i < conf.MaxConcurrentUploads; i++ {
+			worker := uploaders.NewWorker(logger, objStorage, externalQueue, uploader.WorkersReady, metricRegistry)
+			f.UploadWorkers = append(f.UploadWorkers, worker)
+		}
+
+		f.Entrypoint = uploader
+		if f.Accumulator != nil {
+			f.Entrypoint = f.Accumulator
+		}
+
+		flows = append(flows, f)
 	}
 
-	if conf.Accumulator.SizeInBytes > 0 {
-		f.Accumulator = createAccumulator(logger, conf.Accumulator, metricRegistry, uploader)
-	}
-
-	for i := 0; i < conf.MaxConcurrentUploads; i++ {
-		worker := uploaders.NewWorker(logger, objStorage, externalQueue, uploader.WorkersReady, metricRegistry)
-		f.UploadWorkers = append(f.UploadWorkers, worker)
-	}
-
-	f.Entrypoint = uploader
-	if f.Accumulator != nil {
-		f.Entrypoint = f.Accumulator
-	}
-
-	return f
+	return flows
 }
