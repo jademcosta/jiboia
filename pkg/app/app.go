@@ -156,11 +156,13 @@ func addFlowActorToRunGroup(g *run.Group, apiWG *sync.WaitGroup, flw *flow.Flow)
 }
 
 func registerDefaultMetrics(registry *prometheus.Registry) {
-	registry.MustRegister(collectors.NewBuildInfoCollector())
-	// TODO: registry.MustRegister(collectors.NewProcessCollector())
-	registry.MustRegister(collectors.NewGoCollector(
-		collectors.WithGoCollectorRuntimeMetrics(collectors.GoRuntimeMetricsRule{Matcher: regexp.MustCompile("/.*")}),
-	))
+	registry.MustRegister(
+		collectors.NewBuildInfoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+		collectors.NewGoCollector(
+			collectors.WithGoCollectorRuntimeMetrics(collectors.GoRuntimeMetricsRule{Matcher: regexp.MustCompile("/.*")}),
+		),
+	)
 }
 
 func createObjStorage(l *zap.SugaredLogger, c config.ObjectStorage, metricRegistry *prometheus.Registry) uploaders.ObjStorage {
