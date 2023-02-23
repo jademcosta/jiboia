@@ -27,3 +27,24 @@ flows:
         prefix: "some/fixed_prefix"
         bucket: $JIBOIA_S3_BUCKET
         region: us-east-1
+  - name: "nonused-flow"
+    type: async
+    in_memory_queue_max_size: 10
+    max_concurrent_uploads: 2
+    max_retries: 1
+    accumulator:
+      size_in_bytes: 50
+      separator: "__n__"
+      queue_capacity: 0
+    external_queue:
+      type: sqs
+      config:
+        url: "$JIBOIA_SQS_URL"
+        region: us-east-1
+    object_storage:
+      type: s3
+      config:
+        timeout_milliseconds: 30000 # 30sec
+        prefix: "some/fixed_prefix"
+        bucket: $JIBOIA_S3_BUCKET
+        region: us-east-1
