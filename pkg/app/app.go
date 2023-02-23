@@ -83,7 +83,8 @@ func (a *App) Start() {
 	)
 
 	for _, flw := range flows {
-		addFlowActorToRunGroup(&g, &apiWG, &flw)
+		flowCopy := flw
+		addFlowActorToRunGroup(&g, &apiWG, &flowCopy)
 	}
 
 	err := g.Run()
