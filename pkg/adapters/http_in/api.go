@@ -26,18 +26,19 @@ type Api struct {
 }
 
 func New(l *zap.SugaredLogger, c config.ApiConfig, metricRegistry *prometheus.Registry,
-	appVersion string, f *flow.Flow) *Api {
+	appVersion string, flws []flow.Flow) *Api {
 
 	router := chi.NewRouter()
+	logg := l.With(logger.COMPONENT_KEY, API_COMPONENT_TYPE)
 
 	api := &Api{
 		mux:  router,
-		log:  l.With(logger.COMPONENT_KEY, API_COMPONENT_TYPE),
+		log:  logg,
 		srv:  &http.Server{Addr: fmt.Sprintf(":%d", c.Port), Handler: router},
 		port: c.Port,
 	}
 
-	registerDefaultMiddlewares(api, l.With(logger.COMPONENT_KEY, API_COMPONENT_TYPE), metricRegistry)
+	registerDefaultMiddlewares(api, logg, metricRegistry)
 
 	sizeHist := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
@@ -53,10 +54,8 @@ func New(l *zap.SugaredLogger, c config.ApiConfig, metricRegistry *prometheus.Re
 	)
 
 	metricRegistry.MustRegister(sizeHist)
-
-	//TODO: I'm using static approach to be able to release it asap. In the future the route naming
-	//creation needs to be dynamic
-	RegisterIngestingRoutes(api, sizeHist, f) //TODO: add middleware that will return syntax error in case a request comes with no body
+	RegisterIngestingRoutes(api, sizeHist, flws)
+	//TODO: add middleware that will return syntax error in case a request comes with no body
 	RegisterOperatinalRoutes(api, appVersion, metricRegistry)
 	api.mux.Mount("/debug", middleware.Profiler())
 

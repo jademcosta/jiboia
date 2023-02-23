@@ -13,12 +13,17 @@ import (
 func RegisterIngestingRoutes(
 	api *Api,
 	sizeHistogram *prometheus.HistogramVec,
-	f *flow.Flow,
+	flws []flow.Flow,
 ) {
-	api.mux.Post(fmt.Sprintf("/%s/async_ingestion", f.Name), asyncIngestion(api.log, sizeHistogram, f))
+
+	for _, flw := range flws {
+		flwCopy := flw
+		api.mux.Post(fmt.Sprintf("/%s/async_ingestion", flw.Name), asyncIngestion(api.log, sizeHistogram, &flwCopy))
+	}
+
 }
 
-func asyncIngestion(l *zap.SugaredLogger, sizeHistogram *prometheus.HistogramVec, f *flow.Flow) http.HandlerFunc {
+func asyncIngestion(l *zap.SugaredLogger, sizeHistogram *prometheus.HistogramVec, flw *flow.Flow) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		//TODO: implement the "with" on the logger and add the "ingestion_type": "async" here on this fn
 
@@ -50,7 +55,7 @@ func asyncIngestion(l *zap.SugaredLogger, sizeHistogram *prometheus.HistogramVec
 
 		l.Debug("data received on async handler", "length", dataLen)
 
-		err = f.Entrypoint.Enqueue(data)
+		err = flw.Entrypoint.Enqueue(data)
 		if err != nil {
 			l.Warn("failed while enqueueing data from http request", "error", err)
 			w.Header().Set("Content-Type", "application/json")

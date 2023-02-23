@@ -1,6 +1,12 @@
 package nonblocking_uploader
 
-import "github.com/prometheus/client_golang/prometheus"
+import (
+	"sync"
+
+	"github.com/prometheus/client_golang/prometheus"
+)
+
+var ensureMetricRegisteringOnce sync.Once
 
 type metricCollector struct {
 	queueCapacityGauge *prometheus.GaugeVec
@@ -49,7 +55,9 @@ func NewMetricCollector(metricRegistry *prometheus.Registry) *metricCollector {
 		[]string{},
 	)
 
-	metricRegistry.MustRegister(queueCapacityGauge, workersCountGauge, enqueueCounter, enqueuedItemsGauge)
+	ensureMetricRegisteringOnce.Do(func() {
+		metricRegistry.MustRegister(queueCapacityGauge, workersCountGauge, enqueueCounter, enqueuedItemsGauge)
+	})
 
 	return &metricCollector{
 		queueCapacityGauge: queueCapacityGauge,
