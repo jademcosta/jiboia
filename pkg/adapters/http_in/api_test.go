@@ -36,11 +36,15 @@ func (mockDF *dummyAlwaysFailDataFlow) Enqueue(data []byte) error {
 	return fmt.Errorf("dummy error")
 }
 
-func TestPassesDataFlow(t *testing.T) {
+func TestPassesDataFlows(t *testing.T) {
 	l := logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
 	c := config.ApiConfig{Port: 9111}
 
 	mockDF := &mockDataFlow{
+		calledWith: make([][]byte, 0),
+	}
+
+	mockDF2 := &mockDataFlow{
 		calledWith: make([][]byte, 0),
 	}
 
@@ -49,6 +53,10 @@ func TestPassesDataFlow(t *testing.T) {
 			Name:       "flow-1",
 			Entrypoint: mockDF,
 		},
+		{
+			Name:       "flow2",
+			Entrypoint: mockDF2,
+		},
 	}
 
 	api := New(l, c, prometheus.NewRegistry(), version, flws)
@@ -56,15 +64,19 @@ func TestPassesDataFlow(t *testing.T) {
 	defer srvr.Close()
 
 	resp, err := http.Post(fmt.Sprintf("%s/flow-1/async_ingestion", srvr.URL), "application/json", strings.NewReader("helloooooo"))
-
 	if err != nil {
-		assert.Fail(t, "error on posting data", err)
+		assert.Fail(t, "error on posting data to flow 1", err)
 	}
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200) on flow 1")
 
-	expectedMockState := [][]byte{[]byte("helloooooo")}
+	resp, err = http.Post(fmt.Sprintf("%s/flow2/async_ingestion", srvr.URL), "application/json", strings.NewReader("world!"))
+	if err != nil {
+		assert.Fail(t, "error on posting data to flow 2", err)
+	}
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200) on flow 2")
 
-	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200)")
-	assert.Equal(t, expectedMockState, mockDF.calledWith, "the posted data should have been sent to flow")
+	assert.Equal(t, [][]byte{[]byte("helloooooo")}, mockDF.calledWith, "the posted data should have been sent to flow 1")
+	assert.Equal(t, [][]byte{[]byte("world!")}, mockDF2.calledWith, "the posted data should have been sent to flow 2")
 }
 
 func TestAnswersAnErrorIfNoBodyIsSent(t *testing.T) {
