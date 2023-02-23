@@ -61,7 +61,7 @@ flows:
 var testingPathAcc string = "/tmp/int_test"
 var testingPathNoAcc string = "/tmp/int_test2"
 
-var letters = []rune("abcdefghijklmnopqrstuvwxyz") //TODO: change to characters
+var characters = []rune("abcdefghijklmnopqrstuvwxyz")
 var l *zap.SugaredLogger
 
 func TestAppIntegration(t *testing.T) {
@@ -170,7 +170,7 @@ func randSeq(n int) string {
 	b := make([]rune, n)
 
 	for i := range b {
-		b[i] = letters[r1.Intn(len(letters))]
+		b[i] = characters[r1.Intn(len(characters))]
 	}
 	return string(b)
 }
