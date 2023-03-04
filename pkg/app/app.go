@@ -27,24 +27,27 @@ import (
 )
 
 type App struct {
-	conf     *config.Config
-	logger   *zap.SugaredLogger
-	ctx      context.Context
-	stopFunc context.CancelFunc
+	conf         *config.Config
+	logger       *zap.SugaredLogger
+	ctx          context.Context
+	stopFunc     context.CancelFunc
+	shutdownDone chan struct{}
 }
 
 func New(c *config.Config, logger *zap.SugaredLogger) *App {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &App{
-		conf:     c,
-		logger:   logger,
-		ctx:      ctx,
-		stopFunc: cancel,
+		conf:         c,
+		logger:       logger,
+		ctx:          ctx,
+		stopFunc:     cancel,
+		shutdownDone: make(chan struct{}),
 	}
 }
 
 func (a *App) Start() {
+	defer close(a.shutdownDone)
 	metricRegistry := prometheus.NewRegistry()
 	registerDefaultMetrics(metricRegistry)
 
@@ -110,9 +113,10 @@ func (a *App) addShutdownRelatedActors(g *run.Group) {
 	})
 }
 
-func (a *App) stop() {
+func (a *App) stop() <-chan struct{} {
 	a.logger.Debug("app stop called")
 	a.stopFunc()
+	return a.shutdownDone
 }
 
 func addFlowActorToRunGroup(g *run.Group, apiShutdownDone <-chan struct{}, flw *flow.Flow) {
