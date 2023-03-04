@@ -146,8 +146,8 @@ func testWithBatchSize(t *testing.T, conf *config.Config, stringExemplarSizes ..
 	}
 	time.Sleep(10 * time.Millisecond)
 
-	app.stop()
-	time.Sleep(1 * time.Second)
+	stopDone := app.stop()
+	<-stopDone
 
 	resultingValuesWithAcc := readFilesFromDir(t, testingPathAcc)
 	resultingValuesWithoutAcc := readFilesFromDir(t, testingPathNoAcc)
