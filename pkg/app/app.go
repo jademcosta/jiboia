@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
-	"sync"
 	"syscall"
 
 	"github.com/jademcosta/jiboia/pkg/accumulators/non_blocking_bucket"
@@ -51,7 +50,7 @@ func (a *App) Start() {
 
 	flows := createFlows(a.logger, metricRegistry, a.conf.Flows)
 
-	var apiWG sync.WaitGroup // TODO: Switch for channel and close()
+	apiShutdownDone := make(chan struct{})
 
 	api := http_in.New(a.logger, a.conf.Api, metricRegistry, a.conf.Version, flows)
 
@@ -63,12 +62,12 @@ func (a *App) Start() {
 
 	g.Add(
 		func() error {
-			apiWG.Add(1)
+			defer close(apiShutdownDone)
 			err := api.ListenAndServe()
 			if err != nil && !errors.Is(err, http.ErrServerClosed) {
 				a.logger.Errorw("api listening and serving failed", "error", err)
 			}
-			apiWG.Done() // FIXME: defer this
+
 			return err
 		},
 		func(error) {
@@ -84,7 +83,7 @@ func (a *App) Start() {
 
 	for _, flw := range flows {
 		flowCopy := flw
-		addFlowActorToRunGroup(&g, &apiWG, &flowCopy)
+		addFlowActorToRunGroup(&g, apiShutdownDone, &flowCopy)
 	}
 
 	err := g.Run()
@@ -116,24 +115,26 @@ func (a *App) stop() {
 	a.stopFunc()
 }
 
-func addFlowActorToRunGroup(g *run.Group, apiWG *sync.WaitGroup, flw *flow.Flow) {
-	var uploaderWG sync.WaitGroup // TODO: Switch for channel and close()
+func addFlowActorToRunGroup(g *run.Group, apiShutdownDone <-chan struct{}, flw *flow.Flow) {
+
+	accumulatorShutdownDone := make(chan struct{})
 
 	if flw.Accumulator != nil {
-		uploaderWG.Add(1)
 		accumulatorContext, accumulatorCancel := context.WithCancel(context.Background())
 
 		g.Add(
 			func() error {
+				defer close(accumulatorShutdownDone)
 				flw.Accumulator.Run(accumulatorContext)
-				uploaderWG.Done()
 				return nil
 			},
 			func(error) {
-				apiWG.Wait()
+				<-apiShutdownDone
 				accumulatorCancel()
 			},
 		)
+	} else {
+		close(accumulatorShutdownDone)
 	}
 
 	uploaderContext, uploaderCancel := context.WithCancel(context.Background())
@@ -143,8 +144,8 @@ func addFlowActorToRunGroup(g *run.Group, apiWG *sync.WaitGroup, flw *flow.Flow)
 			return nil
 		},
 		func(error) {
-			apiWG.Wait()
-			uploaderWG.Wait()
+			<-apiShutdownDone
+			<-accumulatorShutdownDone
 			uploaderCancel()
 		},
 	)
