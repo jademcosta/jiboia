@@ -17,9 +17,19 @@ jobs:
         go-version: "1.19.5"
         cache: true
     - name: Test
-      run: make install-test-tools
-    - name: Test
       run: make test
+
+  # lint:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - uses: actions/checkout@v3
+  #   - name: Setup Go
+  #     uses: actions/setup-go@v3
+  #     with:
+  #       go-version: "1.19.5"
+  #       cache: true
+  #   - name: Lint
+  #     run: make lint
 
   lint:
     runs-on: ubuntu-latest
@@ -30,8 +40,8 @@ jobs:
       with:
         go-version: "1.19.5"
         cache: true
-    - name: Lint
-      run: make lint
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@v3
 
   e2e-aws:
     needs: [test, lint]

@@ -39,16 +39,20 @@ coverage: ## Run the tests of the project and export the coverage
 	$(GOTEST) -timeout 30s -cover -covermode=count -coverprofile=profile.cov ./...
 	$(GOCMD) tool cover -func profile.cov
 
-install-test-tools:
-	$(GOCMD) install gotest.tools/gotestsum@latest
+install-lint-tools:
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
 
 ## Lint:
 lint: ## Run all available linters
-	$(GOCMD) install honnef.co/go/tools/cmd/staticcheck@latest
+# $(GOCMD) install honnef.co/go/tools/cmd/staticcheck@latest
+# $(GOCMD) install github.com/kisielk/errcheck@latest
 # $(GOCMD) install golang.org/x/lint/golint@latest
-	$(GOVET) ./...
-	staticcheck ./...
+# $(GOVET) ./...
+# staticcheck ./...
+# errcheck ./...
 # golint ./...
+curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
+	golangci-lint run
 
 lint-experimental: ## Linters that we are still testings
 	@$(GOCMD) install github.com/alexkohler/nakedret@latest
