@@ -32,7 +32,10 @@ func main() {
 
 func setupCommandFlags(rootCmd *cobra.Command) {
 	configPath = rootCmd.Flags().StringP("config", "c", "", "[required]The path for the config file")
-	rootCmd.MarkFlagRequired("config")
+	err := rootCmd.MarkFlagRequired("config")
+	if err != nil {
+		panic(fmt.Sprintf("err on flags setup: %v", err))
+	}
 }
 
 func start(cmd *cobra.Command, args []string) {

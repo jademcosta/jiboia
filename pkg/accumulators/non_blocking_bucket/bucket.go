@@ -86,7 +86,7 @@ func (b *BucketAccumulator) Enqueue(data []byte) error {
 	return nil
 }
 
-//Run should be called in a new goroutine
+// Run should be called in a new goroutine
 func (b *BucketAccumulator) Run(ctx context.Context) {
 	// TODO: add flush based on time
 	b.l.Info("Starting non-blocking accumulator")
@@ -117,7 +117,7 @@ func (b *BucketAccumulator) append(data []byte) {
 
 	if receivedDataTooBigForBuffer {
 		b.flush()
-		b.next.Enqueue(data)
+		_ = b.next.Enqueue(data) // TODO: use datadropper on error
 		b.metrics.increaseNextCounter()
 
 		return
@@ -157,7 +157,8 @@ func (b *BucketAccumulator) flush() {
 		}
 	}
 
-	b.next.Enqueue(mergedData)
+	// TODO: use datadropper on error
+	_ = b.next.Enqueue(mergedData)
 	b.current = b.current[:0]
 	b.metrics.increaseNextCounter()
 }

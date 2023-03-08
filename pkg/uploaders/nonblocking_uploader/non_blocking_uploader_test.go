@@ -88,7 +88,8 @@ func TestWorkSentDownstreamHasTheCorrectDataInIt(t *testing.T) {
 
 	go uploader.Run(ctx)
 
-	uploader.Enqueue([]byte("1"))
+	err := uploader.Enqueue([]byte("1"))
+	assert.NoError(t, err, "should not err on enqueue")
 	uploader.WorkersReady <- receiver
 
 	select {
@@ -114,7 +115,8 @@ func TestItDeniesWorkAfterContextIsCanceled(t *testing.T) {
 
 	go uploader.Run(ctx)
 
-	uploader.Enqueue([]byte("1"))
+	err := uploader.Enqueue([]byte("1"))
+	assert.NoError(t, err, "should not err on enqueue")
 	uploader.WorkersReady <- receiver
 
 	select {
@@ -126,7 +128,7 @@ func TestItDeniesWorkAfterContextIsCanceled(t *testing.T) {
 
 	cancel()
 	time.Sleep(10 * time.Millisecond)
-	err := uploader.Enqueue([]byte("2"))
+	err = uploader.Enqueue([]byte("2"))
 	assert.Error(t, err, "enqueue should return error when context has been canceled")
 }
 
@@ -141,8 +143,10 @@ func TestItFlushesAllPendingDataWhenContextIsCancelled(t *testing.T) {
 	receiver := make(chan *domain.WorkUnit, 1)
 
 	go uploader.Run(ctx)
-	uploader.Enqueue([]byte("1"))
-	uploader.Enqueue([]byte("2"))
+	err := uploader.Enqueue([]byte("1"))
+	assert.NoError(t, err, "should not err on enqueue")
+	err = uploader.Enqueue([]byte("2"))
+	assert.NoError(t, err, "should not err on enqueue")
 
 	cancel()
 	time.Sleep(10 * time.Millisecond)
@@ -251,7 +255,8 @@ func testUploader(
 	go uploader.Run(ctx)
 
 	for i := 0; i < objectsToEnqueueCount; i++ {
-		uploader.Enqueue([]byte(fmt.Sprint(i)))
+		err := uploader.Enqueue([]byte(fmt.Sprint(i)))
+		assert.NoError(t, err, "should not err on enqueue")
 		if sleepTimeBeforeProducing != 0 {
 			time.Sleep(sleepTimeBeforeProducing)
 		}
@@ -304,7 +309,8 @@ func testUploaderEnsuringEnqueuedItems(
 	go uploader.Run(ctx)
 
 	for i := 0; i < objectsToEnqueueCount; i++ {
-		uploader.Enqueue([]byte(fmt.Sprint(i)))
+		err := uploader.Enqueue([]byte(fmt.Sprint(i)))
+		assert.NoError(t, err, "should not err on enqueue")
 		expected[i] = fmt.Sprint(i)
 	}
 

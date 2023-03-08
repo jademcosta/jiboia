@@ -37,7 +37,7 @@ func versionHandler(version string) http.HandlerFunc {
 		} else {
 			w.WriteHeader(http.StatusOK)
 			w.Header().Set("Content-Type", "application/json")
-			w.Write(response)
+			w.Write(response) //nolint:errcheck
 		}
 	}
 }

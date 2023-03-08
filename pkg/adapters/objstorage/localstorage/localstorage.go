@@ -52,7 +52,10 @@ func (storage *LocalStorage) Upload(workU *domain.WorkUnit) (*domain.UploadResul
 	}
 
 	if err != nil && os.IsNotExist(err) {
-		os.MkdirAll(directoryPath, os.ModePerm)
+		err = os.MkdirAll(directoryPath, os.ModePerm)
+		if err != nil {
+			return nil, fmt.Errorf("error creating directory: %w", err)
+		}
 	}
 
 	fullFilePath := filepath.Join(storage.path, workU.Prefix, workU.Filename)

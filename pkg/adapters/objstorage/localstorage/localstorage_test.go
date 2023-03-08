@@ -42,10 +42,11 @@ func TestNewErrorsWhenPathDoesNotExist(t *testing.T) {
 func TestNewErrorsWhenPathIsNotADirectory(t *testing.T) {
 	randomNumber := strconv.Itoa(int(time.Now().Unix()))
 	filePath := "/tmp/" + randomNumber
-	os.WriteFile(filePath, []byte("content!"), os.ModePerm)
+	err := os.WriteFile(filePath, []byte("content!"), os.ModePerm)
+	assert.NoError(t, err, "writing file should not err")
 
 	conf := &localstorage.Config{Path: filePath}
-	_, err := localstorage.New(l, conf)
+	_, err = localstorage.New(l, conf)
 	assert.Error(t, err, "returns error when path is not a directory")
 }
 
@@ -56,7 +57,8 @@ func TestUploadFailsIfDirectoryPathHasAFileInIt(t *testing.T) {
 	sut, err := localstorage.New(l, conf)
 	assert.NoError(t, err, "should not return an error")
 
-	os.WriteFile(filepath.Join("/tmp", randomNumber), []byte("content!"), os.ModePerm)
+	err = os.WriteFile(filepath.Join("/tmp", randomNumber), []byte("content!"), os.ModePerm)
+	assert.NoError(t, err, "should not error on file writing")
 
 	work := &domain.WorkUnit{
 		Filename: "some_filename_here",
