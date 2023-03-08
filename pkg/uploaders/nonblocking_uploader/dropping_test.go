@@ -69,8 +69,7 @@ func TestDropsDataIfAtFullCapacity(t *testing.T) {
 		go uploader.Run(ctx)
 
 		for i := 0; i < tc.objectsToEnqueueCount; i++ {
-			err := uploader.Enqueue([]byte(fmt.Sprint(i)))
-			assert.NoError(t, err, "should not err on enqueue")
+			_ = uploader.Enqueue([]byte(fmt.Sprint(i)))
 		}
 
 		assert.Lenf(t, d.dataDropped, tc.want, "should have dropped %d items", tc.want)

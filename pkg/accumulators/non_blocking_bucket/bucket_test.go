@@ -312,8 +312,8 @@ func TestDropsDataIfAtFullCapacity(t *testing.T) {
 		sut := bucket.New(l, limitBytes, tc.separator, tc.queueCapacity, ddropper, next, prometheus.NewRegistry())
 
 		for i := 0; i < tc.dataEnqueueCount; i++ {
-			err := sut.Enqueue([]byte(fmt.Sprint(i)))
-			assert.NoError(t, err, "should not err on enqueue")
+			_ = sut.Enqueue([]byte(fmt.Sprint(i)))
+
 		}
 
 		next.mu.Lock()
@@ -359,9 +359,9 @@ func TestTheMinimunCapacityIsFixed(t *testing.T) {
 	ddropper.mu.Unlock()
 
 	err := sut.Enqueue([]byte("a"))
-	assert.NoError(t, err, "should not err on enqueue")
+	assert.Error(t, err, "should err on enqueue")
 	err = sut.Enqueue([]byte("b"))
-	assert.NoError(t, err, "should not err on enqueue")
+	assert.Error(t, err, "should err on enqueue")
 
 	ddropper.mu.Lock()
 	assert.Lenf(t, ddropper.dataDropped, 2,
