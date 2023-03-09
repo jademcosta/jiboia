@@ -156,7 +156,7 @@ func addFlowActorToRunGroup(g *run.Group, apiShutdownDone <-chan struct{}, flw *
 		},
 	)
 
-	workersContext, workersCancel := context.WithCancel(context.Background())
+	workersContext, workersCancel := context.WithCancel(context.Background()) //nolint:govet
 	for _, worker := range flw.UploadWorkers {
 		workerCopy := worker
 		g.Add(
@@ -170,7 +170,7 @@ func addFlowActorToRunGroup(g *run.Group, apiShutdownDone <-chan struct{}, flw *
 			},
 		)
 	}
-}
+} //nolint:govet
 
 func registerDefaultMetrics(registry *prometheus.Registry) {
 	registry.MustRegister(
