@@ -26,7 +26,6 @@ type Worker struct {
 	storage              ObjStorage
 	queue                ExternalQueue
 	workVolunteeringChan chan chan *domain.WorkUnit
-	ctx                  context.Context
 	workInFlightGauge    *prometheus.GaugeVec
 }
 
@@ -61,18 +60,16 @@ func NewWorker(
 	}
 }
 
-//Run should be called on a goroutine
+// Run should be called on a goroutine
 func (w *Worker) Run(ctx context.Context) {
-	w.ctx = ctx
 	for {
 		w.workVolunteeringChan <- w.workChan
 		select {
 		case workU := <-w.workChan:
 			w.work(workU)
-		case <-w.ctx.Done():
+		case <-ctx.Done():
 			return
 		}
-
 	}
 }
 

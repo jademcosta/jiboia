@@ -122,6 +122,7 @@ func (a *App) stop() <-chan struct{} {
 func addFlowActorToRunGroup(g *run.Group, apiShutdownDone <-chan struct{}, flw *flow.Flow) {
 
 	accumulatorShutdownDone := make(chan struct{})
+	uploaderShutdownDone := make(chan struct{})
 
 	if flw.Accumulator != nil {
 		accumulatorContext, accumulatorCancel := context.WithCancel(context.Background())
@@ -144,6 +145,7 @@ func addFlowActorToRunGroup(g *run.Group, apiShutdownDone <-chan struct{}, flw *
 	uploaderContext, uploaderCancel := context.WithCancel(context.Background())
 	g.Add(
 		func() error {
+			defer close(uploaderShutdownDone)
 			flw.Uploader.Run(uploaderContext)
 			return nil
 		},
@@ -154,11 +156,21 @@ func addFlowActorToRunGroup(g *run.Group, apiShutdownDone <-chan struct{}, flw *
 		},
 	)
 
+	workersContext, workersCancel := context.WithCancel(context.Background()) //nolint:govet
 	for _, worker := range flw.UploadWorkers {
 		workerCopy := worker
-		go workerCopy.Run(context.Background()) //TODO: we need to make uploader completelly stop the workers, for safety
+		g.Add(
+			func() error {
+				workerCopy.Run(workersContext)
+				return nil
+			},
+			func(error) {
+				<-uploaderShutdownDone
+				workersCancel()
+			},
+		)
 	}
-}
+} //nolint:govet
 
 func registerDefaultMetrics(registry *prometheus.Registry) {
 	registry.MustRegister(

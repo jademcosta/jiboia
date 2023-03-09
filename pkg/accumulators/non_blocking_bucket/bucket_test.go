@@ -108,7 +108,8 @@ func TestItDoesNotPassDataIfLimitNotReached(t *testing.T) {
 
 		sut := bucket.New(l, tc.limitBytes, tc.separator, queueCapacity, &dummyDataDropper{}, next, prometheus.NewRegistry())
 		go sut.Run(ctx)
-		sut.Enqueue(tc.data)
+		err := sut.Enqueue(tc.data)
+		assert.NoError(t, err, "should not err on enqueue")
 		time.Sleep(5 * time.Millisecond)
 
 		next.mu.Lock()
@@ -170,7 +171,8 @@ func TestWritesTheDataIfSizeEqualOrBiggerThanCapacity(t *testing.T) {
 
 		sut := bucket.New(l, tc.limitBytes, tc.separator, queueCapacity, &dummyDataDropper{}, next, prometheus.NewRegistry())
 		go sut.Run(ctx)
-		sut.Enqueue(tc.data)
+		err := sut.Enqueue(tc.data)
+		assert.NoError(t, err, "should not err on enqueue")
 		time.Sleep(5 * time.Millisecond)
 
 		next.mu.Lock()
@@ -267,7 +269,8 @@ func TestWritesTheDataWhenLimitIsHitAfterMultipleCalls(t *testing.T) {
 		sut := bucket.New(l, tc.limitBytes, tc.separator, queueCapacity, &dummyDataDropper{}, next, prometheus.NewRegistry())
 		go sut.Run(ctx)
 		for _, data := range tc.data {
-			sut.Enqueue(data)
+			err := sut.Enqueue(data)
+			assert.NoError(t, err, "should not err on enqueue")
 			time.Sleep(1 * time.Millisecond)
 		}
 		time.Sleep(5 * time.Millisecond)
@@ -309,7 +312,8 @@ func TestDropsDataIfAtFullCapacity(t *testing.T) {
 		sut := bucket.New(l, limitBytes, tc.separator, tc.queueCapacity, ddropper, next, prometheus.NewRegistry())
 
 		for i := 0; i < tc.dataEnqueueCount; i++ {
-			sut.Enqueue([]byte(fmt.Sprint(i)))
+			_ = sut.Enqueue([]byte(fmt.Sprint(i)))
+
 		}
 
 		next.mu.Lock()
@@ -339,7 +343,8 @@ func TestTheMinimunCapacityIsFixed(t *testing.T) {
 	sut := bucket.New(l, limitBytes, separator, queueCapacity, ddropper, next, prometheus.NewRegistry())
 
 	for i := 0; i < dataEnqueueCount; i++ {
-		sut.Enqueue([]byte(fmt.Sprint(i)))
+		err := sut.Enqueue([]byte(fmt.Sprint(i)))
+		assert.NoError(t, err, "should not err on enqueue")
 	}
 
 	next.mu.Lock()
@@ -353,8 +358,10 @@ func TestTheMinimunCapacityIsFixed(t *testing.T) {
 		"should not drop messages until queue capacity is exceeded.")
 	ddropper.mu.Unlock()
 
-	sut.Enqueue([]byte("a"))
-	sut.Enqueue([]byte("b"))
+	err := sut.Enqueue([]byte("a"))
+	assert.Error(t, err, "should err on enqueue")
+	err = sut.Enqueue([]byte("b"))
+	assert.Error(t, err, "should err on enqueue")
 
 	ddropper.mu.Lock()
 	assert.Lenf(t, ddropper.dataDropped, 2,
@@ -400,7 +407,8 @@ func TestSendsPendingDataWhenContextIsCancelled(t *testing.T) {
 		go sut.Run(ctx)
 
 		for _, data := range tc.data {
-			sut.Enqueue(data)
+			err := sut.Enqueue(data)
+			assert.NoError(t, err, "should not err on enqueue")
 		}
 
 		next.mu.Lock()

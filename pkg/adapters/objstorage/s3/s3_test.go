@@ -67,7 +67,8 @@ func TestItParsesWorkUnitIntoUploadInput(t *testing.T) {
 		Data:     []byte("A data for input"),
 	}
 
-	sut.Upload(workU)
+	_, err = sut.Upload(workU)
+	assert.NoError(t, err, "should not err on upload")
 
 	assert.Len(t, mockUploader.calledWith, 1, "should have called the uploader with 1 workUnit")
 	input := mockUploader.calledWith[0]
@@ -119,7 +120,8 @@ func TestItWorksWithDifferentPrefixConfigs(t *testing.T) {
 			Data:     []byte("Some data here"),
 		}
 
-		sut.Upload(workU)
+		_, err = sut.Upload(workU)
+		assert.NoError(t, err, "should not err on upload")
 
 		assert.Len(t, mockUploader.calledWith, 1, "should have called the uploader with 1 workUnit")
 		input := mockUploader.calledWith[0]

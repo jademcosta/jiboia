@@ -158,7 +158,8 @@ func TestVersionEndpointInformsTheVersion(t *testing.T) {
 	}
 
 	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
+	_, err = buf.ReadFrom(resp.Body)
+	assert.NoError(t, err, "should not err when reading body from http")
 	defer resp.Body.Close()
 	body := buf.String()
 

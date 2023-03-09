@@ -54,12 +54,13 @@ func TestMessageContainsTheData(t *testing.T) {
 		assert.Fail(t, "failed to create SQS struct")
 	}
 
-	sut.Enqueue(&domain.UploadResult{
+	err = sut.Enqueue(&domain.UploadResult{
 		Bucket:      "my-bucket1",
 		Region:      "region-a",
 		Path:        "filepath",
 		URL:         "some_url",
 		SizeInBytes: 1111})
+	assert.NoError(t, err, "should not err on enqueue")
 
 	jsonMsg := "{\"schema_version\":\"0.0.1\",\"bucket\":{\"name\":\"my-bucket1\",\"region\":\"region-a\"},\"object\":{\"path\":\"filepath\",\"full_url\":\"some_url\",\"size_in_bytes\":1111}}"
 
