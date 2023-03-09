@@ -39,9 +39,6 @@ coverage: ## Run the tests of the project and export the coverage
 	$(GOTEST) -timeout 30s -cover -covermode=count -coverprofile=profile.cov ./...
 	$(GOCMD) tool cover -func profile.cov
 
-install-lint-tools:
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
-
 ## Lint:
 lint: ## Run all available linters
 # $(GOCMD) install honnef.co/go/tools/cmd/staticcheck@latest
