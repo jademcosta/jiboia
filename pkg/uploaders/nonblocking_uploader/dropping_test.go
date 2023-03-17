@@ -64,7 +64,7 @@ func TestDropsDataIfAtFullCapacity(t *testing.T) {
 		d := &mockDataDropper{dataDropped: make([][]byte, 0)}
 		ctx := context.Background()
 
-		uploader := uploader.New(l, workersCount, tc.capacity, d, &dummyFilePather{}, prometheus.NewRegistry())
+		uploader := uploader.New("someflow", l, workersCount, tc.capacity, d, &dummyFilePather{}, prometheus.NewRegistry())
 
 		go uploader.Run(ctx)
 
@@ -100,7 +100,7 @@ func TestDoesNotDropDataIfNotAtFullCapacity(t *testing.T) {
 		d := &mockDataDropper{dataDropped: make([][]byte, 0)}
 		ctx := context.Background()
 
-		uploader := uploader.New(l, workersCount, tc.capacity, d, &dummyFilePather{}, prometheus.NewRegistry())
+		uploader := uploader.New("someflow", l, workersCount, tc.capacity, d, &dummyFilePather{}, prometheus.NewRegistry())
 
 		go uploader.Run(ctx)
 

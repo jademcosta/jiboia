@@ -26,6 +26,7 @@ type NonBlockingUploader struct {
 }
 
 func New(
+	flowName string,
 	l *zap.SugaredLogger,
 	workersCount int,
 	queueCapacity int,
@@ -33,7 +34,7 @@ func New(
 	filePathProvider domain.FilePathProvider,
 	metricRegistry *prometheus.Registry) *NonBlockingUploader {
 
-	metrics := NewMetricCollector(metricRegistry)
+	metrics := NewMetricCollector(flowName, metricRegistry)
 
 	metrics.queueCapacity(queueCapacity)
 	metrics.workersCount(workersCount)
@@ -42,7 +43,7 @@ func New(
 		internalDataChan: make(chan []byte, queueCapacity),
 		WorkersReady:     make(chan chan *domain.WorkUnit, workersCount),
 		searchForWork:    make(chan struct{}, 1),
-		log:              l.With(logger.COMPONENT_KEY, "uploader"),
+		log:              l.With(logger.COMPONENT_KEY, "uploader", logger.FLOW_KEY, flowName),
 		dataDropper:      dataDropper,
 		filePathProvider: filePathProvider,
 		metrics:          metrics,
@@ -72,7 +73,7 @@ func (s *NonBlockingUploader) Enqueue(data []byte) error {
 	return nil
 }
 
-//Run should be called in a new goroutine
+// Run should be called in a new goroutine
 func (s *NonBlockingUploader) Run(ctx context.Context) {
 	s.log.Info("starting non-blocking uploader loop")
 	s.ctx = ctx

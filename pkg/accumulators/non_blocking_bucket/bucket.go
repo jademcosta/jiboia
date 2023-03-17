@@ -30,6 +30,7 @@ type BucketAccumulator struct {
 }
 
 func New(
+	flowName string,
 	l *zap.SugaredLogger,
 	limitOfBytes int,
 	separator []byte,
@@ -50,11 +51,11 @@ func New(
 		queueCapacity = MINIMAL_QUEUE_CAPACITY
 	}
 
-	metrics := NewMetricCollector(metricRegistry)
+	metrics := NewMetricCollector(flowName, metricRegistry)
 	metrics.queueCapacity(queueCapacity)
 
 	return &BucketAccumulator{
-		l:                l.With(logger.COMPONENT_KEY, "accumulator"),
+		l:                l.With(logger.COMPONENT_KEY, "accumulator", logger.FLOW_KEY, flowName),
 		limitOfBytes:     limitOfBytes,
 		separator:        separator,
 		separatorLen:     len(separator),

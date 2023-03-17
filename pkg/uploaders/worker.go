@@ -30,6 +30,7 @@ type Worker struct {
 }
 
 func NewWorker(
+	flowName string,
 	l *zap.SugaredLogger,
 	storage ObjStorage,
 	extQueue ExternalQueue,
@@ -38,10 +39,11 @@ func NewWorker(
 
 	workInFlightGauge := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Namespace: "jiboia",
-			Subsystem: "worker",
-			Name:      "work_in_flight",
-			Help:      "How many workers are performing work (vs being idle) right now.",
+			Namespace:   "jiboia",
+			Subsystem:   "worker",
+			Name:        "work_in_flight",
+			Help:        "How many workers are performing work (vs being idle) right now.",
+			ConstLabels: prometheus.Labels{"flow": flowName},
 		},
 		[]string{})
 
@@ -51,7 +53,7 @@ func NewWorker(
 
 	workChan := make(chan *domain.WorkUnit, 1)
 	return &Worker{
-		l:                    l.With(logger.COMPONENT_KEY, "worker"),
+		l:                    l.With(logger.COMPONENT_KEY, "worker", logger.FLOW_KEY, flowName),
 		storage:              storage,
 		queue:                extQueue,
 		workVolunteeringChan: workVolunteeringChan,

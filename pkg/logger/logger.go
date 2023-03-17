@@ -8,6 +8,7 @@ import (
 
 const (
 	COMPONENT_KEY        = "component"
+	FLOW_KEY             = "flow"
 	EXT_QUEUE_TYPE_KEY   = "ext_queue_type"
 	OBJ_STORAGE_TYPE_KEY = "obj_storage_type"
 )
