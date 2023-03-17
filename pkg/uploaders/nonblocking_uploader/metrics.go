@@ -6,6 +6,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+const FLOW_METRIC_KEY string = "flow"
+
 var ensureMetricRegisteringOnce sync.Once
 
 type metricCollector struct {
@@ -15,42 +17,47 @@ type metricCollector struct {
 	enqueuedItemsGauge *prometheus.GaugeVec
 }
 
-func NewMetricCollector(metricRegistry *prometheus.Registry) *metricCollector {
+func NewMetricCollector(flowName string, metricRegistry *prometheus.Registry) *metricCollector {
 	queueCapacityGauge := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Namespace: "jiboia",
-			Subsystem: "uploader",
-			Name:      "queue_capacity",
-			Help:      "The total capacity of the internal queue.",
+			Namespace:   "jiboia",
+			Subsystem:   "uploader",
+			Name:        "queue_capacity",
+			Help:        "The total capacity of the internal queue.",
+			ConstLabels: prometheus.Labels{FLOW_METRIC_KEY: flowName},
 		},
 		[]string{},
 	)
 
 	workersCountGauge := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Namespace: "jiboia",
-			Subsystem: "uploader",
-			Name:      "workers_count",
-			Help:      "The total number of workers, meaning how many uploads can happen in parallel.",
+			Namespace:   "jiboia",
+			Subsystem:   "uploader",
+			Name:        "workers_count",
+			Help:        "The total number of workers, meaning how many uploads can happen in parallel.",
+			ConstLabels: prometheus.Labels{FLOW_METRIC_KEY: flowName},
 		},
 		[]string{},
 	)
 
 	enqueueCounter := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace: "jiboia",
-			Subsystem: "uploader",
-			Name:      "enqueue_calls_total",
-			Help:      "The total number of times that data was enqueued."},
+			Namespace:   "jiboia",
+			Subsystem:   "uploader",
+			Name:        "enqueue_calls_total",
+			Help:        "The total number of times that data was enqueued.",
+			ConstLabels: prometheus.Labels{FLOW_METRIC_KEY: flowName},
+		},
 		[]string{},
 	)
 
 	enqueuedItemsGauge := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Namespace: "jiboia",
-			Subsystem: "uploader",
-			Name:      "items_in_queue",
-			Help:      "The count of current items in the internal queue, waiting to be uploaded.",
+			Namespace:   "jiboia",
+			Subsystem:   "uploader",
+			Name:        "items_in_queue",
+			Help:        "The count of current items in the internal queue, waiting to be uploaded.",
+			ConstLabels: prometheus.Labels{FLOW_METRIC_KEY: flowName},
 		},
 		[]string{},
 	)

@@ -220,6 +220,7 @@ func createFlows(logger *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 		objStorage := createObjStorage(logger, conf.ObjectStorage, metricRegistry)
 
 		uploader := nonblocking_uploader.New(
+			conf.Name,
 			logger,
 			conf.MaxConcurrentUploads,
 			conf.QueueMaxSize,
