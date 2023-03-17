@@ -51,7 +51,7 @@ func randSeq(n int) string {
 func BenchmarkAccumulatorAppend(b *testing.B) {
 	for _, tc := range inputTable {
 		l := logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
-		acc := New(l, (10 * tc.payloadSize), []byte("_n_"), 50, &dummyDataDropper{}, &dummyDataEnqueuerMock{}, prometheus.NewRegistry())
+		acc := New("someflow", l, (10 * tc.payloadSize), []byte("_n_"), 50, &dummyDataDropper{}, &dummyDataEnqueuerMock{}, prometheus.NewRegistry())
 
 		b.Run(fmt.Sprintf("input_size_%d", tc.payloadSize), func(b *testing.B) {
 			for n := 0; n < b.N; n++ {

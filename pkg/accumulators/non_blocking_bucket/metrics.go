@@ -6,6 +6,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+const FLOW_METRIC_KEY string = "flow"
+
 var ensureMetricRegisteringOnce sync.Once
 
 type metricCollector struct {
@@ -15,39 +17,45 @@ type metricCollector struct {
 	enqueuedItemsGauge *prometheus.GaugeVec
 }
 
-func NewMetricCollector(metricRegistry *prometheus.Registry) *metricCollector {
+func NewMetricCollector(flowName string, metricRegistry *prometheus.Registry) *metricCollector {
 	enqueueCounter := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace: "jiboia",
-			Subsystem: "accumulator",
-			Name:      "enqueue_calls_total",
-			Help:      "The total number of times that data was enqueued."},
+			Namespace:   "jiboia",
+			Subsystem:   "accumulator",
+			Name:        "enqueue_calls_total",
+			Help:        "The total number of times that data was enqueued.",
+			ConstLabels: prometheus.Labels{FLOW_METRIC_KEY: flowName},
+		},
 		[]string{})
 
 	nextCounter := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace: "jiboia",
-			Subsystem: "accumulator",
-			Name:      "next_calls_total",
-			Help:      "The total number of times that data was sent to next step."},
+			Namespace:   "jiboia",
+			Subsystem:   "accumulator",
+			Name:        "next_calls_total",
+			Help:        "The total number of times that data was sent to next step.",
+			ConstLabels: prometheus.Labels{FLOW_METRIC_KEY: flowName},
+		},
 		[]string{})
 
 	capacityGauge := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Namespace: "jiboia",
-			Subsystem: "accumulator",
-			Name:      "queue_capacity",
-			Help:      "The total capacity of the internal queue.",
+			Namespace:   "jiboia",
+			Subsystem:   "accumulator",
+			Name:        "queue_capacity",
+			Help:        "The total capacity of the internal queue.",
+			ConstLabels: prometheus.Labels{FLOW_METRIC_KEY: flowName},
 		},
 		[]string{},
 	)
 
 	enqueuedItemsGauge := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Namespace: "jiboia",
-			Subsystem: "accumulator",
-			Name:      "items_in_queue",
-			Help:      "The count of current items in the internal queue.",
+			Namespace:   "jiboia",
+			Subsystem:   "accumulator",
+			Name:        "items_in_queue",
+			Help:        "The count of current items in the internal queue.",
+			ConstLabels: prometheus.Labels{FLOW_METRIC_KEY: flowName},
 		},
 		[]string{},
 	)

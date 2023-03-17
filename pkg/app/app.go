@@ -200,8 +200,9 @@ func createExternalQueue(l *zap.SugaredLogger, c config.ExternalQueue, metricReg
 	return externalQueue
 }
 
-func createAccumulator(l *zap.SugaredLogger, c config.Accumulator, registry *prometheus.Registry, uploader domain.DataFlow) *non_blocking_bucket.BucketAccumulator {
+func createAccumulator(flowName string, l *zap.SugaredLogger, c config.Accumulator, registry *prometheus.Registry, uploader domain.DataFlow) *non_blocking_bucket.BucketAccumulator {
 	return non_blocking_bucket.New(
+		flowName,
 		l,
 		c.SizeInBytes,
 		[]byte(c.Separator),
@@ -238,7 +239,7 @@ func createFlows(logger *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 
 		hasAccumulatorDeclared := conf.Accumulator.SizeInBytes > 0
 		if hasAccumulatorDeclared {
-			f.Accumulator = createAccumulator(logger, conf.Accumulator, metricRegistry, uploader)
+			f.Accumulator = createAccumulator(conf.Name, logger, conf.Accumulator, metricRegistry, uploader)
 		}
 
 		for i := 0; i < conf.MaxConcurrentUploads; i++ {
