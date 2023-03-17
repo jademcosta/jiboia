@@ -241,7 +241,7 @@ func createFlows(logger *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 		}
 
 		for i := 0; i < conf.MaxConcurrentUploads; i++ {
-			worker := uploaders.NewWorker(logger, objStorage, externalQueue, uploader.WorkersReady, metricRegistry)
+			worker := uploaders.NewWorker(conf.Name, logger, objStorage, externalQueue, uploader.WorkersReady, metricRegistry)
 			f.UploadWorkers = append(f.UploadWorkers, worker)
 		}
 
