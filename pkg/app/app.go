@@ -17,6 +17,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/datetimeprovider"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/domain/flow"
+	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/jademcosta/jiboia/pkg/uploaders"
 	"github.com/jademcosta/jiboia/pkg/uploaders/filepather"
 	"github.com/jademcosta/jiboia/pkg/uploaders/nonblocking_uploader"
@@ -211,21 +212,22 @@ func createAccumulator(flowName string, l *zap.SugaredLogger, c config.Accumulat
 		uploader, registry)
 }
 
-func createFlows(logger *zap.SugaredLogger, metricRegistry *prometheus.Registry,
+func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 	confs []config.FlowConfig) []flow.Flow {
 
 	flows := make([]flow.Flow, 0, len(confs))
 
 	for _, conf := range confs {
-		externalQueue := createExternalQueue(logger, conf.ExternalQueue, metricRegistry)
-		objStorage := createObjStorage(logger, conf.ObjectStorage, metricRegistry)
+		localLogger := llog.With(logger.FLOW_KEY, conf.Name)
+		externalQueue := createExternalQueue(localLogger, conf.ExternalQueue, metricRegistry)
+		objStorage := createObjStorage(localLogger, conf.ObjectStorage, metricRegistry)
 
 		uploader := nonblocking_uploader.New(
 			conf.Name,
-			logger,
+			localLogger,
 			conf.MaxConcurrentUploads,
 			conf.QueueMaxSize,
-			domain.NewObservableDataDropper(logger, metricRegistry, "uploader"),
+			domain.NewObservableDataDropper(localLogger, metricRegistry, "uploader"),
 			filepather.New(datetimeprovider.New(), conf.PathPrefixCount),
 			metricRegistry)
 
@@ -239,11 +241,11 @@ func createFlows(logger *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 
 		hasAccumulatorDeclared := conf.Accumulator.SizeInBytes > 0
 		if hasAccumulatorDeclared {
-			f.Accumulator = createAccumulator(conf.Name, logger, conf.Accumulator, metricRegistry, uploader)
+			f.Accumulator = createAccumulator(conf.Name, localLogger, conf.Accumulator, metricRegistry, uploader)
 		}
 
 		for i := 0; i < conf.MaxConcurrentUploads; i++ {
-			worker := uploaders.NewWorker(conf.Name, logger, objStorage, externalQueue, uploader.WorkersReady, metricRegistry)
+			worker := uploaders.NewWorker(conf.Name, localLogger, objStorage, externalQueue, uploader.WorkersReady, metricRegistry)
 			f.UploadWorkers = append(f.UploadWorkers, worker)
 		}
 
