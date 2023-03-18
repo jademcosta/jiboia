@@ -15,51 +15,48 @@ type metricCollector struct {
 	workersCountGauge  *prometheus.GaugeVec
 	enqueueCounter     *prometheus.CounterVec
 	enqueuedItemsGauge *prometheus.GaugeVec
+	flowName           string
 }
 
 func NewMetricCollector(flowName string, metricRegistry *prometheus.Registry) *metricCollector {
 	queueCapacityGauge := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Namespace:   "jiboia",
-			Subsystem:   "uploader",
-			Name:        "queue_capacity",
-			Help:        "The total capacity of the internal queue.",
-			ConstLabels: prometheus.Labels{FLOW_METRIC_KEY: flowName},
+			Namespace: "jiboia",
+			Subsystem: "uploader",
+			Name:      "queue_capacity",
+			Help:      "The total capacity of the internal queue.",
 		},
-		[]string{},
+		[]string{FLOW_METRIC_KEY},
 	)
 
 	workersCountGauge := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Namespace:   "jiboia",
-			Subsystem:   "uploader",
-			Name:        "workers_count",
-			Help:        "The total number of workers, meaning how many uploads can happen in parallel.",
-			ConstLabels: prometheus.Labels{FLOW_METRIC_KEY: flowName},
+			Namespace: "jiboia",
+			Subsystem: "uploader",
+			Name:      "workers_count",
+			Help:      "The total number of workers, meaning how many uploads can happen in parallel.",
 		},
-		[]string{},
+		[]string{FLOW_METRIC_KEY},
 	)
 
 	enqueueCounter := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Namespace:   "jiboia",
-			Subsystem:   "uploader",
-			Name:        "enqueue_calls_total",
-			Help:        "The total number of times that data was enqueued.",
-			ConstLabels: prometheus.Labels{FLOW_METRIC_KEY: flowName},
+			Namespace: "jiboia",
+			Subsystem: "uploader",
+			Name:      "enqueue_calls_total",
+			Help:      "The total number of times that data was enqueued.",
 		},
-		[]string{},
+		[]string{FLOW_METRIC_KEY},
 	)
 
 	enqueuedItemsGauge := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Namespace:   "jiboia",
-			Subsystem:   "uploader",
-			Name:        "items_in_queue",
-			Help:        "The count of current items in the internal queue, waiting to be uploaded.",
-			ConstLabels: prometheus.Labels{FLOW_METRIC_KEY: flowName},
+			Namespace: "jiboia",
+			Subsystem: "uploader",
+			Name:      "items_in_queue",
+			Help:      "The count of current items in the internal queue, waiting to be uploaded.",
 		},
-		[]string{},
+		[]string{FLOW_METRIC_KEY},
 	)
 
 	ensureMetricRegisteringOnce.Do(func() {
@@ -71,21 +68,22 @@ func NewMetricCollector(flowName string, metricRegistry *prometheus.Registry) *m
 		workersCountGauge:  workersCountGauge,
 		enqueueCounter:     enqueueCounter,
 		enqueuedItemsGauge: enqueuedItemsGauge,
+		flowName:           flowName,
 	}
 }
 
 func (m *metricCollector) queueCapacity(queueCapacity int) {
-	m.queueCapacityGauge.WithLabelValues().Set(float64(queueCapacity))
+	m.queueCapacityGauge.WithLabelValues(m.flowName).Set(float64(queueCapacity))
 }
 
 func (m *metricCollector) workersCount(workersCount int) {
-	m.workersCountGauge.WithLabelValues().Set(float64(workersCount))
+	m.workersCountGauge.WithLabelValues(m.flowName).Set(float64(workersCount))
 }
 
 func (m *metricCollector) increaseEnqueueCounter() {
-	m.enqueueCounter.WithLabelValues().Inc()
+	m.enqueueCounter.WithLabelValues(m.flowName).Inc()
 }
 
 func (m *metricCollector) enqueuedItems(itemsCount int) {
-	m.enqueuedItemsGauge.WithLabelValues().Set(float64(itemsCount))
+	m.enqueuedItemsGauge.WithLabelValues(m.flowName).Set(float64(itemsCount))
 }

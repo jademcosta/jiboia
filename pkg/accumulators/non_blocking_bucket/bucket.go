@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
+const ( //TODO: move this from here into config
 	MINIMAL_QUEUE_CAPACITY = 30
 )
 

@@ -27,6 +27,7 @@ type Worker struct {
 	queue                ExternalQueue
 	workVolunteeringChan chan chan *domain.WorkUnit
 	workInFlightGauge    *prometheus.GaugeVec
+	flowName             string
 }
 
 func NewWorker(
@@ -39,13 +40,12 @@ func NewWorker(
 
 	workInFlightGauge := prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Namespace:   "jiboia",
-			Subsystem:   "worker",
-			Name:        "work_in_flight",
-			Help:        "How many workers are performing work (vs being idle) right now.",
-			ConstLabels: prometheus.Labels{"flow": flowName},
+			Namespace: "jiboia",
+			Subsystem: "worker",
+			Name:      "work_in_flight",
+			Help:      "How many workers are performing work (vs being idle) right now.",
 		},
-		[]string{})
+		[]string{"flow"})
 
 	ensureSingleMetricRegistration.Do(func() {
 		metricRegistry.MustRegister(workInFlightGauge)
@@ -59,6 +59,7 @@ func NewWorker(
 		workVolunteeringChan: workVolunteeringChan,
 		workChan:             workChan,
 		workInFlightGauge:    workInFlightGauge,
+		flowName:             flowName,
 	}
 }
 
@@ -76,8 +77,8 @@ func (w *Worker) Run(ctx context.Context) {
 }
 
 func (w *Worker) work(workU *domain.WorkUnit) {
-	w.workInFlightGauge.WithLabelValues().Inc()
-	defer w.workInFlightGauge.WithLabelValues().Dec()
+	w.workInFlightGauge.WithLabelValues(w.flowName).Inc()
+	defer w.workInFlightGauge.WithLabelValues(w.flowName).Dec()
 
 	uploadResult, err := w.storage.Upload(workU)
 
