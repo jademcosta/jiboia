@@ -53,7 +53,7 @@ func NewWorker(
 
 	workChan := make(chan *domain.WorkUnit, 1)
 	return &Worker{
-		l:                    l.With(logger.COMPONENT_KEY, "worker", logger.FLOW_KEY, flowName),
+		l:                    l.With(logger.COMPONENT_KEY, "worker"),
 		storage:              storage,
 		queue:                extQueue,
 		workVolunteeringChan: workVolunteeringChan,

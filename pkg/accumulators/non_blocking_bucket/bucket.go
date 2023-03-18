@@ -55,7 +55,7 @@ func New(
 	metrics.queueCapacity(queueCapacity)
 
 	return &BucketAccumulator{
-		l:                l.With(logger.COMPONENT_KEY, "accumulator", logger.FLOW_KEY, flowName),
+		l:                l.With(logger.COMPONENT_KEY, "accumulator"),
 		limitOfBytes:     limitOfBytes,
 		separator:        separator,
 		separatorLen:     len(separator),
