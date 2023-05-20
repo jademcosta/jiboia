@@ -48,7 +48,7 @@ func NewSequentialCircuitBreaker(conf SequentialCircuitBreakerConfig) *Sequentia
 }
 
 func (cb *SequentialCircuitBreaker) Call(f func() error) error {
-	if !cb.Ready() {
+	if cb.Tripped() {
 		return ErrorOpenCircuitBreaker
 	}
 
@@ -63,10 +63,10 @@ func (cb *SequentialCircuitBreaker) Call(f func() error) error {
 
 // TODO: (jademcosta) I don't like the "ready" work. i need to find a better name
 // TODO: if this is going to be kept public tests need to be made
-func (cb *SequentialCircuitBreaker) Ready() bool {
+func (cb *SequentialCircuitBreaker) Tripped() bool {
 	cb.m.Lock()
 	defer cb.m.Unlock()
-	return !cb.cState.blockCall()
+	return cb.cState.blockCall()
 }
 
 func (cb *SequentialCircuitBreaker) Fail() {

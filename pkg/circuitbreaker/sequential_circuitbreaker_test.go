@@ -250,3 +250,22 @@ func TestCallingFailWhenOpenIncreasesThreshold(t *testing.T) {
 	err = sut.Call(alwaysSuccessfulFn)
 	assert.NoError(t, err, "should return no error")
 }
+
+func TestTripped(t *testing.T) {
+	sut := circuitbreaker.NewSequentialCircuitBreaker(
+		circuitbreaker.SequentialCircuitBreakerConfig{
+			OpenInterval:       100 * time.Millisecond,
+			FailCountThreshold: 1,
+		})
+
+	assert.False(t, sut.Tripped(), "should not be tripped")
+	_ = sut.Call(alwaysSuccessfulFn)
+	assert.False(t, sut.Tripped(), "should not be tripped")
+	sut.Success()
+	assert.False(t, sut.Tripped(), "should not be tripped")
+
+	sut.Fail()
+	assert.True(t, sut.Tripped(), "should be tripped")
+	time.Sleep(101 * time.Millisecond)
+	assert.False(t, sut.Tripped(), "should not be tripped")
+}
