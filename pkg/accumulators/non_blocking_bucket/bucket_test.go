@@ -50,18 +50,24 @@ type failingDataEnqueuerMock struct {
 	fail        bool
 }
 
-func (w *failingDataEnqueuerMock) Enqueue(data []byte) error {
-	w.mu.Lock()
-	defer w.mu.Unlock()
+func (denq *failingDataEnqueuerMock) Enqueue(data []byte) error {
+	denq.mu.Lock()
+	defer denq.mu.Unlock()
 
-	w.callCount += 1
-	w.dataWritten = append(w.dataWritten, data)
-	if w.fail {
+	denq.callCount += 1
+	denq.dataWritten = append(denq.dataWritten, data)
+	if denq.fail {
 		return errors.New("i always fail")
 	} else {
 		return nil
 	}
 
+}
+
+func (denq *failingDataEnqueuerMock) SetFail(v bool) {
+	denq.mu.Lock()
+	defer denq.mu.Unlock()
+	denq.fail = v
 }
 
 type dummyDataDropper struct{}
@@ -585,7 +591,7 @@ func TestItStopsRetryingOnceItSendsTheData(t *testing.T) {
 	assert.Equal(t, 1, next.callCount, "should produce only 1 data message, as the CB was open")
 	next.mu.Unlock()
 
-	next.fail = false
+	next.SetFail(false)
 	time.Sleep(openInterval)
 	time.Sleep(bucket.CB_RETRY_SLEEP_DURATION)
 	time.Sleep(1 * time.Millisecond)
@@ -596,11 +602,11 @@ func TestItStopsRetryingOnceItSendsTheData(t *testing.T) {
 	assert.Equal(t, wanted, next.dataWritten, "should call 'Write' with exactly the same data passed into it")
 	next.mu.Unlock()
 
-	next.fail = true
+	next.SetFail(true)
 	err = sut.Enqueue([]byte("4444"))
 	assert.NoError(t, err, "should not err on enqueue")
 	time.Sleep(5 * time.Millisecond)
-	next.fail = false
+	next.SetFail(false)
 
 	time.Sleep(openInterval * 2) //Waiting longer to show we don't have any more message
 	time.Sleep(bucket.CB_RETRY_SLEEP_DURATION)
