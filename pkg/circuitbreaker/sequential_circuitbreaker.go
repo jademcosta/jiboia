@@ -48,15 +48,18 @@ func NewSequentialCircuitBreaker(conf SequentialCircuitBreakerConfig) *Sequentia
 }
 
 func (cb *SequentialCircuitBreaker) Call(f func() error) error {
-	if cb.Tripped() {
+	cb.m.Lock()
+	defer cb.m.Unlock()
+
+	if cb.tripped() {
 		return ErrorOpenCircuitBreaker
 	}
-
+	//TODO: Test that the mutex in this fn works
 	err := f()
 	if err != nil {
-		cb.Fail()
+		cb.fail()
 	} else {
-		cb.Success()
+		cb.success()
 	}
 	return err
 }
@@ -78,6 +81,18 @@ func (cb *SequentialCircuitBreaker) Fail() {
 func (cb *SequentialCircuitBreaker) Success() {
 	cb.m.Lock()
 	defer cb.m.Unlock()
+	cb.cState = cb.cState.success()
+}
+
+func (cb *SequentialCircuitBreaker) tripped() bool {
+	return cb.cState.blockCall()
+}
+
+func (cb *SequentialCircuitBreaker) fail() {
+	cb.cState = cb.cState.fail()
+}
+
+func (cb *SequentialCircuitBreaker) success() {
 	cb.cState = cb.cState.success()
 }
 
