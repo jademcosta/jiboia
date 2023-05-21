@@ -4,15 +4,18 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 
+	"github.com/jademcosta/jiboia/pkg/circuitbreaker"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 )
 
-const ( //TODO: move this from here into config
-	MINIMAL_QUEUE_CAPACITY = 30
+const (
+	MINIMAL_QUEUE_CAPACITY  = 30
+	CB_RETRY_SLEEP_DURATION = 10 * time.Millisecond // TODO: fine tune this value
 )
 
 type BucketAccumulator struct {
@@ -26,6 +29,7 @@ type BucketAccumulator struct {
 	next             domain.DataFlow
 	metrics          *metricCollector
 	shutdownMutex    sync.RWMutex
+	circBreaker      circuitbreaker.CircuitBreaker
 	shuttingDown     bool
 }
 
@@ -37,6 +41,7 @@ func New(
 	queueCapacity int,
 	dataDropper domain.DataDropper,
 	next domain.DataFlow,
+	cb circuitbreaker.CircuitBreaker,
 	metricRegistry *prometheus.Registry) *BucketAccumulator {
 
 	if limitOfBytes <= 1 {
@@ -64,6 +69,14 @@ func New(
 		current:          make([][]byte, 0, 1024), //TODO: create the initial size based on the capacity
 		next:             next,
 		metrics:          metrics,
+		circBreaker:      cb,
+		// circuitbreaker.NewSequentialCircuitBreaker(
+		// 	//TODO: create configs for this, move the it to outside the New fn
+		// 	circuitbreaker.SequentialCircuitBreakerConfig{
+		// 		OpenInterval:       100 * time.Millisecond,
+		// 		FailCountThreshold: 1,
+		// 	},
+		// ),
 	}
 }
 
@@ -118,8 +131,7 @@ func (b *BucketAccumulator) append(data []byte) {
 
 	if receivedDataTooBigForBuffer {
 		b.flush()
-		_ = b.next.Enqueue(data) // TODO: use datadropper on error
-		b.metrics.increaseNextCounter()
+		b.enqueueOnNext(data)
 
 		return
 	}
@@ -158,10 +170,9 @@ func (b *BucketAccumulator) flush() {
 		}
 	}
 
-	// TODO: use datadropper on error
-	_ = b.next.Enqueue(mergedData)
+	b.enqueueOnNext(mergedData)
 	b.current = b.current[:0]
-	b.metrics.increaseNextCounter()
+
 }
 
 func (b *BucketAccumulator) currentBufferLen() int {
@@ -179,6 +190,23 @@ func (b *BucketAccumulator) currentBufferLen() int {
 
 func (b *BucketAccumulator) dataDropped(data []byte) {
 	b.dataDropper.Drop(data)
+}
+
+func (b *BucketAccumulator) enqueueOnNext(data []byte) {
+	err := b.circBreaker.Call(func() error {
+		return b.next.Enqueue(data)
+	})
+
+	for err != nil {
+		time.Sleep(CB_RETRY_SLEEP_DURATION) // TODO: should this be configurable?
+		err = b.circBreaker.Call(
+			func() error {
+				return b.next.Enqueue(data)
+			},
+		)
+	}
+
+	b.metrics.increaseNextCounter()
 }
 
 func (b *BucketAccumulator) updateEnqueuedItemsMetric() {
