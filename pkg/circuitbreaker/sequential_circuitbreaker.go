@@ -69,19 +69,19 @@ func (cb *SequentialCircuitBreaker) Call(f func() error) error {
 func (cb *SequentialCircuitBreaker) Tripped() bool {
 	cb.m.Lock()
 	defer cb.m.Unlock()
-	return cb.cState.blockCall()
+	return cb.tripped()
 }
 
 func (cb *SequentialCircuitBreaker) Fail() {
 	cb.m.Lock()
 	defer cb.m.Unlock()
-	cb.cState = cb.cState.fail()
+	cb.fail()
 }
 
 func (cb *SequentialCircuitBreaker) Success() {
 	cb.m.Lock()
 	defer cb.m.Unlock()
-	cb.cState = cb.cState.success()
+	cb.success()
 }
 
 func (cb *SequentialCircuitBreaker) tripped() bool {
