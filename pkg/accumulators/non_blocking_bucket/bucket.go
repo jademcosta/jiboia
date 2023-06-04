@@ -70,13 +70,6 @@ func New(
 		next:             next,
 		metrics:          metrics,
 		circBreaker:      cb,
-		// circuitbreaker.NewSequentialCircuitBreaker(
-		// 	//TODO: create configs for this, move the it to outside the New fn
-		// 	circuitbreaker.SequentialCircuitBreakerConfig{
-		// 		OpenInterval:       100 * time.Millisecond,
-		// 		FailCountThreshold: 1,
-		// 	},
-		// ),
 	}
 }
 
