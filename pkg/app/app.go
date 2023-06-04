@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,6 +14,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/adapters/external_queue"
 	"github.com/jademcosta/jiboia/pkg/adapters/http_in"
 	"github.com/jademcosta/jiboia/pkg/adapters/objstorage"
+	"github.com/jademcosta/jiboia/pkg/circuitbreaker"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/datetimeprovider"
 	"github.com/jademcosta/jiboia/pkg/domain"
@@ -201,7 +203,12 @@ func createExternalQueue(l *zap.SugaredLogger, c config.ExternalQueue, metricReg
 	return externalQueue
 }
 
-func createAccumulator(flowName string, l *zap.SugaredLogger, c config.Accumulator, registry *prometheus.Registry, uploader domain.DataFlow) *non_blocking_bucket.BucketAccumulator {
+func createAccumulator(flowName string, l *zap.SugaredLogger, c config.Accumulator, registry *prometheus.Registry, uploader domain.DataFlow) (*non_blocking_bucket.BucketAccumulator, error) {
+	cb, err := circuitbreaker.FromConfig(c.CircuitBreaker)
+	if err != nil {
+		return nil, fmt.Errorf("error creating accumulator: %w", err)
+	}
+
 	return non_blocking_bucket.New(
 		flowName,
 		l,
@@ -209,7 +216,9 @@ func createAccumulator(flowName string, l *zap.SugaredLogger, c config.Accumulat
 		[]byte(c.Separator),
 		c.QueueCapacity,
 		domain.NewObservableDataDropper(l, registry, "accumulator"),
-		uploader, registry)
+		uploader,
+		cb,
+		registry), nil
 }
 
 func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
@@ -239,9 +248,13 @@ func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 			UploadWorkers: make([]flow.Runnable, 0, conf.MaxConcurrentUploads),
 		}
 
-		hasAccumulatorDeclared := conf.Accumulator.SizeInBytes > 0
+		hasAccumulatorDeclared := conf.Accumulator.SizeInBytes > 0 //TODO: this is something that will need to be improved once config is localized inside packages
 		if hasAccumulatorDeclared {
-			f.Accumulator = createAccumulator(conf.Name, localLogger, conf.Accumulator, metricRegistry, uploader)
+			acc, err := createAccumulator(conf.Name, localLogger, conf.Accumulator, metricRegistry, uploader)
+			if err != nil {
+				localLogger.Panicw("error on accumulator creation", "error", err)
+			}
+			f.Accumulator = acc
 		}
 
 		for i := 0; i < conf.MaxConcurrentUploads; i++ {
