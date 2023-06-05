@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -203,10 +202,10 @@ func createExternalQueue(l *zap.SugaredLogger, c config.ExternalQueue, metricReg
 	return externalQueue
 }
 
-func createAccumulator(flowName string, l *zap.SugaredLogger, c config.Accumulator, registry *prometheus.Registry, uploader domain.DataFlow) (*non_blocking_bucket.BucketAccumulator, error) {
+func createAccumulator(flowName string, l *zap.SugaredLogger, c config.Accumulator, registry *prometheus.Registry, uploader domain.DataFlow) *non_blocking_bucket.BucketAccumulator {
 	cb, err := circuitbreaker.FromConfig(c.CircuitBreaker)
 	if err != nil {
-		return nil, fmt.Errorf("error creating accumulator: %w", err)
+		l.Panicw("error on accumulator creation", "error", err)
 	}
 
 	return non_blocking_bucket.New(
@@ -218,7 +217,7 @@ func createAccumulator(flowName string, l *zap.SugaredLogger, c config.Accumulat
 		domain.NewObservableDataDropper(l, registry, "accumulator"),
 		uploader,
 		cb,
-		registry), nil
+		registry)
 }
 
 func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
@@ -250,11 +249,7 @@ func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 
 		hasAccumulatorDeclared := conf.Accumulator.SizeInBytes > 0 //TODO: this is something that will need to be improved once config is localized inside packages
 		if hasAccumulatorDeclared {
-			acc, err := createAccumulator(conf.Name, localLogger, conf.Accumulator, metricRegistry, uploader)
-			if err != nil {
-				localLogger.Panicw("error on accumulator creation", "error", err)
-			}
-			f.Accumulator = acc
+			f.Accumulator = createAccumulator(conf.Name, localLogger, conf.Accumulator, metricRegistry, uploader)
 		}
 
 		for i := 0; i < conf.MaxConcurrentUploads; i++ {
