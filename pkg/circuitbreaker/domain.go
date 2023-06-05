@@ -6,3 +6,9 @@ type CircuitBreaker interface {
 	Fail()
 	Success()
 }
+
+type circuitState interface {
+	fail() circuitState
+	success() circuitState
+	blockCall() bool
+}
