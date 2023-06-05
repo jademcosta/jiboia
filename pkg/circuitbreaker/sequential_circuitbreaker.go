@@ -38,7 +38,6 @@ type SequentialCircuitBreaker struct {
 	cState circuitState
 }
 
-// FIXME: validate config, like to not allow zero threshold
 func NewSequentialCircuitBreaker(conf SequentialCircuitBreakerConfig) *SequentialCircuitBreaker {
 	return &SequentialCircuitBreaker{
 		cState: &circuitClosedState{
@@ -48,23 +47,22 @@ func NewSequentialCircuitBreaker(conf SequentialCircuitBreakerConfig) *Sequentia
 }
 
 func (cb *SequentialCircuitBreaker) Call(f func() error) error {
-	cb.m.Lock()
-	defer cb.m.Unlock()
+	// cb.m.Lock()
+	// defer cb.m.Unlock()
 
-	if cb.tripped() {
+	if cb.Tripped() {
 		return ErrorOpenCircuitBreaker
 	}
-	//TODO: Test that the mutex in this fn works
+
 	err := f()
 	if err != nil {
-		cb.fail()
+		cb.Fail()
 	} else {
-		cb.success()
+		cb.Success()
 	}
 	return err
 }
 
-// TODO: (jademcosta) I don't like the "ready" work. i need to find a better name
 // TODO: if this is going to be kept public tests need to be made
 func (cb *SequentialCircuitBreaker) Tripped() bool {
 	cb.m.Lock()
@@ -150,6 +148,3 @@ func (s *circuitOpenState) blockCall() bool {
 	expired := time.Now().After(s.until)
 	return !expired
 }
-
-//TODO: create the half-open state, which is a state right after the "until" period has expired,
-// and in where if the call fails, it enters again in open state

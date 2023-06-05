@@ -52,6 +52,7 @@ func createSequentialCircuitBreaker(cbConf map[string]string) (*SequentialCircui
 		}
 
 		if intervalInMs == 0 {
+			//TODO: this validation should be moved to the CB itself
 			return nil, fmt.Errorf("%s key cannot be zero", OPEN_INTERVAL_KEY)
 		}
 
