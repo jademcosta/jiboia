@@ -524,14 +524,18 @@ func TestCallindEnqueueUsesACircuitBreaderAndRetriesOnFailure(t *testing.T) {
 		FailCountThreshold: 1,
 	})
 
-	sut := bucket.New("someflow", l, 3, []byte(""), queueCapacity, dataDropper, next, cb, prometheus.NewRegistry())
+	limitOfBytes := 3
+	separator := []byte("")
+
+	sut := bucket.New("someflow", l, limitOfBytes, separator, queueCapacity, dataDropper, next, cb, prometheus.NewRegistry())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go sut.Run(ctx)
 
-	err := sut.Enqueue([]byte("333"))
+	payload := []byte("333")
+	err := sut.Enqueue(payload)
 	assert.NoError(t, err, "should not err on enqueue")
-	time.Sleep(5 * time.Millisecond)
+	time.Sleep(1 * time.Millisecond)
 
 	next.mu.Lock()
 	assert.Equal(t, 1, next.callCount, "should produce only 1 data message, as the CB was open")
@@ -539,9 +543,9 @@ func TestCallindEnqueueUsesACircuitBreaderAndRetriesOnFailure(t *testing.T) {
 
 	time.Sleep(openInterval)
 	time.Sleep(bucket.CB_RETRY_SLEEP_DURATION)
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(1 * time.Microsecond)
 
-	wanted := [][]byte{[]byte("333"), []byte("333")}
+	wanted := [][]byte{payload, payload}
 	next.mu.Lock()
 	assert.Equal(t, 2, next.callCount, "should produce only 2 data message, as the CB has closed, open, and closed again")
 	assert.Equal(t, wanted, next.dataWritten, "should call 'Write' with exactly the same data passed into it")
@@ -549,11 +553,11 @@ func TestCallindEnqueueUsesACircuitBreaderAndRetriesOnFailure(t *testing.T) {
 
 	time.Sleep(openInterval)
 	time.Sleep(bucket.CB_RETRY_SLEEP_DURATION)
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(1 * time.Microsecond)
 
-	wanted = [][]byte{[]byte("333"), []byte("333"), []byte("333")}
+	wanted = [][]byte{payload, payload, payload}
 	next.mu.Lock()
-	assert.Equal(t, 3, next.callCount, "should produce only 2 data message, as the CB has closed, open, and closed again")
+	assert.Equal(t, 3, next.callCount, "should produce only 3 data message, as the CB has closed, open, and closed again")
 	assert.Equal(t, wanted, next.dataWritten, "should call 'Write' with exactly the same data passed into it")
 	next.mu.Unlock()
 
@@ -578,14 +582,18 @@ func TestItStopsRetryingOnceItSendsTheData(t *testing.T) {
 		FailCountThreshold: 1,
 	})
 
-	sut := bucket.New("someflow", l, 3, []byte(""), queueCapacity, dataDropper, next, cb, prometheus.NewRegistry())
+	limitOfBytes := 3
+	separator := []byte("")
+
+	sut := bucket.New("someflow", l, limitOfBytes, separator, queueCapacity, dataDropper, next, cb, prometheus.NewRegistry())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go sut.Run(ctx)
 
-	err := sut.Enqueue([]byte("333"))
+	payload := []byte("333")
+	err := sut.Enqueue(payload)
 	assert.NoError(t, err, "should not err on enqueue")
-	time.Sleep(5 * time.Millisecond)
+	time.Sleep(1 * time.Millisecond)
 
 	next.mu.Lock()
 	assert.Equal(t, 1, next.callCount, "should produce only 1 data message, as the CB was open")
@@ -596,23 +604,25 @@ func TestItStopsRetryingOnceItSendsTheData(t *testing.T) {
 	time.Sleep(bucket.CB_RETRY_SLEEP_DURATION)
 	time.Sleep(1 * time.Millisecond)
 
-	wanted := [][]byte{[]byte("333"), []byte("333")}
+	wanted := [][]byte{payload, payload}
 	next.mu.Lock()
 	assert.Equal(t, 2, next.callCount, "should produce only 2 data message, as the CB has closed, open, and closed again")
 	assert.Equal(t, wanted, next.dataWritten, "should call 'Write' with exactly the same data passed into it")
 	next.mu.Unlock()
 
 	next.SetFail(true)
-	err = sut.Enqueue([]byte("4444"))
+	payload2 := []byte("4444")
+	err = sut.Enqueue(payload2)
 	assert.NoError(t, err, "should not err on enqueue")
-	time.Sleep(5 * time.Millisecond)
+	time.Sleep(1 * time.Millisecond)
+
 	next.SetFail(false)
 
-	time.Sleep(openInterval * 2) //Waiting longer to show we don't have any more message
+	time.Sleep(openInterval * 5) //Waiting longer to show we don't have any more message
 	time.Sleep(bucket.CB_RETRY_SLEEP_DURATION)
 	time.Sleep(1 * time.Millisecond)
 
-	wanted = [][]byte{[]byte("333"), []byte("333"), []byte("4444"), []byte("4444")}
+	wanted = [][]byte{payload, payload, payload2, payload2}
 	next.mu.Lock()
 	assert.Equal(t, 4, next.callCount, "should produce only 2 data message, as the CB has closed, open, and closed again")
 	assert.Equal(t, wanted, next.dataWritten, "should call 'Write' with exactly the same data passed into it")

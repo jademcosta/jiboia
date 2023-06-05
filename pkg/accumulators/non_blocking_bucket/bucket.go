@@ -15,7 +15,7 @@ import (
 
 const (
 	MINIMAL_QUEUE_CAPACITY  = 30
-	CB_RETRY_SLEEP_DURATION = 10 * time.Millisecond // TODO: fine tune this value
+	CB_RETRY_SLEEP_DURATION = 1 * time.Millisecond // TODO: fine tune this value
 )
 
 type BucketAccumulator struct {
@@ -191,7 +191,7 @@ func (b *BucketAccumulator) enqueueOnNext(data []byte) {
 	})
 
 	for err != nil {
-		time.Sleep(CB_RETRY_SLEEP_DURATION) // TODO: should this be configurable?
+		time.Sleep(CB_RETRY_SLEEP_DURATION)
 		err = b.circBreaker.Call(
 			func() error {
 				return b.next.Enqueue(data)
