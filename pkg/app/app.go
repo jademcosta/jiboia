@@ -187,7 +187,7 @@ func registerDefaultMetrics(registry *prometheus.Registry) {
 func createObjStorage(l *zap.SugaredLogger, c config.ObjectStorage, metricRegistry *prometheus.Registry) uploaders.ObjStorage {
 	objStorage, err := objstorage.New(l, metricRegistry, &c)
 	if err != nil {
-		l.Panic("error creating object storage", "error", err)
+		l.Panicw("error creating object storage", "error", err)
 	}
 
 	return objStorage
@@ -196,25 +196,25 @@ func createObjStorage(l *zap.SugaredLogger, c config.ObjectStorage, metricRegist
 func createExternalQueue(l *zap.SugaredLogger, c config.ExternalQueue, metricRegistry *prometheus.Registry) uploaders.ExternalQueue {
 	externalQueue, err := external_queue.New(l, metricRegistry, &c)
 	if err != nil {
-		l.Panic("error creating external queue", "error", err)
+		l.Panicw("error creating external queue", "error", err)
 	}
 
 	return externalQueue
 }
 
-func createAccumulator(flowName string, l *zap.SugaredLogger, c config.Accumulator, registry *prometheus.Registry, uploader domain.DataFlow) *non_blocking_bucket.BucketAccumulator {
+func createAccumulator(flowName string, logger *zap.SugaredLogger, c config.Accumulator, registry *prometheus.Registry, uploader domain.DataFlow) *non_blocking_bucket.BucketAccumulator {
 	cb, err := circuitbreaker.FromConfig(c.CircuitBreaker)
 	if err != nil {
-		l.Panicw("error on accumulator creation", "error", err)
+		logger.Panicw("error on accumulator creation", "error", err)
 	}
 
 	return non_blocking_bucket.New(
 		flowName,
-		l,
+		logger,
 		c.SizeInBytes,
 		[]byte(c.Separator),
 		c.QueueCapacity,
-		domain.NewObservableDataDropper(l, registry, "accumulator"),
+		domain.NewObservableDataDropper(logger, registry, "accumulator"),
 		uploader,
 		cb,
 		registry)
