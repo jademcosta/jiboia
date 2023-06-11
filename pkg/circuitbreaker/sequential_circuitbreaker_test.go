@@ -20,7 +20,8 @@ func alwaysFailFn() error {
 func TestABrandNewCBStartsWithClosedState(t *testing.T) {
 	sut := circuitbreaker.NewSequentialCircuitBreaker(
 		circuitbreaker.SequentialCircuitBreakerConfig{
-			OpenInterval: 1000 * time.Millisecond,
+			FailCountThreshold: 1,
+			OpenInterval:       1000 * time.Millisecond,
 		})
 
 	for i := 0; i <= 5; i++ {
