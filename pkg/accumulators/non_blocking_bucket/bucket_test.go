@@ -99,6 +99,10 @@ func TestPanicsIfLimitIsOneOrLess(t *testing.T) {
 	assert.Panics(t, func() {
 		bucket.New("someflow", l, 1, separator, 30, &dummyDataDropper{}, next, dummyCB, prometheus.NewRegistry())
 	}, "limit of bytes 1 is not allowed")
+
+	assert.NotPanics(t, func() {
+		bucket.New("someflow", l, 2, separator, 30, &dummyDataDropper{}, next, dummyCB, prometheus.NewRegistry())
+	}, "limit of bytes 2 is allowed")
 }
 
 func TestPanicsIfSeparatorLenEqualOrBiggerThanLimit(t *testing.T) {
@@ -118,6 +122,24 @@ func TestPanicsIfSeparatorLenEqualOrBiggerThanLimit(t *testing.T) {
 	assert.Panics(t, func() {
 		bucket.New("someflow", l, limitOfBytes, separator, 30, &dummyDataDropper{}, next, dummyCB, prometheus.NewRegistry())
 	}, "separator size > limit is not allowed")
+}
+
+func TestPanicsIfQueueSizeIsTwoOrLess(t *testing.T) {
+
+	next := &dataEnqueuerMock{dataWritten: make([][]byte, 0)}
+	separator := []byte("")
+	bytesSizeLimit := 11
+
+	assert.Panics(t, func() {
+		bucket.New("someflow", l, bytesSizeLimit, separator, 0, &dummyDataDropper{}, next, dummyCB, prometheus.NewRegistry())
+	}, "queue size of 0 is not allowed")
+	assert.Panics(t, func() {
+		bucket.New("someflow", l, bytesSizeLimit, separator, 1, &dummyDataDropper{}, next, dummyCB, prometheus.NewRegistry())
+	}, "queue size of 1 is not allowed")
+
+	assert.NotPanics(t, func() {
+		bucket.New("someflow", l, bytesSizeLimit, separator, 2, &dummyDataDropper{}, next, dummyCB, prometheus.NewRegistry())
+	}, "queue size of 2 should be allowed")
 }
 
 func TestItDoesNotPassDataIfLimitNotReached(t *testing.T) {
@@ -368,15 +390,15 @@ func TestDropsDataIfAtFullCapacity(t *testing.T) {
 	}
 }
 
-func TestTheMinimunCapacityIsFixed(t *testing.T) {
+func TestTheCapacityIsFixed(t *testing.T) {
 
 	limitBytes := 6000
 
 	next := &dataEnqueuerMock{dataWritten: make([][]byte, 0)}
 	ddropper := &mockDataDropper{dataDropped: make([][]byte, 0)}
 	separator := []byte("")
-	queueCapacity := 3
-	dataEnqueueCount := bucket.MINIMAL_QUEUE_CAPACITY
+	queueCapacity := 2
+	dataEnqueueCount := bucket.MINIMUM_QUEUE_CAPACITY
 
 	sut := bucket.New("someflow", l, limitBytes, separator, queueCapacity, ddropper, next, dummyCB, prometheus.NewRegistry())
 

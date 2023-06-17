@@ -3,6 +3,7 @@ package non_blocking_bucket
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -14,7 +15,7 @@ import (
 )
 
 const (
-	MINIMAL_QUEUE_CAPACITY  = 30
+	MINIMUM_QUEUE_CAPACITY  = 2
 	CB_RETRY_SLEEP_DURATION = 1 * time.Millisecond // TODO: fine tune this value
 )
 
@@ -45,15 +46,16 @@ func New(
 	metricRegistry *prometheus.Registry) *BucketAccumulator {
 
 	if limitOfBytes <= 1 {
-		panic("limit of bytes in accumulator should be >= 2")
+		l.Panicw("limit of bytes in accumulator should be >= 2", "flow", flowName)
 	}
 
 	if len(separator) >= limitOfBytes {
-		panic("separator length in bytes should be smaller than limit")
+		l.Panicw("separator length in bytes should be smaller than limit", "flow", flowName)
 	}
 
-	if queueCapacity < MINIMAL_QUEUE_CAPACITY {
-		queueCapacity = MINIMAL_QUEUE_CAPACITY
+	if queueCapacity < MINIMUM_QUEUE_CAPACITY {
+		l.Panicw(fmt.Sprintf("the accumulator capacity cannot be less than %d",
+			MINIMUM_QUEUE_CAPACITY), "flow", flowName)
 	}
 
 	metrics := NewMetricCollector(flowName, metricRegistry)
