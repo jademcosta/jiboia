@@ -1,4 +1,4 @@
-package nonblocking_uploader
+package uploader
 
 import (
 	"context"

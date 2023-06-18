@@ -19,8 +19,8 @@ import (
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/domain/flow"
 	"github.com/jademcosta/jiboia/pkg/logger"
-	"github.com/jademcosta/jiboia/pkg/uploaders/filepather"
-	"github.com/jademcosta/jiboia/pkg/uploaders/nonblocking_uploader"
+	"github.com/jademcosta/jiboia/pkg/uploader"
+	"github.com/jademcosta/jiboia/pkg/uploader/filepather"
 	"github.com/jademcosta/jiboia/pkg/worker"
 	"github.com/oklog/run"
 	"github.com/prometheus/client_golang/prometheus"
@@ -230,7 +230,7 @@ func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 		externalQueue := createExternalQueue(localLogger, conf.ExternalQueue, metricRegistry)
 		objStorage := createObjStorage(localLogger, conf.ObjectStorage, metricRegistry)
 
-		uploader := nonblocking_uploader.New(
+		uploader := uploader.New(
 			conf.Name,
 			localLogger,
 			conf.MaxConcurrentUploads,
