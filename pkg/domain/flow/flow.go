@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/jademcosta/jiboia/pkg/domain"
-	"github.com/jademcosta/jiboia/pkg/uploaders"
+	"github.com/jademcosta/jiboia/pkg/worker"
 )
 
 type Runnable interface {
@@ -18,8 +18,8 @@ type DataFlowRunnable interface {
 
 type Flow struct {
 	Name          string
-	ObjStorage    uploaders.ObjStorage
-	ExternalQueue uploaders.ExternalQueue
+	ObjStorage    worker.ObjStorage
+	ExternalQueue worker.ExternalQueue
 	Entrypoint    domain.DataFlow
 	Uploader      DataFlowRunnable
 	Accumulator   DataFlowRunnable

@@ -19,9 +19,9 @@ import (
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/domain/flow"
 	"github.com/jademcosta/jiboia/pkg/logger"
-	"github.com/jademcosta/jiboia/pkg/uploaders"
 	"github.com/jademcosta/jiboia/pkg/uploaders/filepather"
 	"github.com/jademcosta/jiboia/pkg/uploaders/nonblocking_uploader"
+	"github.com/jademcosta/jiboia/pkg/worker"
 	"github.com/oklog/run"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
@@ -184,7 +184,7 @@ func registerDefaultMetrics(registry *prometheus.Registry) {
 	)
 }
 
-func createObjStorage(l *zap.SugaredLogger, c config.ObjectStorage, metricRegistry *prometheus.Registry) uploaders.ObjStorage {
+func createObjStorage(l *zap.SugaredLogger, c config.ObjectStorage, metricRegistry *prometheus.Registry) worker.ObjStorage {
 	objStorage, err := objstorage.New(l, metricRegistry, &c)
 	if err != nil {
 		l.Panicw("error creating object storage", "error", err)
@@ -193,7 +193,7 @@ func createObjStorage(l *zap.SugaredLogger, c config.ObjectStorage, metricRegist
 	return objStorage
 }
 
-func createExternalQueue(l *zap.SugaredLogger, c config.ExternalQueue, metricRegistry *prometheus.Registry) uploaders.ExternalQueue {
+func createExternalQueue(l *zap.SugaredLogger, c config.ExternalQueue, metricRegistry *prometheus.Registry) worker.ExternalQueue {
 	externalQueue, err := external_queue.New(l, metricRegistry, &c)
 	if err != nil {
 		l.Panicw("error creating external queue", "error", err)
@@ -253,7 +253,7 @@ func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 		}
 
 		for i := 0; i < conf.MaxConcurrentUploads; i++ {
-			worker := uploaders.NewWorker(conf.Name, localLogger, objStorage, externalQueue, uploader.WorkersReady, metricRegistry)
+			worker := worker.NewWorker(conf.Name, localLogger, objStorage, externalQueue, uploader.WorkersReady, metricRegistry)
 			f.UploadWorkers = append(f.UploadWorkers, worker)
 		}
 

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/jademcosta/jiboia/pkg/domain"
-	"github.com/jademcosta/jiboia/pkg/uploaders"
+	"github.com/jademcosta/jiboia/pkg/worker"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -17,7 +17,7 @@ const (
 var ensureMetricRegisteringOnce sync.Once
 
 type queueWithMetrics struct {
-	wrappedQueue          uploaders.ExternalQueue
+	wrappedQueue          worker.ExternalQueue
 	latencyHistogram      *prometheus.HistogramVec
 	enqueueCounter        *prometheus.CounterVec
 	enqueueErrorCounter   *prometheus.CounterVec
