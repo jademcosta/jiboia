@@ -13,6 +13,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/adapters/external_queue"
 	"github.com/jademcosta/jiboia/pkg/adapters/http_in"
 	"github.com/jademcosta/jiboia/pkg/adapters/objstorage"
+	"github.com/jademcosta/jiboia/pkg/circuitbreaker"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/datetimeprovider"
 	"github.com/jademcosta/jiboia/pkg/domain"
@@ -186,7 +187,7 @@ func registerDefaultMetrics(registry *prometheus.Registry) {
 func createObjStorage(l *zap.SugaredLogger, c config.ObjectStorage, metricRegistry *prometheus.Registry) uploaders.ObjStorage {
 	objStorage, err := objstorage.New(l, metricRegistry, &c)
 	if err != nil {
-		l.Panic("error creating object storage", "error", err)
+		l.Panicw("error creating object storage", "error", err)
 	}
 
 	return objStorage
@@ -195,21 +196,28 @@ func createObjStorage(l *zap.SugaredLogger, c config.ObjectStorage, metricRegist
 func createExternalQueue(l *zap.SugaredLogger, c config.ExternalQueue, metricRegistry *prometheus.Registry) uploaders.ExternalQueue {
 	externalQueue, err := external_queue.New(l, metricRegistry, &c)
 	if err != nil {
-		l.Panic("error creating external queue", "error", err)
+		l.Panicw("error creating external queue", "error", err)
 	}
 
 	return externalQueue
 }
 
-func createAccumulator(flowName string, l *zap.SugaredLogger, c config.Accumulator, registry *prometheus.Registry, uploader domain.DataFlow) *non_blocking_bucket.BucketAccumulator {
+func createAccumulator(flowName string, logger *zap.SugaredLogger, c config.Accumulator, registry *prometheus.Registry, uploader domain.DataFlow) *non_blocking_bucket.BucketAccumulator {
+	cb, err := circuitbreaker.FromConfig(c.CircuitBreaker)
+	if err != nil {
+		logger.Panicw("error on accumulator creation", "error", err)
+	}
+
 	return non_blocking_bucket.New(
 		flowName,
-		l,
+		logger,
 		c.SizeInBytes,
 		[]byte(c.Separator),
 		c.QueueCapacity,
-		domain.NewObservableDataDropper(l, registry, "accumulator"),
-		uploader, registry)
+		domain.NewObservableDataDropper(logger, registry, "accumulator"),
+		uploader,
+		cb,
+		registry)
 }
 
 func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
@@ -239,7 +247,7 @@ func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 			UploadWorkers: make([]flow.Runnable, 0, conf.MaxConcurrentUploads),
 		}
 
-		hasAccumulatorDeclared := conf.Accumulator.SizeInBytes > 0
+		hasAccumulatorDeclared := conf.Accumulator.SizeInBytes > 0 //TODO: this is something that will need to be improved once config is localized inside packages
 		if hasAccumulatorDeclared {
 			f.Accumulator = createAccumulator(conf.Name, localLogger, conf.Accumulator, metricRegistry, uploader)
 		}

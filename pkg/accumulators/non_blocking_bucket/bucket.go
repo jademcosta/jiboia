@@ -3,16 +3,20 @@ package non_blocking_bucket
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
+	"time"
 
+	"github.com/jademcosta/jiboia/pkg/circuitbreaker"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 )
 
-const ( //TODO: move this from here into config
-	MINIMAL_QUEUE_CAPACITY = 30
+const (
+	MINIMUM_QUEUE_CAPACITY  = 2
+	CB_RETRY_SLEEP_DURATION = 1 * time.Millisecond // TODO: fine tune this value
 )
 
 type BucketAccumulator struct {
@@ -26,6 +30,7 @@ type BucketAccumulator struct {
 	next             domain.DataFlow
 	metrics          *metricCollector
 	shutdownMutex    sync.RWMutex
+	circBreaker      circuitbreaker.CircuitBreaker
 	shuttingDown     bool
 }
 
@@ -37,18 +42,20 @@ func New(
 	queueCapacity int,
 	dataDropper domain.DataDropper,
 	next domain.DataFlow,
+	cb circuitbreaker.CircuitBreaker,
 	metricRegistry *prometheus.Registry) *BucketAccumulator {
 
 	if limitOfBytes <= 1 {
-		panic("limit of bytes in accumulator should be >= 2")
+		l.Panicw("limit of bytes in accumulator should be >= 2", "flow", flowName)
 	}
 
 	if len(separator) >= limitOfBytes {
-		panic("separator length in bytes should be smaller than limit")
+		l.Panicw("separator length in bytes should be smaller than limit", "flow", flowName)
 	}
 
-	if queueCapacity < MINIMAL_QUEUE_CAPACITY {
-		queueCapacity = MINIMAL_QUEUE_CAPACITY
+	if queueCapacity < MINIMUM_QUEUE_CAPACITY {
+		l.Panicw(fmt.Sprintf("the accumulator capacity cannot be less than %d",
+			MINIMUM_QUEUE_CAPACITY), "flow", flowName)
 	}
 
 	metrics := NewMetricCollector(flowName, metricRegistry)
@@ -64,6 +71,7 @@ func New(
 		current:          make([][]byte, 0, 1024), //TODO: create the initial size based on the capacity
 		next:             next,
 		metrics:          metrics,
+		circBreaker:      cb,
 	}
 }
 
@@ -118,8 +126,7 @@ func (b *BucketAccumulator) append(data []byte) {
 
 	if receivedDataTooBigForBuffer {
 		b.flush()
-		_ = b.next.Enqueue(data) // TODO: use datadropper on error
-		b.metrics.increaseNextCounter()
+		b.enqueueOnNext(data)
 
 		return
 	}
@@ -158,10 +165,9 @@ func (b *BucketAccumulator) flush() {
 		}
 	}
 
-	// TODO: use datadropper on error
-	_ = b.next.Enqueue(mergedData)
+	b.enqueueOnNext(mergedData)
 	b.current = b.current[:0]
-	b.metrics.increaseNextCounter()
+
 }
 
 func (b *BucketAccumulator) currentBufferLen() int {
@@ -179,6 +185,23 @@ func (b *BucketAccumulator) currentBufferLen() int {
 
 func (b *BucketAccumulator) dataDropped(data []byte) {
 	b.dataDropper.Drop(data)
+}
+
+func (b *BucketAccumulator) enqueueOnNext(data []byte) {
+	err := b.circBreaker.Call(func() error {
+		return b.next.Enqueue(data)
+	})
+
+	for err != nil {
+		time.Sleep(CB_RETRY_SLEEP_DURATION)
+		err = b.circBreaker.Call(
+			func() error {
+				return b.next.Enqueue(data)
+			},
+		)
+	}
+
+	b.metrics.increaseNextCounter()
 }
 
 func (b *BucketAccumulator) updateEnqueuedItemsMetric() {

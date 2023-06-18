@@ -14,7 +14,7 @@ flows:
     accumulator:
       size_in_bytes: 50
       separator: "__n__"
-      queue_capacity: 0
+      queue_capacity: 30
     external_queue:
       type: sqs
       config:
@@ -35,7 +35,7 @@ flows:
     accumulator:
       size_in_bytes: 50
       separator: "__n__"
-      queue_capacity: 0
+      queue_capacity: 30
     external_queue:
       type: sqs
       config:

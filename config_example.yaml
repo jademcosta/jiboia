@@ -32,6 +32,15 @@ flows:
       # The internal queue of this component. This serves as a buffer for data yet to be merged.
       # The minimum allowed is 30 (if you put less than this it will get overwritten)
       queue_capacity: 0
+      # This doesn't need to be declared. If not declared, it will have a open_interval_in_ms of 100
+      circuit_breaker:
+        # In case the below line is false, no circuit breaker will be used and other propoertis of
+        # this "circuit_breaker" will be ignored.
+        turn_on: true
+        # This is the time it takes for, once the circuit breaker is opened (meaning it is not
+        # accepting calls), how long it will take to try to accept calls again. If you set it as
+        # zero it will be automatically set to 100.
+        open_interval_in_ms: 100
     external_queue:
       # Available values: noop, sqs. noop is for when you don't want to use any queue.
       type: sqs

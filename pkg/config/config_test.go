@@ -47,6 +47,7 @@ flows:
       size_in_bytes: 2097152
       separator: "_a_"
       queue_capacity: 123
+      circuit_breaker:
     external_queue:
       type: sqs
       config:
@@ -72,6 +73,9 @@ flows:
       size_in_bytes: 20
       separator: ""
       queue_capacity: 13
+      circuit_breaker:
+        turn_on: true
+        open_interval_in_ms: 12345
     external_queue:
       type: noop
     object_storage:
@@ -100,6 +104,7 @@ flows:
 	assert.Equal(t, 2097152, conf.Flows[0].Accumulator.SizeInBytes, "should have parsed the correct flow.accumulator.size_in_bytes")
 	assert.Equal(t, "_a_", conf.Flows[0].Accumulator.Separator, "should have parsed the correct flow.accumulator.separator")
 	assert.Equal(t, 123, conf.Flows[0].Accumulator.QueueCapacity, "should have parsed the correct flow.accumulator.queue_capacity")
+	assert.Equal(t, map[string]string(nil), conf.Flows[0].Accumulator.CircuitBreaker, "should have parsed the correct flow.accumulator.circuit_breaker")
 
 	assert.Equal(t, "sqs", conf.Flows[0].ExternalQueue.Type, "should have parsed the correct flow.external_queue.type")
 	assert.NotNil(t, conf.Flows[0].ExternalQueue.Config, "should maintain the value of flow.external_queue.config")
@@ -117,6 +122,7 @@ flows:
 	assert.Equal(t, 20, conf.Flows[1].Accumulator.SizeInBytes, "should have parsed the correct flow.accumulator.size_in_bytes")
 	assert.Equal(t, "", conf.Flows[1].Accumulator.Separator, "should have parsed the correct flow.accumulator.separator")
 	assert.Equal(t, 13, conf.Flows[1].Accumulator.QueueCapacity, "should have parsed the correct flow.accumulator.queue_capacity")
+	assert.Equal(t, map[string]string{"turn_on": "true", "open_interval_in_ms": "12345"}, conf.Flows[1].Accumulator.CircuitBreaker, "should have parsed the correct flow.accumulator.circuit_breaker")
 
 	assert.Equal(t, "noop", conf.Flows[1].ExternalQueue.Type, "should have parsed the correct flow.external_queue.type")
 	assert.Nil(t, conf.Flows[1].ExternalQueue.Config, "should maintain the value of flow.external_queue.config")
