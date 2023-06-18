@@ -68,7 +68,7 @@ func (storage *HttpStorage) Upload(workU *domain.WorkUnit) (*domain.UploadResult
 	//TODO: Do I need to read the whole body to be able to use keep-alive?
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 && resp.StatusCode != 201 {
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("request failed with status %d", resp.StatusCode)
 	}
 
@@ -92,6 +92,18 @@ func validateAndFormatUrl(url string) (string, error) {
 
 	if !strings.HasPrefix(url, "http") && !strings.HasPrefix(url, "https") {
 		return "", fmt.Errorf("the url should start with http or https")
+	}
+
+	multiplePlaceholders := strings.Count(url, "%s") > 1
+	if multiplePlaceholders {
+		return "", fmt.Errorf("multiple %%s detected on URL, only 1 is allowed")
+	}
+
+	placeholderNotPreceededBySlash :=
+		strings.Contains(url, "%s") && !strings.Contains(url, "/%s")
+
+	if placeholderNotPreceededBySlash {
+		return "", fmt.Errorf("the %%s should be preceeded by a / on URL")
 	}
 
 	return url, nil
