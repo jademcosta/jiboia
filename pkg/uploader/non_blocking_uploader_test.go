@@ -1,4 +1,4 @@
-package nonblocking_uploader
+package uploader
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
-	"github.com/jademcosta/jiboia/pkg/uploaders"
+	"github.com/jademcosta/jiboia/pkg/worker"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
@@ -249,7 +249,7 @@ func testUploader(
 			wg:             &waitG,
 		}
 
-		w := uploaders.NewWorker("someflow", l, objStorage, &dummyExternalQueue{}, uploader.WorkersReady, prometheus.NewRegistry())
+		w := worker.NewWorker("someflow", l, objStorage, &dummyExternalQueue{}, uploader.WorkersReady, prometheus.NewRegistry())
 		go w.Run(ctx)
 	}
 
@@ -303,7 +303,7 @@ func testUploaderEnsuringEnqueuedItems(
 			},
 		}
 
-		w := uploaders.NewWorker("someflow", l, objStorage, &dummyExternalQueue{}, uploader.WorkersReady, prometheus.NewRegistry())
+		w := worker.NewWorker("someflow", l, objStorage, &dummyExternalQueue{}, uploader.WorkersReady, prometheus.NewRegistry())
 		go w.Run(ctx)
 	}
 

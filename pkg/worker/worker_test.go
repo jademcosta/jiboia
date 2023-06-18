@@ -1,4 +1,4 @@
-package uploaders_test
+package worker_test
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
-	"github.com/jademcosta/jiboia/pkg/uploaders"
+	"github.com/jademcosta/jiboia/pkg/worker"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
@@ -83,7 +83,7 @@ func TestRegistersItsChannelOnStartup(t *testing.T) {
 
 	workerQueueChan := make(chan chan *domain.WorkUnit, 1)
 
-	sut := uploaders.NewWorker("someflow", l, objStorage, queue, workerQueueChan, prometheus.NewRegistry())
+	sut := worker.NewWorker("someflow", l, objStorage, queue, workerQueueChan, prometheus.NewRegistry())
 	go sut.Run(ctx)
 
 	select {
@@ -107,7 +107,7 @@ func TestCallsObjUploaderWithDataPassed(t *testing.T) {
 
 	workerQueueChan := make(chan chan *domain.WorkUnit, 1)
 
-	sut := uploaders.NewWorker("someflow", l, objStorage, queue, workerQueueChan, prometheus.NewRegistry())
+	sut := worker.NewWorker("someflow", l, objStorage, queue, workerQueueChan, prometheus.NewRegistry())
 	go sut.Run(ctx)
 
 	var workerChan chan *domain.WorkUnit
@@ -156,7 +156,7 @@ func TestCallsEnqueuerWithUploaderResult(t *testing.T) {
 	queue := &mockExternalQueue{calledWith: make([]*domain.UploadResult, 0), wg: &wg}
 	workerQueueChan := make(chan chan *domain.WorkUnit, 1)
 
-	sut := uploaders.NewWorker("someflow", l, objStorage, queue, workerQueueChan, prometheus.NewRegistry())
+	sut := worker.NewWorker("someflow", l, objStorage, queue, workerQueueChan, prometheus.NewRegistry())
 	go sut.Run(ctx)
 
 	var workerChan chan *domain.WorkUnit
@@ -198,7 +198,7 @@ func TestRegistersItselfForWorkAgainAfterWorking(t *testing.T) {
 	queue := &dummyExternalQueue{}
 	workerQueueChan := make(chan chan *domain.WorkUnit, 1)
 
-	sut := uploaders.NewWorker("someflow", l, objStorage, queue, workerQueueChan, prometheus.NewRegistry())
+	sut := worker.NewWorker("someflow", l, objStorage, queue, workerQueueChan, prometheus.NewRegistry())
 	go sut.Run(ctx)
 
 	wg.Add(11)
@@ -239,7 +239,7 @@ func TestStopsAcceptingWorkAfterContextIsCancelled(t *testing.T) {
 	queue := &dummyExternalQueue{}
 	workerQueueChan := make(chan chan *domain.WorkUnit, 1)
 
-	sut := uploaders.NewWorker("someflow", l, objStorage, queue, workerQueueChan, prometheus.NewRegistry())
+	sut := worker.NewWorker("someflow", l, objStorage, queue, workerQueueChan, prometheus.NewRegistry())
 	go sut.Run(ctx)
 
 	var workerChan chan *domain.WorkUnit
@@ -300,7 +300,7 @@ func TestDoesNotCallEnqueueWhenObjUploadFails(t *testing.T) {
 	queue := &mockExternalQueue{calledWith: make([]*domain.UploadResult, 0), wg: &wg}
 	workerQueueChan := make(chan chan *domain.WorkUnit, 1)
 
-	sut := uploaders.NewWorker("someflow", l, objStorage, queue, workerQueueChan, prometheus.NewRegistry())
+	sut := worker.NewWorker("someflow", l, objStorage, queue, workerQueueChan, prometheus.NewRegistry())
 	go sut.Run(ctx)
 
 	var workerChan chan *domain.WorkUnit

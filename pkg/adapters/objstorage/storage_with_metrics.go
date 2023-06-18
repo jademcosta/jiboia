@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/jademcosta/jiboia/pkg/domain"
-	"github.com/jademcosta/jiboia/pkg/uploaders"
+	"github.com/jademcosta/jiboia/pkg/worker"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -17,7 +17,7 @@ const (
 var ensureMetricRegisteringOnce sync.Once
 
 type storageWithMetrics struct {
-	storage              uploaders.ObjStorage
+	storage              worker.ObjStorage
 	latencyHistogram     *prometheus.HistogramVec
 	uploadCounter        *prometheus.CounterVec
 	uploadSuccessCounter *prometheus.CounterVec

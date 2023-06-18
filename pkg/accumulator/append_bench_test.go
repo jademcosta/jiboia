@@ -1,4 +1,4 @@
-package non_blocking_bucket
+package accumulator
 
 // This test is to be used in case we need to improve the algorithm of the accumulator
 // internal storage, used to accumulate data.

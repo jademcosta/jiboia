@@ -7,14 +7,14 @@ import (
 	"github.com/jademcosta/jiboia/pkg/adapters/objstorage/localstorage"
 	"github.com/jademcosta/jiboia/pkg/adapters/objstorage/s3"
 	"github.com/jademcosta/jiboia/pkg/config"
-	"github.com/jademcosta/jiboia/pkg/uploaders"
+	"github.com/jademcosta/jiboia/pkg/worker"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 )
 
 type ObjStorageWithMetadata interface {
-	uploaders.ObjStorage
+	worker.ObjStorage
 	Type() string
 	Name() string
 }

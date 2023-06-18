@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/jademcosta/jiboia/pkg/domain"
-	"github.com/jademcosta/jiboia/pkg/uploaders/filepather"
+	"github.com/jademcosta/jiboia/pkg/uploader/filepather"
 	"github.com/stretchr/testify/assert"
 )
 
