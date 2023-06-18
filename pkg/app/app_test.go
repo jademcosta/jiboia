@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"math/rand"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -58,11 +59,86 @@ flows:
         path: "/tmp/int_test2"
 `
 
+const confForCBYaml = `
+log:
+  level: error
+  format: json
+
+api:
+  port: 9099
+
+flows:
+  - name: "cb_flow"
+    type: async
+    in_memory_queue_max_size: 2
+    max_concurrent_uploads: 3
+    max_retries: 3
+    timeout: 120
+    accumulator:
+      size_in_bytes: 5
+      separator: "_n_"
+      queue_capacity: 2
+    external_queue:
+      type: noop
+      config: ""
+    object_storage:
+      type: httpstorage
+      config:
+        url: "{{OBJ_STORAGE_URL}}"
+`
+
 var testingPathAcc string = "/tmp/int_test"
 var testingPathNoAcc string = "/tmp/int_test2"
 
 var characters = []rune("abcdefghijklmnopqrstuvwxyz")
 var l *zap.SugaredLogger
+
+func TestAccumulatorCircuitBreaker(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	storageServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(5 * time.Second)
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer storageServer.Close()
+
+	confFull := strings.Replace(confForCBYaml, "{{OBJ_STORAGE_URL}}",
+		fmt.Sprintf("%s/%s", storageServer.URL, "%s"), 1)
+
+	conf, err := config.New([]byte(confFull))
+	assert.NoError(t, err, "should initialize config")
+	l = logger.New(conf)
+
+	app := New(conf, l)
+	go app.Start()
+	time.Sleep(2 * time.Second)
+
+	payload := randSeq(20)
+
+	for i := 0; i <= 8; i++ {
+		//why 8? 3 payload on workers, 2 on uploader queue, 2 on accumulator queue,
+		// 1 on accumulator "current"
+		response, err := http.Post("http://localhost:9099/cb_flow/async_ingestion", "application/json", strings.NewReader(payload))
+		assert.NoError(t, err, "ingesting items should not return error on cb_flow")
+		// The status might not be 2XX here, as it is dependant on the order at which parallel
+		// components are running
+		response.Body.Close()
+		time.Sleep(100 * time.Millisecond)
+	}
+	time.Sleep(500 * time.Millisecond)
+	time.Sleep(2 * time.Second)
+
+	response, err := http.Post("http://localhost:9099/cb_flow/async_ingestion", "application/json", strings.NewReader(payload))
+	assert.NoError(t, err, "ingesting items should not return error on cb_flow")
+	assert.Equal(t, 500, response.StatusCode,
+		"data ingestion should have errored on cb_flow, as the CB is open and queues should be full")
+	response.Body.Close()
+
+	stopDone := app.stop()
+	<-stopDone
+}
 
 func TestAppIntegration(t *testing.T) {
 	if testing.Short() {
