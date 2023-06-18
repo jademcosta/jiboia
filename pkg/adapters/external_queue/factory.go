@@ -6,14 +6,14 @@ import (
 	"github.com/jademcosta/jiboia/pkg/adapters/external_queue/noop_ext_queue"
 	"github.com/jademcosta/jiboia/pkg/adapters/external_queue/sqs"
 	"github.com/jademcosta/jiboia/pkg/config"
-	"github.com/jademcosta/jiboia/pkg/uploaders"
+	"github.com/jademcosta/jiboia/pkg/worker"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 )
 
 type ExtQueueWithMetadata interface {
-	uploaders.ExternalQueue
+	worker.ExternalQueue
 	Type() string
 	Name() string
 }

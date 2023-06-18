@@ -1,4 +1,4 @@
-package nonblocking_uploader_test
+package uploader_test
 
 // TODO: merge this whole file with the other test
 
@@ -10,7 +10,7 @@ import (
 
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/logger"
-	uploader "github.com/jademcosta/jiboia/pkg/uploaders/nonblocking_uploader"
+	"github.com/jademcosta/jiboia/pkg/uploader"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 )

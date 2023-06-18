@@ -1,4 +1,4 @@
-package non_blocking_bucket
+package accumulator
 
 import (
 	"sync"

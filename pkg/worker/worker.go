@@ -1,4 +1,4 @@
-package uploaders
+package worker
 
 import (
 	"context"
