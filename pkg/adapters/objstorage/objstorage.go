@@ -3,6 +3,7 @@ package objstorage
 import (
 	"fmt"
 
+	"github.com/jademcosta/jiboia/pkg/adapters/objstorage/httpstorage"
 	"github.com/jademcosta/jiboia/pkg/adapters/objstorage/localstorage"
 	"github.com/jademcosta/jiboia/pkg/adapters/objstorage/s3"
 	"github.com/jademcosta/jiboia/pkg/config"
@@ -46,6 +47,16 @@ func New(l *zap.SugaredLogger, metricRegistry *prometheus.Registry, conf *config
 		objStorage, err = localstorage.New(l, localStorageConf)
 		if err != nil {
 			return nil, fmt.Errorf("error creating localstorage object storage: %w", err)
+		}
+	case httpstorage.TYPE:
+		httpStorageConf, err := httpstorage.ParseConfig(specificConf)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing httpstorage-specific config: %w", err)
+		}
+
+		objStorage, err = httpstorage.New(l, httpStorageConf)
+		if err != nil {
+			return nil, fmt.Errorf("error creating httpstorage object storage: %w", err)
 		}
 	default:
 		objStorage, err = nil, fmt.Errorf("invalid object storage type %s", conf.Type)
