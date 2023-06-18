@@ -19,6 +19,7 @@ type LogConfig struct {
 	Level  string `yaml:"level"`
 	Format string `yaml:"format"`
 }
+
 type ApiConfig struct {
 	Port int `yaml:"port"`
 }
@@ -37,9 +38,10 @@ type FlowConfig struct {
 }
 
 type Accumulator struct {
-	SizeInBytes   int    `yaml:"size_in_bytes"`
-	Separator     string `yaml:"separator"`
-	QueueCapacity int    `yaml:"queue_capacity"`
+	SizeInBytes    int               `yaml:"size_in_bytes"`
+	Separator      string            `yaml:"separator"`
+	QueueCapacity  int               `yaml:"queue_capacity"`
+	CircuitBreaker map[string]string `yaml:"circuit_breaker"`
 }
 
 type ExternalQueue struct {
