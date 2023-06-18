@@ -533,7 +533,7 @@ func TestEnqueuesErrorsAfterContextCancelled(t *testing.T) {
 	assert.Error(t, err, "should return error if enqueue is called after a shutdown has started")
 }
 
-func TestCallindEnqueueUsesACircuitBreaderAndRetriesOnFailure(t *testing.T) {
+func TestCallindEnqueueUsesACircuitBreakerAndRetriesOnFailure(t *testing.T) {
 	openInterval := 100 * time.Millisecond
 
 	dataDropper := &mockDataDropper{dataDropped: make([][]byte, 0)}
