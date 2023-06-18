@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"syscall"
 
-	"github.com/jademcosta/jiboia/pkg/accumulators/non_blocking_bucket"
+	"github.com/jademcosta/jiboia/pkg/accumulator"
 	"github.com/jademcosta/jiboia/pkg/adapters/external_queue"
 	"github.com/jademcosta/jiboia/pkg/adapters/http_in"
 	"github.com/jademcosta/jiboia/pkg/adapters/objstorage"
@@ -202,13 +202,13 @@ func createExternalQueue(l *zap.SugaredLogger, c config.ExternalQueue, metricReg
 	return externalQueue
 }
 
-func createAccumulator(flowName string, logger *zap.SugaredLogger, c config.Accumulator, registry *prometheus.Registry, uploader domain.DataFlow) *non_blocking_bucket.BucketAccumulator {
+func createAccumulator(flowName string, logger *zap.SugaredLogger, c config.Accumulator, registry *prometheus.Registry, uploader domain.DataFlow) *accumulator.BucketAccumulator {
 	cb, err := circuitbreaker.FromConfig(c.CircuitBreaker)
 	if err != nil {
 		logger.Panicw("error on accumulator creation", "error", err)
 	}
 
-	return non_blocking_bucket.New(
+	return accumulator.New(
 		flowName,
 		logger,
 		c.SizeInBytes,
