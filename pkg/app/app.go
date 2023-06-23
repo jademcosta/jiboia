@@ -226,34 +226,35 @@ func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 	flows := make([]flow.Flow, 0, len(confs))
 
 	for _, conf := range confs {
-		localLogger := llog.With(logger.FLOW_KEY, conf.Name)
-		externalQueue := createExternalQueue(localLogger, conf.ExternalQueue, metricRegistry)
-		objStorage := createObjStorage(localLogger, conf.ObjectStorage, metricRegistry)
+		flowConf := conf
+		localLogger := llog.With(logger.FLOW_KEY, flowConf.Name)
+		externalQueue := createExternalQueue(localLogger, flowConf.ExternalQueue, metricRegistry)
+		objStorage := createObjStorage(localLogger, flowConf.ObjectStorage, metricRegistry)
 
 		uploader := uploader.New(
-			conf.Name,
+			flowConf.Name,
 			localLogger,
-			conf.MaxConcurrentUploads,
-			conf.QueueMaxSize,
+			flowConf.MaxConcurrentUploads,
+			flowConf.QueueMaxSize,
 			domain.NewObservableDataDropper(localLogger, metricRegistry, "uploader"),
-			filepather.New(datetimeprovider.New(), conf.PathPrefixCount),
+			filepather.New(datetimeprovider.New(), flowConf.PathPrefixCount),
 			metricRegistry)
 
 		f := flow.Flow{
-			Name:          conf.Name,
+			Name:          flowConf.Name,
 			ObjStorage:    objStorage,
 			ExternalQueue: externalQueue,
 			Uploader:      uploader,
-			UploadWorkers: make([]flow.Runnable, 0, conf.MaxConcurrentUploads),
+			UploadWorkers: make([]flow.Runnable, 0, flowConf.MaxConcurrentUploads),
 		}
 
-		hasAccumulatorDeclared := conf.Accumulator.SizeInBytes > 0 //TODO: this is something that will need to be improved once config is localized inside packages
+		hasAccumulatorDeclared := flowConf.Accumulator.SizeInBytes > 0 //TODO: this is something that will need to be improved once config is localized inside packages
 		if hasAccumulatorDeclared {
-			f.Accumulator = createAccumulator(conf.Name, localLogger, conf.Accumulator, metricRegistry, uploader)
+			f.Accumulator = createAccumulator(flowConf.Name, localLogger, flowConf.Accumulator, metricRegistry, uploader)
 		}
 
-		for i := 0; i < conf.MaxConcurrentUploads; i++ {
-			worker := worker.NewWorker(conf.Name, localLogger, objStorage, externalQueue, uploader.WorkersReady, metricRegistry)
+		for i := 0; i < flowConf.MaxConcurrentUploads; i++ {
+			worker := worker.NewWorker(flowConf.Name, localLogger, objStorage, externalQueue, uploader.WorkersReady, metricRegistry)
 			f.UploadWorkers = append(f.UploadWorkers, worker)
 		}
 
