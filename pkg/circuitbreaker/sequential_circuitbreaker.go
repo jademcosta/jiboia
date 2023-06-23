@@ -5,27 +5,6 @@ import (
 	"time"
 )
 
-// type FlowCircuitBreaker[T any] struct {
-// 	Name string
-// }
-
-// func NewFlowCircuitBreaker[T any]() *FlowCircuitBreaker[T] {
-// 	return &FlowCircuitBreaker[T]{}
-// }
-
-// func (cb *FlowCircuitBreaker[T]) CallW(f func() (T, error)) (T, error) {
-// 	t, err := f()
-// 	if err != nil {
-// 		panic("aaaaaa") //TODO: call cb fail
-// 	}
-// 	return t, err
-// }
-
-// const (
-// 	OpenState = iota
-// 	ClosedState
-// )
-
 // TODO: Add half-open state and then implement exponential backoff
 type SequentialCircuitBreakerConfig struct {
 	OpenInterval       time.Duration
@@ -47,8 +26,6 @@ func NewSequentialCircuitBreaker(conf SequentialCircuitBreakerConfig) *Sequentia
 }
 
 func (cb *SequentialCircuitBreaker) Call(f func() error) error {
-	// cb.m.Lock()
-	// defer cb.m.Unlock()
 
 	if cb.Tripped() {
 		return ErrorOpenCircuitBreaker
@@ -63,41 +40,25 @@ func (cb *SequentialCircuitBreaker) Call(f func() error) error {
 	return err
 }
 
-// TODO: if this is going to be kept public tests need to be made
 func (cb *SequentialCircuitBreaker) Tripped() bool {
 	cb.m.Lock()
 	defer cb.m.Unlock()
-	return cb.tripped()
+	return cb.cState.isCallBlocked()
 }
 
 func (cb *SequentialCircuitBreaker) Fail() {
 	cb.m.Lock()
 	defer cb.m.Unlock()
-	cb.fail()
+	cb.cState = cb.cState.fail()
 }
 
 func (cb *SequentialCircuitBreaker) Success() {
 	cb.m.Lock()
 	defer cb.m.Unlock()
-	cb.success()
-}
-
-func (cb *SequentialCircuitBreaker) tripped() bool {
-	return cb.cState.blockCall()
-}
-
-func (cb *SequentialCircuitBreaker) fail() {
-	cb.cState = cb.cState.fail()
-}
-
-func (cb *SequentialCircuitBreaker) success() {
 	cb.cState = cb.cState.success()
 }
 
-// TODO: implement forceclose and forceopen
-
 // Closed state
-
 type circuitClosedState struct {
 	failsInARow int
 	conf        *SequentialCircuitBreakerConfig
@@ -121,12 +82,11 @@ func (s *circuitClosedState) fail() circuitState {
 	}
 }
 
-func (s *circuitClosedState) blockCall() bool {
+func (s *circuitClosedState) isCallBlocked() bool {
 	return false
 }
 
 // Open state
-
 type circuitOpenState struct {
 	until time.Time
 	conf  *SequentialCircuitBreakerConfig
@@ -144,7 +104,7 @@ func (s *circuitOpenState) fail() circuitState {
 	return s
 }
 
-func (s *circuitOpenState) blockCall() bool {
+func (s *circuitOpenState) isCallBlocked() bool {
 	expired := time.Now().After(s.until)
 	return !expired
 }
