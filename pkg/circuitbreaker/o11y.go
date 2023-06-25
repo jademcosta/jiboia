@@ -14,6 +14,7 @@ const NAME_METRIC_KEY string = "name"
 var ensureMetricRegisteringOnce sync.Once
 
 var openCBGauge *prometheus.GaugeVec
+var openCBTotal *prometheus.CounterVec
 
 type CBObservability struct {
 	name string
@@ -38,7 +39,16 @@ func NewObservability(
 			[]string{FLOW_METRIC_KEY, NAME_METRIC_KEY},
 		)
 
-		registry.MustRegister(openCBGauge)
+		openCBTotal = prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Namespace: "jiboia",
+				Name:      "circuitbreaker_open_total",
+				Help:      "How many times have circuitbreaker opened",
+			},
+			[]string{FLOW_METRIC_KEY, NAME_METRIC_KEY},
+		)
+
+		registry.MustRegister(openCBGauge, openCBTotal)
 	})
 
 	return &CBObservability{
@@ -55,5 +65,6 @@ func (cbO11y *CBObservability) cbClosed() {
 
 func (cbO11y *CBObservability) cbOpen() {
 	openCBGauge.WithLabelValues(cbO11y.flow, cbO11y.name).Set(1.0)
+	openCBTotal.WithLabelValues(cbO11y.flow, cbO11y.name).Inc()
 	cbO11y.log.Warn("circuitbreaker is open")
 }
