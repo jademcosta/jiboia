@@ -56,12 +56,14 @@ func main() {
 
 	response, err := http.Post("http://localhost:9099/jiboia-flow/async_ingestion", "application/json", strings.NewReader(expected1))
 	if err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	}
 	response.Body.Close()
 
 	response, err = http.Post("http://localhost:9099/jiboia-flow/async_ingestion", "application/json", strings.NewReader(expected2))
 	if err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	}
 	response.Body.Close()
@@ -69,6 +71,7 @@ func main() {
 	// This is going to be "ignored", as it will stay in memory waiting for more data to flow in
 	response, err = http.Post("http://localhost:9099/jiboia-flow/async_ingestion", "application/json", strings.NewReader(randSeq(2)))
 	if err != nil {
+		fmt.Println(err)
 		os.Exit(1)
 	}
 	response.Body.Close()
@@ -88,7 +91,7 @@ func main() {
 		&sqs.ReceiveMessageInput{
 			QueueUrl:            queueURL,
 			MaxNumberOfMessages: aws.Int64(1),
-			WaitTimeSeconds:     aws.Int64(15),
+			WaitTimeSeconds:     aws.Int64(30),
 		},
 	)
 
