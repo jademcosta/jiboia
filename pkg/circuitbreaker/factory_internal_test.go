@@ -12,7 +12,7 @@ import (
 )
 
 var registry *prometheus.Registry = prometheus.NewRegistry()
-var log *zap.SugaredLogger = logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
+var log *zap.SugaredLogger = logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
 var dummyName string = "any name"
 var dummyFlow string = "any flow"
 

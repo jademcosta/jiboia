@@ -12,8 +12,8 @@ import (
 	"go.uber.org/zap"
 )
 
-var registry *prometheus.Registry = prometheus.NewRegistry()
-var log *zap.SugaredLogger = logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
+var testRegistry *prometheus.Registry = prometheus.NewRegistry()
+var log *zap.SugaredLogger = logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
 var dummyName string = "any name"
 var dummyFlow string = "any flow"
 
@@ -44,7 +44,7 @@ func TestFromConfigReturnsTheCorrectTypes(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		result, err := circuitbreaker.FromConfig(log, registry, tc.config, dummyName, dummyFlow)
+		result, err := circuitbreaker.FromConfig(log, testRegistry, tc.config, dummyName, dummyFlow)
 		assert.IsType(t, tc.expectedType, result,
 			"when config is %v the CB should be %v", tc.config,
 			reflect.TypeOf(tc.expectedType))
@@ -55,7 +55,7 @@ func TestFromConfigReturnsTheCorrectTypes(t *testing.T) {
 func TestErrorsOnZeroInterval(t *testing.T) {
 
 	conf := map[string]string{"open_interval_in_ms": "0"}
-	_, err := circuitbreaker.FromConfig(log, registry, conf, dummyName, dummyFlow)
+	_, err := circuitbreaker.FromConfig(log, testRegistry, conf, dummyName, dummyFlow)
 	assert.Errorf(t, err, "should return error when interval is zero")
 }
 
@@ -76,7 +76,7 @@ func TestErrorsWhenKeysDoNotHaveCorrectTypes(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		_, err := circuitbreaker.FromConfig(log, registry, tc.config, dummyName, dummyFlow)
+		_, err := circuitbreaker.FromConfig(log, testRegistry, tc.config, dummyName, dummyFlow)
 		assert.Errorf(t, err,
 			"should return error when config is %v", tc.config)
 	}
