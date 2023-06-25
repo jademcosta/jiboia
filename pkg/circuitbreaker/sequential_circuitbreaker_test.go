@@ -6,8 +6,17 @@ import (
 	"time"
 
 	"github.com/jademcosta/jiboia/pkg/circuitbreaker"
+	"github.com/jademcosta/jiboia/pkg/config"
+	"github.com/jademcosta/jiboia/pkg/logger"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 )
+
+var dummyO11y *circuitbreaker.CBObservability = circuitbreaker.NewObservability(
+	prometheus.NewRegistry(),
+	logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}}),
+	"any name",
+	"any flow")
 
 func alwaysSuccessfulFn() error {
 	return nil
@@ -22,7 +31,8 @@ func TestABrandNewCBStartsWithClosedState(t *testing.T) {
 		circuitbreaker.SequentialCircuitBreakerConfig{
 			FailCountThreshold: 1,
 			OpenInterval:       1000 * time.Millisecond,
-		})
+		},
+		dummyO11y)
 
 	for i := 0; i <= 5; i++ {
 		err := sut.Call(alwaysSuccessfulFn)
@@ -35,7 +45,8 @@ func TestSuccessCallsOnClosedStateKeepItClosed(t *testing.T) {
 		circuitbreaker.SequentialCircuitBreakerConfig{
 			OpenInterval:       60000 * time.Millisecond,
 			FailCountThreshold: 1,
-		})
+		},
+		dummyO11y)
 
 	sut.Success()
 
@@ -60,7 +71,8 @@ func TestOneSuccessResetsTheFailStreak(t *testing.T) {
 		circuitbreaker.SequentialCircuitBreakerConfig{
 			OpenInterval:       60000 * time.Millisecond,
 			FailCountThreshold: 11,
-		})
+		},
+		dummyO11y)
 
 	for i := 0; i < 10; i++ {
 		sut.Fail()
@@ -77,7 +89,8 @@ func TestOneSuccessResetsTheFailStreak(t *testing.T) {
 		circuitbreaker.SequentialCircuitBreakerConfig{
 			OpenInterval:       60000 * time.Millisecond,
 			FailCountThreshold: 11,
-		})
+		},
+		dummyO11y)
 
 	for i := 0; i < 10; i++ {
 		_ = sut.Call(alwaysFailFn)
@@ -98,7 +111,8 @@ func TestBecomesClosedAfterThreshold(t *testing.T) {
 		circuitbreaker.SequentialCircuitBreakerConfig{
 			OpenInterval:       interval,
 			FailCountThreshold: 1,
-		})
+		},
+		dummyO11y)
 
 	sut.Fail()
 	err := sut.Call(alwaysSuccessfulFn)
@@ -111,7 +125,8 @@ func TestBecomesClosedAfterThreshold(t *testing.T) {
 		circuitbreaker.SequentialCircuitBreakerConfig{
 			OpenInterval:       interval,
 			FailCountThreshold: 1,
-		})
+		},
+		dummyO11y)
 
 	_ = sut.Call(alwaysFailFn)
 
@@ -127,7 +142,8 @@ func TestErrorTypeIsOpenCircuitBreaker(t *testing.T) {
 		circuitbreaker.SequentialCircuitBreakerConfig{
 			OpenInterval:       6000 * time.Millisecond,
 			FailCountThreshold: 3,
-		})
+		},
+		dummyO11y)
 
 	sut.Fail()
 	sut.Fail()
@@ -147,7 +163,8 @@ func TestErrorTypeIsOpenCircuitBreaker(t *testing.T) {
 		circuitbreaker.SequentialCircuitBreakerConfig{
 			OpenInterval:       60000 * time.Millisecond,
 			FailCountThreshold: 3,
-		})
+		},
+		dummyO11y)
 
 	_ = sut.Call(alwaysFailFn)
 	_ = sut.Call(alwaysFailFn)
@@ -173,7 +190,8 @@ func TestItCanCloseAndOpenMiultipleTimes(t *testing.T) {
 		circuitbreaker.SequentialCircuitBreakerConfig{
 			OpenInterval:       interval,
 			FailCountThreshold: 1,
-		})
+		},
+		dummyO11y)
 
 	for i := 0; i <= 37; i++ {
 		sut.Fail()
@@ -200,7 +218,8 @@ func TestWhenOpenSuccessCallMakesClosed(t *testing.T) {
 		circuitbreaker.SequentialCircuitBreakerConfig{
 			OpenInterval:       30 * time.Second,
 			FailCountThreshold: 1,
-		})
+		},
+		dummyO11y)
 
 	sut.Fail()
 	err := sut.Call(alwaysSuccessfulFn)
@@ -223,7 +242,8 @@ func TestCallingFailWhenOpenIncreasesThreshold(t *testing.T) {
 		circuitbreaker.SequentialCircuitBreakerConfig{
 			OpenInterval:       100 * time.Millisecond,
 			FailCountThreshold: 1,
-		})
+		},
+		dummyO11y)
 
 	sut.Fail()
 	err := sut.Call(alwaysSuccessfulFn)
@@ -257,7 +277,8 @@ func TestTripped(t *testing.T) {
 		circuitbreaker.SequentialCircuitBreakerConfig{
 			OpenInterval:       100 * time.Millisecond,
 			FailCountThreshold: 1,
-		})
+		},
+		dummyO11y)
 
 	assert.False(t, sut.Tripped(), "should not be tripped")
 	_ = sut.Call(alwaysSuccessfulFn)

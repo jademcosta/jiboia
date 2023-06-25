@@ -203,7 +203,7 @@ func createExternalQueue(l *zap.SugaredLogger, c config.ExternalQueue, metricReg
 }
 
 func createAccumulator(flowName string, logger *zap.SugaredLogger, c config.Accumulator, registry *prometheus.Registry, uploader domain.DataFlow) *accumulator.BucketAccumulator {
-	cb, err := circuitbreaker.FromConfig(c.CircuitBreaker)
+	cb, err := circuitbreaker.FromConfig(logger, registry, c.CircuitBreaker, accumulator.COMPONENT_NAME, flowName)
 	if err != nil {
 		logger.Panicw("error on accumulator creation", "error", err)
 	}
@@ -214,7 +214,7 @@ func createAccumulator(flowName string, logger *zap.SugaredLogger, c config.Accu
 		c.SizeInBytes,
 		[]byte(c.Separator),
 		c.QueueCapacity,
-		domain.NewObservableDataDropper(logger, registry, "accumulator"),
+		domain.NewObservableDataDropper(logger, registry, accumulator.COMPONENT_NAME),
 		uploader,
 		cb,
 		registry)

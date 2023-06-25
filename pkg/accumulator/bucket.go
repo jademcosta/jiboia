@@ -17,6 +17,7 @@ import (
 const (
 	MINIMUM_QUEUE_CAPACITY  = 2
 	CB_RETRY_SLEEP_DURATION = 1 * time.Millisecond // TODO: fine tune this value
+	COMPONENT_NAME          = "accumulator"
 )
 
 type BucketAccumulator struct {
@@ -62,7 +63,7 @@ func New(
 	metrics.queueCapacity(queueCapacity)
 
 	return &BucketAccumulator{
-		l:                l.With(logger.COMPONENT_KEY, "accumulator"),
+		l:                l.With(logger.COMPONENT_KEY, COMPONENT_NAME),
 		limitOfBytes:     limitOfBytes,
 		separator:        separator,
 		separatorLen:     len(separator),

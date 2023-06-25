@@ -1,6 +1,5 @@
 package circuitbreaker
 
-// TODO: add unit tests
 type DummyCircuitBreaker struct{}
 
 func NewDummyCircuitBreaker() *DummyCircuitBreaker {
