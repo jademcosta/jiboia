@@ -20,13 +20,8 @@ import (
 
 const queueCapacity int = 30
 
-var l *zap.SugaredLogger
-var dummyCB circuitbreaker.CircuitBreaker
-
-func init() {
-	l = logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
-	dummyCB = circuitbreaker.NewDummyCircuitBreaker()
-}
+var l *zap.SugaredLogger = logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
+var dummyCB circuitbreaker.CircuitBreaker = circuitbreaker.NewDummyCircuitBreaker()
 
 type dataEnqueuerMock struct {
 	callCount   int
@@ -535,21 +530,25 @@ func TestEnqueuesErrorsAfterContextCancelled(t *testing.T) {
 
 func TestCallindEnqueueUsesACircuitBreakerAndRetriesOnFailure(t *testing.T) {
 	openInterval := 100 * time.Millisecond
+	registry := prometheus.NewRegistry()
 
 	dataDropper := &mockDataDropper{dataDropped: make([][]byte, 0)}
 	next := &failingDataEnqueuerMock{
 		dataWritten: make([][]byte, 0),
 		fail:        true,
 	}
-	cb := circuitbreaker.NewSequentialCircuitBreaker(circuitbreaker.SequentialCircuitBreakerConfig{
-		OpenInterval:       openInterval,
-		FailCountThreshold: 1,
-	})
+	cb := circuitbreaker.NewSequentialCircuitBreaker(
+		circuitbreaker.SequentialCircuitBreakerConfig{
+			OpenInterval:       openInterval,
+			FailCountThreshold: circuitbreaker.FIXED_FAIL_COUNT_THRESHOLD,
+		},
+		circuitbreaker.NewObservability(registry, l, accumulator.COMPONENT_NAME, "someflow"),
+	)
 
 	limitOfBytes := 3
 	separator := []byte("")
 
-	sut := accumulator.New("someflow", l, limitOfBytes, separator, queueCapacity, dataDropper, next, cb, prometheus.NewRegistry())
+	sut := accumulator.New("someflow", l, limitOfBytes, separator, queueCapacity, dataDropper, next, cb, registry)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go sut.Run(ctx)
@@ -593,21 +592,25 @@ func TestCallindEnqueueUsesACircuitBreakerAndRetriesOnFailure(t *testing.T) {
 
 func TestItStopsRetryingOnceItSendsTheData(t *testing.T) {
 	openInterval := 100 * time.Millisecond
+	registry := prometheus.NewRegistry()
 
 	dataDropper := &mockDataDropper{dataDropped: make([][]byte, 0)}
 	next := &failingDataEnqueuerMock{
 		dataWritten: make([][]byte, 0),
 		fail:        true,
 	}
-	cb := circuitbreaker.NewSequentialCircuitBreaker(circuitbreaker.SequentialCircuitBreakerConfig{
-		OpenInterval:       openInterval,
-		FailCountThreshold: 1,
-	})
+	cb := circuitbreaker.NewSequentialCircuitBreaker(
+		circuitbreaker.SequentialCircuitBreakerConfig{
+			OpenInterval:       openInterval,
+			FailCountThreshold: circuitbreaker.FIXED_FAIL_COUNT_THRESHOLD,
+		},
+		circuitbreaker.NewObservability(registry, l, accumulator.COMPONENT_NAME, "someflow"),
+	)
 
 	limitOfBytes := 3
 	separator := []byte("")
 
-	sut := accumulator.New("someflow", l, limitOfBytes, separator, queueCapacity, dataDropper, next, cb, prometheus.NewRegistry())
+	sut := accumulator.New("someflow", l, limitOfBytes, separator, queueCapacity, dataDropper, next, cb, registry)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go sut.Run(ctx)

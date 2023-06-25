@@ -23,7 +23,7 @@ func NewMetricCollector(flowName string, metricRegistry *prometheus.Registry) *m
 		enqueueCounter = prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: "jiboia",
-				Subsystem: "accumulator",
+				Subsystem: COMPONENT_NAME,
 				Name:      "enqueue_calls_total",
 				Help:      "The total number of times that data was enqueued.",
 			},
@@ -32,7 +32,7 @@ func NewMetricCollector(flowName string, metricRegistry *prometheus.Registry) *m
 		nextCounter = prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: "jiboia",
-				Subsystem: "accumulator",
+				Subsystem: COMPONENT_NAME,
 				Name:      "next_calls_total",
 				Help:      "The total number of times that data was sent to next step.",
 			},
@@ -41,7 +41,7 @@ func NewMetricCollector(flowName string, metricRegistry *prometheus.Registry) *m
 		capacityGauge = prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: "jiboia",
-				Subsystem: "accumulator",
+				Subsystem: COMPONENT_NAME,
 				Name:      "queue_capacity",
 				Help:      "The total capacity of the internal queue.",
 			},
@@ -51,7 +51,7 @@ func NewMetricCollector(flowName string, metricRegistry *prometheus.Registry) *m
 		enqueuedItemsGauge = prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: "jiboia",
-				Subsystem: "accumulator",
+				Subsystem: COMPONENT_NAME,
 				Name:      "items_in_queue",
 				Help:      "The count of current items in the internal queue.",
 			},

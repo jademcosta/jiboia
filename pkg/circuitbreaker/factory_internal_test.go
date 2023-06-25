@@ -4,8 +4,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jademcosta/jiboia/pkg/config"
+	"github.com/jademcosta/jiboia/pkg/logger"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
 )
+
+var registry *prometheus.Registry = prometheus.NewRegistry()
+var log *zap.SugaredLogger = logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
+var dummyName string = "any name"
+var dummyFlow string = "any flow"
 
 func TestUsesConfigValues(t *testing.T) {
 	type testCase struct {
@@ -26,7 +35,7 @@ func TestUsesConfigValues(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		cb, err := FromConfig(tc.config)
+		cb, err := FromConfig(log, registry, tc.config, dummyName, dummyFlow)
 		sequentialCB := cb.(*SequentialCircuitBreaker)
 		state := sequentialCB.cState.(*circuitClosedState)
 		assert.Equalf(t, tc.expected, state.conf.OpenInterval, "The default Open interval should be %v", tc.expected)
@@ -51,7 +60,7 @@ func TestDefaultValuesOfSequentialCB(t *testing.T) {
 	defaultOpenInterval := 100 * time.Millisecond
 
 	for _, tc := range testCases {
-		cb, err := FromConfig(tc.config)
+		cb, err := FromConfig(log, registry, tc.config, dummyName, dummyFlow)
 		sequentialCB := cb.(*SequentialCircuitBreaker)
 		state := sequentialCB.cState.(*circuitClosedState)
 		assert.NoError(t, err, "%v should return no error", tc.config)

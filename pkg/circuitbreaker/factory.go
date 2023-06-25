@@ -4,16 +4,27 @@ import (
 	"fmt"
 	"strconv"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"go.uber.org/zap"
 )
 
 const DEFAULT_OPEN_INTERVAL_DURATION = 100 * time.Millisecond
 const TURN_ON_KEY = "turn_on"
 const OPEN_INTERVAL_KEY = "open_interval_in_ms"
+const FIXED_FAIL_COUNT_THRESHOLD = 1
 
-func FromConfig(cbConfig map[string]string) (CircuitBreaker, error) {
+func FromConfig(log *zap.SugaredLogger, registry *prometheus.Registry, cbConfig map[string]string, name string, flow string) (CircuitBreaker, error) {
 	noConfig := len(cbConfig) == 0 || cbConfig == nil
 	if noConfig {
-		return defaultCircuitBreaker(), nil
+		defaultCircuitBreaker := NewSequentialCircuitBreaker(
+			SequentialCircuitBreakerConfig{
+				FailCountThreshold: FIXED_FAIL_COUNT_THRESHOLD,
+				OpenInterval:       DEFAULT_OPEN_INTERVAL_DURATION,
+			},
+			createCBO11y(log, registry, name, flow),
+		)
+		return defaultCircuitBreaker, nil
 	}
 
 	turnOnVal, turnOnDefined := cbConfig[TURN_ON_KEY]
@@ -28,19 +39,10 @@ func FromConfig(cbConfig map[string]string) (CircuitBreaker, error) {
 		}
 	}
 
-	return createSequentialCircuitBreaker(cbConfig)
+	return createSequentialCircuitBreaker(log, registry, cbConfig, name, flow)
 }
 
-func defaultCircuitBreaker() *SequentialCircuitBreaker {
-	return NewSequentialCircuitBreaker(
-		SequentialCircuitBreakerConfig{
-			FailCountThreshold: 1,
-			OpenInterval:       DEFAULT_OPEN_INTERVAL_DURATION,
-		},
-	)
-}
-
-func createSequentialCircuitBreaker(cbConf map[string]string) (*SequentialCircuitBreaker, error) {
+func createSequentialCircuitBreaker(log *zap.SugaredLogger, registry *prometheus.Registry, cbConf map[string]string, name string, flow string) (*SequentialCircuitBreaker, error) {
 
 	intervalVal, intervalDefined := cbConf[OPEN_INTERVAL_KEY]
 	var interval time.Duration = DEFAULT_OPEN_INTERVAL_DURATION
@@ -61,8 +63,13 @@ func createSequentialCircuitBreaker(cbConf map[string]string) (*SequentialCircui
 
 	return NewSequentialCircuitBreaker(
 		SequentialCircuitBreakerConfig{
-			FailCountThreshold: 1,
+			FailCountThreshold: FIXED_FAIL_COUNT_THRESHOLD,
 			OpenInterval:       interval,
 		},
+		createCBO11y(log, registry, name, flow),
 	), nil
+}
+
+func createCBO11y(log *zap.SugaredLogger, registry *prometheus.Registry, name string, flow string) *CBObservability {
+	return NewObservability(registry, log, name, flow)
 }

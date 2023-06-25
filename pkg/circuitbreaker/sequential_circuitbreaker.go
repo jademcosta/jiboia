@@ -12,15 +12,16 @@ type SequentialCircuitBreakerConfig struct {
 }
 
 type SequentialCircuitBreaker struct {
-	Name   string
 	m      sync.Mutex
 	cState circuitState
 }
 
-func NewSequentialCircuitBreaker(conf SequentialCircuitBreakerConfig) *SequentialCircuitBreaker {
+func NewSequentialCircuitBreaker(conf SequentialCircuitBreakerConfig,
+	o11y *CBObservability) *SequentialCircuitBreaker {
 	return &SequentialCircuitBreaker{
 		cState: &circuitClosedState{
 			conf: &conf,
+			o11y: o11y,
 		},
 	}
 }
@@ -62,6 +63,7 @@ func (cb *SequentialCircuitBreaker) Success() {
 type circuitClosedState struct {
 	failsInARow int
 	conf        *SequentialCircuitBreakerConfig
+	o11y        *CBObservability
 }
 
 func (s *circuitClosedState) success() circuitState {
@@ -73,9 +75,11 @@ func (s *circuitClosedState) fail() circuitState {
 	s.failsInARow += 1
 
 	if s.failsInARow >= s.conf.FailCountThreshold {
+		s.o11y.cbOpen()
 		return &circuitOpenState{
 			conf:  s.conf,
 			until: time.Now().Add(s.conf.OpenInterval),
+			o11y:  s.o11y,
 		}
 	} else {
 		return s
@@ -90,11 +94,14 @@ func (s *circuitClosedState) isCallBlocked() bool {
 type circuitOpenState struct {
 	until time.Time
 	conf  *SequentialCircuitBreakerConfig
+	o11y  *CBObservability
 }
 
 func (s *circuitOpenState) success() circuitState {
+	s.o11y.cbClosed()
 	return &circuitClosedState{
 		conf: s.conf,
+		o11y: s.o11y,
 	}
 }
 
