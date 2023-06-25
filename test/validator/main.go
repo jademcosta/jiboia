@@ -91,7 +91,7 @@ func main() {
 		&sqs.ReceiveMessageInput{
 			QueueUrl:            queueURL,
 			MaxNumberOfMessages: aws.Int64(1),
-			WaitTimeSeconds:     aws.Int64(30),
+			WaitTimeSeconds:     aws.Int64(20),
 		},
 	)
 
