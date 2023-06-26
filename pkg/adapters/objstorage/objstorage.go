@@ -19,7 +19,7 @@ type ObjStorageWithMetadata interface {
 	Name() string
 }
 
-func New(l *zap.SugaredLogger, metricRegistry *prometheus.Registry, conf *config.ObjectStorage) (ObjStorageWithMetadata, error) {
+func New(l *zap.SugaredLogger, metricRegistry *prometheus.Registry, flowName string, conf *config.ObjectStorage) (ObjStorageWithMetadata, error) {
 
 	var objStorage ObjStorageWithMetadata
 	specificConf, err := yaml.Marshal(conf.Config)
@@ -62,5 +62,5 @@ func New(l *zap.SugaredLogger, metricRegistry *prometheus.Registry, conf *config
 		objStorage, err = nil, fmt.Errorf("invalid object storage type %s", conf.Type)
 	}
 
-	return NewStorageWithMetrics(objStorage, metricRegistry), err
+	return NewStorageWithMetrics(objStorage, metricRegistry, flowName), err
 }
