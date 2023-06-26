@@ -12,6 +12,7 @@ import (
 const (
 	QUEUE_TYPE_LABEL string = "queue_type"
 	NAME_LABEL       string = "name"
+	FLOW_LABEL       string = "flow"
 )
 
 var (
@@ -24,11 +25,12 @@ var (
 
 type queueWithMetrics struct {
 	wrappedQueue worker.ExternalQueue
+	name         string
 	wrappedType  string
 	wrappedName  string
 }
 
-func NewExternalQueueWithMetrics(queue ExtQueueWithMetadata, metricRegistry *prometheus.Registry) ExtQueueWithMetadata {
+func NewExternalQueueWithMetrics(queue ExtQueueWithMetadata, metricRegistry *prometheus.Registry, name string) ExtQueueWithMetadata {
 	ensureMetricRegisteringOnce.Do(func() {
 		latencyHistogram = prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
@@ -38,7 +40,7 @@ func NewExternalQueueWithMetrics(queue ExtQueueWithMetadata, metricRegistry *pro
 				Help:      "the time it took to finish the put action to a external queue (only successful cases)",
 				Buckets:   []float64{0.25, 0.5, 1.0, 1.5, 2.0, 5.0, 10.0, 30.0, 45.0, 60.0},
 			},
-			[]string{QUEUE_TYPE_LABEL, NAME_LABEL},
+			[]string{QUEUE_TYPE_LABEL, NAME_LABEL, FLOW_LABEL},
 		)
 
 		enqueueCounter = prometheus.NewCounterVec(
@@ -48,7 +50,7 @@ func NewExternalQueueWithMetrics(queue ExtQueueWithMetadata, metricRegistry *pro
 				Subsystem: "external_queue",
 				Help:      "count of put actions to external queues that finished (successful or not)",
 			},
-			[]string{QUEUE_TYPE_LABEL, NAME_LABEL},
+			[]string{QUEUE_TYPE_LABEL, NAME_LABEL, FLOW_LABEL},
 		)
 
 		enqueueErrorCounter = prometheus.NewCounterVec(
@@ -58,7 +60,7 @@ func NewExternalQueueWithMetrics(queue ExtQueueWithMetadata, metricRegistry *pro
 				Subsystem: "external_queue",
 				Help:      "count of errors putting to external queue",
 			},
-			[]string{QUEUE_TYPE_LABEL, NAME_LABEL},
+			[]string{QUEUE_TYPE_LABEL, NAME_LABEL, FLOW_LABEL},
 		)
 
 		enqueueSuccessCounter = prometheus.NewCounterVec(
@@ -68,7 +70,7 @@ func NewExternalQueueWithMetrics(queue ExtQueueWithMetadata, metricRegistry *pro
 				Subsystem: "external_queue",
 				Help:      "count of successes putting to external queue",
 			},
-			[]string{QUEUE_TYPE_LABEL, NAME_LABEL},
+			[]string{QUEUE_TYPE_LABEL, NAME_LABEL, FLOW_LABEL},
 		)
 
 		metricRegistry.MustRegister(latencyHistogram, enqueueCounter, enqueueErrorCounter, enqueueSuccessCounter)
@@ -76,23 +78,24 @@ func NewExternalQueueWithMetrics(queue ExtQueueWithMetadata, metricRegistry *pro
 
 	return &queueWithMetrics{
 		wrappedQueue: queue,
+		name:         name,
 		wrappedType:  queue.Type(),
 		wrappedName:  queue.Name(),
 	}
 }
 
 func (w *queueWithMetrics) Enqueue(uploadResult *domain.UploadResult) error {
-	enqueueCounter.WithLabelValues(w.wrappedType, w.wrappedName).Inc()
+	enqueueCounter.WithLabelValues(w.wrappedType, w.wrappedName, w.name).Inc()
 	startTime := time.Now()
 
 	err := w.wrappedQueue.Enqueue(uploadResult)
 	elapsepTime := time.Since(startTime).Seconds()
 
 	if err != nil {
-		enqueueErrorCounter.WithLabelValues(w.wrappedType, w.wrappedName).Inc()
+		enqueueErrorCounter.WithLabelValues(w.wrappedType, w.wrappedName, w.name).Inc()
 	} else {
-		latencyHistogram.WithLabelValues(w.wrappedType, w.wrappedName).Observe(elapsepTime)
-		enqueueSuccessCounter.WithLabelValues(w.wrappedType, w.wrappedName).Inc()
+		latencyHistogram.WithLabelValues(w.wrappedType, w.wrappedName, w.name).Observe(elapsepTime)
+		enqueueSuccessCounter.WithLabelValues(w.wrappedType, w.wrappedName, w.name).Inc()
 	}
 
 	return err
