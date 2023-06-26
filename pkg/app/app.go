@@ -184,8 +184,8 @@ func registerDefaultMetrics(registry *prometheus.Registry) {
 	)
 }
 
-func createObjStorage(l *zap.SugaredLogger, c config.ObjectStorage, metricRegistry *prometheus.Registry) worker.ObjStorage {
-	objStorage, err := objstorage.New(l, metricRegistry, &c)
+func createObjStorage(l *zap.SugaredLogger, c config.ObjectStorage, metricRegistry *prometheus.Registry, flowName string) worker.ObjStorage {
+	objStorage, err := objstorage.New(l, metricRegistry, flowName, &c)
 	if err != nil {
 		l.Panicw("error creating object storage", "error", err)
 	}
@@ -229,7 +229,7 @@ func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 		flowConf := conf
 		localLogger := llog.With(logger.FLOW_KEY, flowConf.Name)
 		externalQueue := createExternalQueue(localLogger, flowConf.ExternalQueue, metricRegistry)
-		objStorage := createObjStorage(localLogger, flowConf.ObjectStorage, metricRegistry)
+		objStorage := createObjStorage(localLogger, flowConf.ObjectStorage, metricRegistry, flowConf.Name)
 
 		uploader := uploader.New(
 			flowConf.Name,
