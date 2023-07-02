@@ -35,6 +35,7 @@ func FromConfig(log *zap.SugaredLogger, registry *prometheus.Registry, cbConfig 
 		}
 
 		if !turnOn {
+			log.Warnf("circuit breaker not being used on specific case", "name", name, "flow", flow)
 			return NewDummyCircuitBreaker(), nil
 		}
 	}
