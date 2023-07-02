@@ -18,6 +18,8 @@ type SequentialCircuitBreaker struct {
 
 func NewSequentialCircuitBreaker(conf SequentialCircuitBreakerConfig,
 	o11y *CBObservability) *SequentialCircuitBreaker {
+
+	o11y.cbClosed() //CB always starts closed
 	return &SequentialCircuitBreaker{
 		cState: &circuitClosedState{
 			conf: &conf,
