@@ -60,9 +60,20 @@ func (storage *LocalStorage) Upload(workU *domain.WorkUnit) (*domain.UploadResul
 
 	fullFilePath := filepath.Join(storage.path, workU.Prefix, workU.Filename)
 
-	err = os.WriteFile(fullFilePath, workU.Data, os.ModePerm)
+	file, err := os.Create(fullFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("error creating file: %w", err)
+	}
+	defer file.Close()
+
+	_, err = file.Write(workU.Data)
 	if err != nil {
 		return nil, fmt.Errorf("error writing data into file: %w", err)
+	}
+
+	err = file.Sync()
+	if err != nil {
+		return nil, fmt.Errorf("error when syncing file: %w", err)
 	}
 
 	return &domain.UploadResult{
