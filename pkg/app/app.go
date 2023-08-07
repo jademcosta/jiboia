@@ -115,7 +115,7 @@ func (a *App) addShutdownRelatedActors(g *run.Group) {
 	})
 }
 
-func (a *App) stop() <-chan struct{} {
+func (a *App) Stop() <-chan struct{} {
 	a.logger.Debug("app stop called")
 	a.stopFunc()
 	return a.shutdownDone

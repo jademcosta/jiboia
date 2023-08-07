@@ -1,5 +1,5 @@
 log:
-  level: info
+  level: warn
   format: json
 
 api:
@@ -30,8 +30,8 @@ flows:
       # [Optional] The separator it will use to merge the chuncks of data
       separator: "__n__"
       # The internal queue of this component. This serves as a buffer for data yet to be merged.
-      # The minimum allowed is 30 (if you put less than this it will get overwritten)
-      queue_capacity: 0
+      # The minimum allowed is 2 (which is a bad number, you should give it at least some room to work)
+      queue_capacity: 11
       # This doesn't need to be declared. If not declared, it will have a open_interval_in_ms of 100
       circuit_breaker:
         # In case the below line is false, no circuit breaker will be used and other propoertis of
