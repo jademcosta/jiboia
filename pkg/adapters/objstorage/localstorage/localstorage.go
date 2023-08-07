@@ -67,11 +67,14 @@ func (storage *LocalStorage) Upload(workU *domain.WorkUnit) (*domain.UploadResul
 	defer file.Close()
 
 	_, err = file.Write(workU.Data)
-	// err = os.WriteFile(fullFilePath, workU.Data, os.ModePerm)
 	if err != nil {
 		return nil, fmt.Errorf("error writing data into file: %w", err)
 	}
-	file.Sync()
+
+	err = file.Sync()
+	if err != nil {
+		return nil, fmt.Errorf("error when syncing file: %w", err)
+	}
 
 	return &domain.UploadResult{
 		Bucket:      "localstorage",
