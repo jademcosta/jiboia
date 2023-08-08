@@ -83,7 +83,7 @@ log:
   format: json
 
 api:
-  port: 9099
+  port: 9098
 
 flows:
   - name: "cb_flow"
@@ -115,6 +115,82 @@ type metricForTests struct {
 	name   string
 	labels map[string]string
 	value  string
+}
+
+func TestAccumulatorCircuitBreaker(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	storageServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(2 * time.Second)
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer storageServer.Close()
+
+	confFull := strings.Replace(confForCBYaml, "{{OBJ_STORAGE_URL}}",
+		fmt.Sprintf("%s/%s", storageServer.URL, "%s"), 1)
+
+	conf, err := config.New([]byte(confFull))
+	assert.NoError(t, err, "should initialize config")
+	l = logger.New(conf)
+
+	app := New(conf, l)
+	go app.Start()
+	time.Sleep(2 * time.Second)
+
+	validateMetricValue(
+		t,
+		"http://localhost:9098",
+		metricForTests{
+			name:   "jiboia_circuitbreaker_open",
+			labels: map[string]string{"flow": "cb_flow", "name": "accumulator"},
+			value:  "0",
+		},
+	)
+
+	payload := randSeq(20)
+
+	for i := 0; i <= 8; i++ {
+		//why 8? 3 payload on workers, 2 on uploader queue, 2 on accumulator queue,
+		// 1 on accumulator "current"
+		response, err := http.Post("http://localhost:9098/cb_flow/async_ingestion", "application/json", strings.NewReader(payload))
+		assert.NoError(t, err, "ingesting items should not return error on cb_flow")
+		// The status might not be 2XX here, as it is dependant on the order at which parallel
+		// components are running
+		response.Body.Close()
+		time.Sleep(50 * time.Millisecond)
+	}
+	time.Sleep(100 * time.Millisecond)
+
+	response, err := http.Post("http://localhost:9098/cb_flow/async_ingestion", "application/json", strings.NewReader(payload))
+	assert.NoError(t, err, "ingesting items should not return error on cb_flow")
+	assert.Equal(t, 500, response.StatusCode,
+		"data ingestion should have errored on cb_flow, as the CB is open and queues should be full")
+	response.Body.Close()
+
+	validateMetricValue(
+		t,
+		"http://localhost:9098",
+		metricForTests{
+			name:   "jiboia_circuitbreaker_open",
+			labels: map[string]string{"flow": "cb_flow", "name": "accumulator"},
+			value:  "1",
+		},
+	)
+
+	validateMetricValue(
+		t,
+		"http://localhost:9098",
+		metricForTests{
+			name:   "jiboia_circuitbreaker_open_total",
+			labels: map[string]string{"flow": "cb_flow", "name": "accumulator"},
+			value:  "1",
+		},
+	)
+
+	stopDone := app.Stop()
+	<-stopDone
 }
 
 func TestPayloadSizeLimit(t *testing.T) {
@@ -173,82 +249,6 @@ func TestPayloadSizeLimit(t *testing.T) {
 	assert.Equal(t, [][]byte{[]byte(validPayload)}, objStorageReceived,
 		"only the valid payload should be ingested")
 	mu.Unlock()
-
-	stopDone := app.Stop()
-	<-stopDone
-}
-
-func TestAccumulatorCircuitBreaker(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping integration test")
-	}
-
-	storageServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		time.Sleep(2 * time.Second)
-		w.WriteHeader(http.StatusInternalServerError)
-	}))
-	defer storageServer.Close()
-
-	confFull := strings.Replace(confForCBYaml, "{{OBJ_STORAGE_URL}}",
-		fmt.Sprintf("%s/%s", storageServer.URL, "%s"), 1)
-
-	conf, err := config.New([]byte(confFull))
-	assert.NoError(t, err, "should initialize config")
-	l = logger.New(conf)
-
-	app := New(conf, l)
-	go app.Start()
-	time.Sleep(2 * time.Second)
-
-	validateMetricValue(
-		t,
-		"http://localhost:9099",
-		metricForTests{
-			name:   "jiboia_circuitbreaker_open",
-			labels: map[string]string{"flow": "cb_flow", "name": "accumulator"},
-			value:  "0",
-		},
-	)
-
-	payload := randSeq(20)
-
-	for i := 0; i <= 8; i++ {
-		//why 8? 3 payload on workers, 2 on uploader queue, 2 on accumulator queue,
-		// 1 on accumulator "current"
-		response, err := http.Post("http://localhost:9099/cb_flow/async_ingestion", "application/json", strings.NewReader(payload))
-		assert.NoError(t, err, "ingesting items should not return error on cb_flow")
-		// The status might not be 2XX here, as it is dependant on the order at which parallel
-		// components are running
-		response.Body.Close()
-		time.Sleep(50 * time.Millisecond)
-	}
-	time.Sleep(100 * time.Millisecond)
-
-	response, err := http.Post("http://localhost:9099/cb_flow/async_ingestion", "application/json", strings.NewReader(payload))
-	assert.NoError(t, err, "ingesting items should not return error on cb_flow")
-	assert.Equal(t, 500, response.StatusCode,
-		"data ingestion should have errored on cb_flow, as the CB is open and queues should be full")
-	response.Body.Close()
-
-	validateMetricValue(
-		t,
-		"http://localhost:9099",
-		metricForTests{
-			name:   "jiboia_circuitbreaker_open",
-			labels: map[string]string{"flow": "cb_flow", "name": "accumulator"},
-			value:  "1",
-		},
-	)
-
-	validateMetricValue(
-		t,
-		"http://localhost:9099",
-		metricForTests{
-			name:   "jiboia_circuitbreaker_open_total",
-			labels: map[string]string{"flow": "cb_flow", "name": "accumulator"},
-			value:  "1",
-		},
-	)
 
 	stopDone := app.Stop()
 	<-stopDone
