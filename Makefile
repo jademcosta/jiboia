@@ -68,6 +68,11 @@ fmt: ## Fixes deprecated APIs and formats the code
 	$(GOCMD) tool fix .
 	$(GOCMD) fmt ./...
 
+## Security:
+vuln:
+	$(GOCMD) install golang.org/x/vuln/cmd/govulncheck@latest
+	govulncheck ./...
+
 ## Help:
 help: ## Show this help.
 	@echo ''
