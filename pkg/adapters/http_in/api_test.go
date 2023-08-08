@@ -36,8 +36,14 @@ func (mockDF *dummyAlwaysFailDataFlow) Enqueue(data []byte) error {
 	return fmt.Errorf("dummy error")
 }
 
+type brokenDataFlow struct{}
+
+func (brokenDF *brokenDataFlow) Enqueue(data []byte) error {
+	panic("I always panic")
+}
+
 func TestPassesDataFlows(t *testing.T) {
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
+	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
 	c := config.ApiConfig{Port: 9111}
 
 	mockDF := &mockDataFlow{
@@ -65,7 +71,7 @@ func TestPassesDataFlows(t *testing.T) {
 
 	resp, err := http.Post(fmt.Sprintf("%s/flow-1/async_ingestion", srvr.URL), "application/json", strings.NewReader("helloooooo"))
 	if err != nil {
-		assert.Fail(t, "error on posting data to flow 1", err)
+		assert.Fail(t, "error on posting data to api", err)
 	}
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200) on flow 1")
 
@@ -132,6 +138,84 @@ func TestAnswersErrorIfEnqueueingFails(t *testing.T) {
 	}
 
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode, "status should be Internal Server Error(500)")
+}
+
+func TestPanicResultInStatus500(t *testing.T) {
+	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
+	c := config.ApiConfig{Port: 9111}
+
+	brokenDF := &brokenDataFlow{}
+
+	flws := []flow.Flow{
+		{
+			Name:       "flow-1",
+			Entrypoint: brokenDF,
+		},
+	}
+	api := New(l, c, prometheus.NewRegistry(), version, flws)
+	srvr := httptest.NewServer(api.mux)
+	defer srvr.Close()
+
+	resp, err := http.Post(fmt.Sprintf("%s/flow-1/async_ingestion", srvr.URL), "application/json", strings.NewReader("some data"))
+	if err != nil {
+		assert.Fail(t, "error on posting data", err)
+	}
+
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode,
+		"status should be Internal Server Error(500) when panics occur")
+}
+
+func TestPayloadSizeLimit(t *testing.T) {
+	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
+	c := config.ApiConfig{Port: 9111, PayloadSizeLimit: "10"} //10 bytes limit
+
+	df := &mockDataFlow{calledWith: make([][]byte, 0)}
+
+	flws := []flow.Flow{
+		{
+			Name:       "flow-1",
+			Entrypoint: df,
+		},
+	}
+
+	api := New(l, c, prometheus.NewRegistry(), version, flws)
+	srvr := httptest.NewServer(api.mux)
+	defer srvr.Close()
+
+	resp, err := http.Post(fmt.Sprintf("%s/flow-1/async_ingestion", srvr.URL), "application/json",
+		strings.NewReader("somedata"))
+	if err != nil {
+		assert.Fail(t, "error on posting data", err)
+	}
+	assert.Equal(t, http.StatusOK, resp.StatusCode,
+		"status should be Internal Server Ok(200) when size is within limits")
+
+	resp, err = http.Post(fmt.Sprintf("%s/flow-1/async_ingestion", srvr.URL), "application/json",
+		strings.NewReader("1111111111")) //10 bytes
+	if err != nil {
+		assert.Fail(t, "error on posting data", err)
+	}
+	assert.Equal(t, http.StatusOK, resp.StatusCode,
+		"status should be Internal Server Ok(200) when size is within limits")
+
+	resp, err = http.Post(fmt.Sprintf("%s/flow-1/async_ingestion", srvr.URL), "application/json",
+		strings.NewReader("abcdefghijk")) //11 bytes
+	if err != nil {
+		assert.Fail(t, "error on posting data", err)
+	}
+	assert.Equal(t, http.StatusRequestEntityTooLarge, resp.StatusCode,
+		"status should be Internal Server Payload too large(413) when size is above limits (11 bytes)")
+
+	resp, err = http.Post(fmt.Sprintf("%s/flow-1/async_ingestion", srvr.URL), "application/json",
+		strings.NewReader("abcdefghijkl")) //12 bytes
+	if err != nil {
+		assert.Fail(t, "error on posting data", err)
+	}
+	assert.Equal(t, http.StatusRequestEntityTooLarge, resp.StatusCode,
+		"status should be Internal Server Payload too large(413) when size is above limits (12 bytes)")
+
+	assert.Equal(t, [][]byte{[]byte("somedata"), []byte("1111111111")}, df.calledWith,
+		"only allowed payloads should be ingested")
 }
 
 func TestVersionEndpointInformsTheVersion(t *testing.T) {

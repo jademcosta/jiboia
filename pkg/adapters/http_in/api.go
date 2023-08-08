@@ -25,20 +25,26 @@ type Api struct {
 	port int
 }
 
-func New(l *zap.SugaredLogger, c config.ApiConfig, metricRegistry *prometheus.Registry,
+func New(l *zap.SugaredLogger, conf config.ApiConfig, metricRegistry *prometheus.Registry,
 	appVersion string, flws []flow.Flow) *Api {
 
 	router := chi.NewRouter()
 	logg := l.With(logger.COMPONENT_KEY, API_COMPONENT_TYPE)
 
+	sizeLimit, err := conf.PayloadSizeLimitInBytes()
+	if err != nil {
+		panic("payload size limit could not be extracted")
+		//FIXME: should it panic?
+	}
+
 	api := &Api{
 		mux:  router,
 		log:  logg,
-		srv:  &http.Server{Addr: fmt.Sprintf(":%d", c.Port), Handler: router},
-		port: c.Port,
+		srv:  &http.Server{Addr: fmt.Sprintf(":%d", conf.Port), Handler: router},
+		port: conf.Port,
 	}
 
-	registerDefaultMiddlewares(api, logg, metricRegistry)
+	registerDefaultMiddlewares(api, sizeLimit, logg, metricRegistry)
 
 	sizeHist := prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
@@ -55,7 +61,6 @@ func New(l *zap.SugaredLogger, c config.ApiConfig, metricRegistry *prometheus.Re
 
 	metricRegistry.MustRegister(sizeHist)
 	RegisterIngestingRoutes(api, sizeHist, flws)
-	//TODO: add middleware that will return syntax error in case a request comes with no body
 	RegisterOperatinalRoutes(api, appVersion, metricRegistry)
 	api.mux.Mount("/debug", middleware.Profiler())
 
@@ -76,9 +81,19 @@ func (api *Api) Shutdown() error {
 	return err
 }
 
-func registerDefaultMiddlewares(api *Api, l *zap.SugaredLogger, metricRegistry *prometheus.Registry) {
+func registerDefaultMiddlewares(
+	api *Api,
+	sizeLimit int,
+	l *zap.SugaredLogger,
+	metricRegistry *prometheus.Registry,
+) {
+
 	//Middlewares on the top wrap the ones in the bottom
 	api.mux.Use(httpmiddleware.NewLoggingMiddleware(l))
 	api.mux.Use(httpmiddleware.NewMetricsMiddleware(metricRegistry))
 	api.mux.Use(httpmiddleware.NewRecoverer(l))
+
+	if sizeLimit > 0 {
+		api.mux.Use(middleware.RequestSize(int64(sizeLimit)))
+	}
 }

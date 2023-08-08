@@ -2,6 +2,7 @@ package http_in
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -9,6 +10,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
 )
+
+var payloadMaxSizeErr *http.MaxBytesError
 
 func RegisterIngestingRoutes(
 	api *Api,
@@ -20,14 +23,12 @@ func RegisterIngestingRoutes(
 		flwCopy := flw
 		api.mux.Post(fmt.Sprintf("/%s/async_ingestion", flw.Name), asyncIngestion(api.log, sizeHistogram, &flwCopy))
 	}
-
 }
 
 func asyncIngestion(l *zap.SugaredLogger, sizeHistogram *prometheus.HistogramVec, flw *flow.Flow) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		//TODO: implement the "with" on the logger and add the "ingestion_type": "async" here on this fn
 
-		//FIXME: buffer size needs a limits when reading, to avoid OOM
 		buf := &bytes.Buffer{}
 		dataLen, err := buf.ReadFrom(r.Body)
 
@@ -35,9 +36,12 @@ func asyncIngestion(l *zap.SugaredLogger, sizeHistogram *prometheus.HistogramVec
 
 		if err != nil {
 			l.Warn("async http request failed", "error", err)
-			w.Header().Set("Content-Type", "application/json")
 			//TODO: send a JSON response with the error
 			//TODO: which should be the response in this case?
+			if errors.As(err, &payloadMaxSizeErr) {
+				w.WriteHeader(http.StatusRequestEntityTooLarge)
+				return
+			}
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
