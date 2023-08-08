@@ -35,7 +35,7 @@ func asyncIngestion(l *zap.SugaredLogger, sizeHistogram *prometheus.HistogramVec
 		sizeHistogram.WithLabelValues(r.URL.Path).Observe(float64(dataLen))
 
 		if err != nil {
-			l.Warn("async http request failed", "error", err)
+			l.Warnw("async http request failed", "error", err)
 			//TODO: send a JSON response with the error
 			//TODO: which should be the response in this case?
 			if errors.As(err, &payloadMaxSizeErr) {
@@ -61,7 +61,7 @@ func asyncIngestion(l *zap.SugaredLogger, sizeHistogram *prometheus.HistogramVec
 
 		err = flw.Entrypoint.Enqueue(data)
 		if err != nil {
-			l.Warn("failed while enqueueing data from http request", "error", err)
+			l.Warnw("failed while enqueueing data from http request", "error", err)
 			w.Header().Set("Content-Type", "application/json")
 			//TODO: send a JSON response with the error
 			w.WriteHeader(http.StatusInternalServerError)
