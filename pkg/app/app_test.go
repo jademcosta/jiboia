@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -129,10 +130,13 @@ func TestPayloadSizeLimit(t *testing.T) {
 		deleteDir(t, testingPathNoAcc)
 	}()
 
+	var mu sync.Mutex
 	objStorageReceived := make([][]byte, 0)
 
 	storageServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
+		mu.Lock()
+		defer mu.Unlock()
 		objStorageReceived = append(objStorageReceived, body)
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -165,8 +169,10 @@ func TestPayloadSizeLimit(t *testing.T) {
 	response.Body.Close()
 
 	time.Sleep(100 * time.Millisecond)
+	mu.Lock()
 	assert.Equal(t, [][]byte{[]byte(validPayload)}, objStorageReceived,
 		"only the valid payload should be ingested")
+	mu.Unlock()
 
 	stopDone := app.Stop()
 	<-stopDone
