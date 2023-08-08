@@ -34,7 +34,6 @@ func New(l *zap.SugaredLogger, conf config.ApiConfig, metricRegistry *prometheus
 	sizeLimit, err := conf.PayloadSizeLimitInBytes()
 	if err != nil {
 		panic("payload size limit could not be extracted")
-		//FIXME: should it panic?
 	}
 
 	api := &Api{
