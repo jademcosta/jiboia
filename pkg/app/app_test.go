@@ -28,6 +28,7 @@ log:
 
 api:
   port: 9099
+  payload_size_limit: 120
 
 flows:
   - name: "int_flow"
@@ -60,6 +61,19 @@ flows:
       type: localstorage
       config:
         path: "/tmp/int_test2"
+  - name: "int_flow3"
+    type: async
+    in_memory_queue_max_size: 4
+    max_concurrent_uploads: 3
+    max_retries: 3
+    timeout: 120
+    external_queue:
+      type: noop
+      config: ""
+    object_storage:
+      type: httpstorage
+      config:
+        url: "http://non-existent.com"
 `
 
 const confForCBYaml = `
@@ -100,6 +114,62 @@ type metricForTests struct {
 	name   string
 	labels map[string]string
 	value  string
+}
+
+func TestPayloadSizeLimit(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	// Needed for the other ingestion endpoints
+	createDir(t, testingPathAcc)
+	createDir(t, testingPathNoAcc)
+	defer func() {
+		deleteDir(t, testingPathAcc)
+		deleteDir(t, testingPathNoAcc)
+	}()
+
+	objStorageReceived := make([][]byte, 0)
+
+	storageServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		objStorageReceived = append(objStorageReceived, body)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer storageServer.Close()
+
+	confFull := strings.Replace(confYaml, "http://non-existent.com",
+		fmt.Sprintf("%s/%s", storageServer.URL, "%s"), 1)
+
+	conf, err := config.New([]byte(confFull))
+	assert.NoError(t, err, "should initialize config")
+	l = logger.New(conf)
+
+	app := New(conf, l)
+	go app.Start()
+	time.Sleep(2 * time.Second)
+
+	validPayload := randSeq(120)
+	invalidPayload := randSeq(121)
+
+	response, err := http.Post("http://localhost:9099/int_flow3/async_ingestion", "application/json", strings.NewReader(validPayload))
+	assert.NoError(t, err, "ingesting items should not return error on int_flow3")
+	assert.Equal(t, http.StatusOK, response.StatusCode,
+		"data ingestion within size limit should be ok")
+	response.Body.Close()
+
+	response, err = http.Post("http://localhost:9099/int_flow3/async_ingestion", "application/json", strings.NewReader(invalidPayload))
+	assert.NoError(t, err, "ingesting items should not return error on cb_flow")
+	assert.Equal(t, http.StatusRequestEntityTooLarge, response.StatusCode,
+		"data ingestion above limit should return error")
+	response.Body.Close()
+
+	time.Sleep(100 * time.Millisecond)
+	assert.Equal(t, [][]byte{[]byte(validPayload)}, objStorageReceived,
+		"only the valid payload should be ingested")
+
+	stopDone := app.Stop()
+	<-stopDone
 }
 
 func TestAccumulatorCircuitBreaker(t *testing.T) {
