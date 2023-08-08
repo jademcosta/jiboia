@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -23,11 +24,12 @@ import (
 
 const confYaml = `
 log:
-  level: warn
+  level: error
   format: json
 
 api:
   port: 9099
+  payload_size_limit: 120
 
 flows:
   - name: "int_flow"
@@ -60,6 +62,19 @@ flows:
       type: localstorage
       config:
         path: "/tmp/int_test2"
+  - name: "int_flow3"
+    type: async
+    in_memory_queue_max_size: 4
+    max_concurrent_uploads: 3
+    max_retries: 3
+    timeout: 120
+    external_queue:
+      type: noop
+      config: ""
+    object_storage:
+      type: httpstorage
+      config:
+        url: "http://non-existent.com"
 `
 
 const confForCBYaml = `
@@ -68,7 +83,7 @@ log:
   format: json
 
 api:
-  port: 9099
+  port: 9098
 
 flows:
   - name: "cb_flow"
@@ -126,7 +141,7 @@ func TestAccumulatorCircuitBreaker(t *testing.T) {
 
 	validateMetricValue(
 		t,
-		"http://localhost:9099",
+		"http://localhost:9098",
 		metricForTests{
 			name:   "jiboia_circuitbreaker_open",
 			labels: map[string]string{"flow": "cb_flow", "name": "accumulator"},
@@ -139,7 +154,7 @@ func TestAccumulatorCircuitBreaker(t *testing.T) {
 	for i := 0; i <= 8; i++ {
 		//why 8? 3 payload on workers, 2 on uploader queue, 2 on accumulator queue,
 		// 1 on accumulator "current"
-		response, err := http.Post("http://localhost:9099/cb_flow/async_ingestion", "application/json", strings.NewReader(payload))
+		response, err := http.Post("http://localhost:9098/cb_flow/async_ingestion", "application/json", strings.NewReader(payload))
 		assert.NoError(t, err, "ingesting items should not return error on cb_flow")
 		// The status might not be 2XX here, as it is dependant on the order at which parallel
 		// components are running
@@ -148,7 +163,7 @@ func TestAccumulatorCircuitBreaker(t *testing.T) {
 	}
 	time.Sleep(100 * time.Millisecond)
 
-	response, err := http.Post("http://localhost:9099/cb_flow/async_ingestion", "application/json", strings.NewReader(payload))
+	response, err := http.Post("http://localhost:9098/cb_flow/async_ingestion", "application/json", strings.NewReader(payload))
 	assert.NoError(t, err, "ingesting items should not return error on cb_flow")
 	assert.Equal(t, 500, response.StatusCode,
 		"data ingestion should have errored on cb_flow, as the CB is open and queues should be full")
@@ -156,7 +171,7 @@ func TestAccumulatorCircuitBreaker(t *testing.T) {
 
 	validateMetricValue(
 		t,
-		"http://localhost:9099",
+		"http://localhost:9098",
 		metricForTests{
 			name:   "jiboia_circuitbreaker_open",
 			labels: map[string]string{"flow": "cb_flow", "name": "accumulator"},
@@ -166,13 +181,74 @@ func TestAccumulatorCircuitBreaker(t *testing.T) {
 
 	validateMetricValue(
 		t,
-		"http://localhost:9099",
+		"http://localhost:9098",
 		metricForTests{
 			name:   "jiboia_circuitbreaker_open_total",
 			labels: map[string]string{"flow": "cb_flow", "name": "accumulator"},
 			value:  "1",
 		},
 	)
+
+	stopDone := app.Stop()
+	<-stopDone
+}
+
+func TestPayloadSizeLimit(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	// Needed for the other ingestion endpoints
+	createDir(t, testingPathAcc)
+	createDir(t, testingPathNoAcc)
+	defer func() {
+		deleteDir(t, testingPathAcc)
+		deleteDir(t, testingPathNoAcc)
+	}()
+
+	var mu sync.Mutex
+	objStorageReceived := make([][]byte, 0)
+
+	storageServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		mu.Lock()
+		defer mu.Unlock()
+		objStorageReceived = append(objStorageReceived, body)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer storageServer.Close()
+
+	confFull := strings.Replace(confYaml, "http://non-existent.com",
+		fmt.Sprintf("%s/%s", storageServer.URL, "%s"), 1)
+
+	conf, err := config.New([]byte(confFull))
+	assert.NoError(t, err, "should initialize config")
+	l = logger.New(conf)
+
+	app := New(conf, l)
+	go app.Start()
+	time.Sleep(2 * time.Second)
+
+	validPayload := randSeq(120)
+	invalidPayload := randSeq(121)
+
+	response, err := http.Post("http://localhost:9099/int_flow3/async_ingestion", "application/json", strings.NewReader(validPayload))
+	assert.NoError(t, err, "ingesting items should not return error on int_flow3")
+	assert.Equal(t, http.StatusOK, response.StatusCode,
+		"data ingestion within size limit should be ok")
+	response.Body.Close()
+
+	response, err = http.Post("http://localhost:9099/int_flow3/async_ingestion", "application/json", strings.NewReader(invalidPayload))
+	assert.NoError(t, err, "ingesting items should not return error on cb_flow")
+	assert.Equal(t, http.StatusRequestEntityTooLarge, response.StatusCode,
+		"data ingestion above limit should return error")
+	response.Body.Close()
+
+	time.Sleep(100 * time.Millisecond)
+	mu.Lock()
+	assert.Equal(t, [][]byte{[]byte(validPayload)}, objStorageReceived,
+		"only the valid payload should be ingested")
+	mu.Unlock()
 
 	stopDone := app.Stop()
 	<-stopDone

@@ -20,10 +20,6 @@ type LogConfig struct {
 	Format string `yaml:"format"`
 }
 
-type ApiConfig struct {
-	Port int `yaml:"port"`
-}
-
 type FlowConfig struct {
 	Name                 string `yaml:"name"`
 	Type                 string `yaml:"type"`
@@ -81,8 +77,8 @@ func New(confData []byte) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	fillFlowsDefaultValues(c)
 
+	fillFlowsDefaultValues(c)
 	return c, nil
 }
 
@@ -107,6 +103,11 @@ func validateConfig(c *Config) error {
 		}
 
 		flowNamesSet[flow.Name] = struct{}{}
+	}
+
+	err := c.Api.validateSizeLimit()
+	if err != nil {
+		return fmt.Errorf("invalid api size limit format")
 	}
 
 	return nil

@@ -4,6 +4,7 @@ log:
 
 api:
   port: 9099
+  payload_size_limit: "1111KB"
 
 flows:
     # The name of the flow. This will be used on logs/metrics and on the URL to intest
