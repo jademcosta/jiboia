@@ -24,7 +24,7 @@ import (
 
 const confYaml = `
 log:
-  level: warn
+  level: error
   format: json
 
 api:
