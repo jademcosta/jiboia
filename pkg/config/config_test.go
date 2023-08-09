@@ -44,7 +44,6 @@ api:
 
 flows:
   - name: "my-flow"
-    type: async
     in_memory_queue_max_size: 1000
     max_concurrent_uploads: 50
     max_retries: 3
@@ -70,7 +69,6 @@ flows:
         access_key: "access 2"
         secret_key: "secret 2"
   - name: "myflow2"
-    type: async
     in_memory_queue_max_size: 11
     max_concurrent_uploads: 1
     max_retries: 0
@@ -105,7 +103,6 @@ flows:
 	assert.NoError(t, err, "api.payload_size_limit should yield no error")
 
 	assert.Equal(t, "my-flow", conf.Flows[0].Name, "should have parsed the correct flow.name")
-	assert.Equal(t, "async", conf.Flows[0].Type, "should have parsed the correct flow.type")
 	assert.Equal(t, 1000, conf.Flows[0].QueueMaxSize, "should have parsed the correct flow.in_memory_queue_max_size")
 	assert.Equal(t, 50, conf.Flows[0].MaxConcurrentUploads, "should have parsed the correct flow.max_concurrent_uploads")
 	assert.Equal(t, 3, conf.Flows[0].MaxRetries, "should have parsed the correct flow.max_retries")
@@ -123,7 +120,6 @@ flows:
 	assert.NotNil(t, conf.Flows[0].ObjectStorage.Config, "should maintain the value of flow.object_storage.config")
 
 	assert.Equal(t, "myflow2", conf.Flows[1].Name, "should have parsed the correct flow.name")
-	assert.Equal(t, "async", conf.Flows[1].Type, "should have parsed the correct flow.type")
 	assert.Equal(t, 11, conf.Flows[1].QueueMaxSize, "should have parsed the correct flow.in_memory_queue_max_size")
 	assert.Equal(t, 1, conf.Flows[1].MaxConcurrentUploads, "should have parsed the correct flow.max_concurrent_uploads")
 	assert.Equal(t, 0, conf.Flows[1].MaxRetries, "should have parsed the correct flow.max_retries")

@@ -33,7 +33,6 @@ api:
 
 flows:
   - name: "int_flow"
-    type: async
     in_memory_queue_max_size: 4
     max_concurrent_uploads: 2
     max_retries: 3
@@ -50,7 +49,6 @@ flows:
       config:
         path: "/tmp/int_test"
   - name: "int_flow2"
-    type: async
     in_memory_queue_max_size: 4
     max_concurrent_uploads: 3
     max_retries: 3

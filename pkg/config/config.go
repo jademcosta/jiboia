@@ -22,7 +22,6 @@ type LogConfig struct {
 
 type FlowConfig struct {
 	Name                 string `yaml:"name"`
-	Type                 string `yaml:"type"`
 	QueueMaxSize         int    `yaml:"in_memory_queue_max_size"`
 	MaxConcurrentUploads int    `yaml:"max_concurrent_uploads"`
 	PathPrefixCount      int    `yaml:"path_prefix_count"`
