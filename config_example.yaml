@@ -4,6 +4,7 @@ log:
 
 api:
   port: 9099
+  # Payloadsd larger than this are denied. Use this as a protection
   payload_size_limit: "1111KB"
 
 flows:
