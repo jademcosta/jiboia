@@ -11,16 +11,15 @@ flows:
     # The name of the flow. This will be used on logs/metrics and on the URL to intest
     # data on this flow
   - name: "my-flow"
-    # Only async works for now
-    type: async
-    # The amount of items in memory, waiting to be uploaded. If this queue is full,
-    # data starts to be dropped (lost).
+    ingestion:
+      # When a token is defined, requests that arrive without it are denied
+      token: "some-token-here"
+    # The amount of items in memory, waiting to be sent to storage. If this queue is full,
+    # data starts to be dropped (lost)
     in_memory_queue_max_size: 1000
     # How many workers will exist to upload files, in parallel. Each worker uploads only 1
     # file at a time (before asking for more work)
     max_concurrent_uploads: 50
-    # Unused for now
-    max_retries: 3
     # This is used on the object storage. It tells how many different dynamic prefixes it will use.
     # Increase it in case you are receiving too many rate-limit errors.
     path_prefix_count: 1

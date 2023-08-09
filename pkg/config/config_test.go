@@ -46,6 +46,8 @@ flows:
     in_memory_queue_max_size: 1000
     max_concurrent_uploads: 50
     path_prefix_count: 7
+    ingestion:
+      token: "some token here!"
     accumulator:
       size_in_bytes: 2097152
       separator: "_a_"
@@ -104,6 +106,8 @@ flows:
 	assert.Equal(t, 50, conf.Flows[0].MaxConcurrentUploads, "should have parsed the correct flow.max_concurrent_uploads")
 	assert.Equal(t, 7, conf.Flows[0].PathPrefixCount, "should have parsed the correct flow.path_prefix_count")
 
+	assert.Equal(t, "some token here!", conf.Flows[0].Ingestion.Token, "should have parsed the correct flow.ingestion.token")
+
 	assert.Equal(t, 2097152, conf.Flows[0].Accumulator.SizeInBytes, "should have parsed the correct flow.accumulator.size_in_bytes")
 	assert.Equal(t, "_a_", conf.Flows[0].Accumulator.Separator, "should have parsed the correct flow.accumulator.separator")
 	assert.Equal(t, 123, conf.Flows[0].Accumulator.QueueCapacity, "should have parsed the correct flow.accumulator.queue_capacity")
@@ -119,6 +123,8 @@ flows:
 	assert.Equal(t, 11, conf.Flows[1].QueueMaxSize, "should have parsed the correct flow.in_memory_queue_max_size")
 	assert.Equal(t, 1, conf.Flows[1].MaxConcurrentUploads, "should have parsed the correct flow.max_concurrent_uploads")
 	assert.Equal(t, 1, conf.Flows[1].PathPrefixCount, "should have parsed the correct flow.path_prefix_count")
+
+	assert.Equal(t, "", conf.Flows[1].Ingestion.Token, "should have parsed the correct flow.ingestion.token (which is empty)")
 
 	assert.Equal(t, 20, conf.Flows[1].Accumulator.SizeInBytes, "should have parsed the correct flow.accumulator.size_in_bytes")
 	assert.Equal(t, "", conf.Flows[1].Accumulator.Separator, "should have parsed the correct flow.accumulator.separator")
