@@ -21,15 +21,13 @@ type LogConfig struct {
 }
 
 type FlowConfig struct {
-	Name                 string `yaml:"name"`
-	QueueMaxSize         int    `yaml:"in_memory_queue_max_size"`
-	MaxConcurrentUploads int    `yaml:"max_concurrent_uploads"`
-	PathPrefixCount      int    `yaml:"path_prefix_count"`
-	//TODO: Use it on workers.
-	MaxRetries    int           `yaml:"max_retries"`
-	Accumulator   Accumulator   `yaml:"accumulator"`
-	ExternalQueue ExternalQueue `yaml:"external_queue"`
-	ObjectStorage ObjectStorage `yaml:"object_storage"`
+	Name                 string        `yaml:"name"`
+	QueueMaxSize         int           `yaml:"in_memory_queue_max_size"`
+	MaxConcurrentUploads int           `yaml:"max_concurrent_uploads"`
+	PathPrefixCount      int           `yaml:"path_prefix_count"`
+	Accumulator          Accumulator   `yaml:"accumulator"`
+	ExternalQueue        ExternalQueue `yaml:"external_queue"`
+	ObjectStorage        ObjectStorage `yaml:"object_storage"`
 }
 
 type Accumulator struct {

@@ -24,7 +24,6 @@ func TestDefaultValues(t *testing.T) {
 	assert.Equal(t, "info", conf.Log.Level, "default for log.level config doesn't match")
 	assert.Equal(t, 9010, conf.Api.Port, "default for api.port config doesn't match")
 	assert.Equal(t, 500, conf.Flows[0].MaxConcurrentUploads, "default for flow.max_concurrent_uploads config doesn't match")
-	assert.Equal(t, 0, conf.Flows[0].MaxRetries, "default for flow.max_retries config doesn't match")
 	assert.Equal(t, 1, conf.Flows[0].PathPrefixCount, "default value for flow path_prefix_count should be 1")
 
 	sizeInBytes, err := conf.Api.PayloadSizeLimitInBytes()
@@ -46,7 +45,6 @@ flows:
   - name: "my-flow"
     in_memory_queue_max_size: 1000
     max_concurrent_uploads: 50
-    max_retries: 3
     path_prefix_count: 7
     accumulator:
       size_in_bytes: 2097152
@@ -71,7 +69,6 @@ flows:
   - name: "myflow2"
     in_memory_queue_max_size: 11
     max_concurrent_uploads: 1
-    max_retries: 0
     path_prefix_count: 1
     accumulator:
       size_in_bytes: 20
@@ -105,7 +102,6 @@ flows:
 	assert.Equal(t, "my-flow", conf.Flows[0].Name, "should have parsed the correct flow.name")
 	assert.Equal(t, 1000, conf.Flows[0].QueueMaxSize, "should have parsed the correct flow.in_memory_queue_max_size")
 	assert.Equal(t, 50, conf.Flows[0].MaxConcurrentUploads, "should have parsed the correct flow.max_concurrent_uploads")
-	assert.Equal(t, 3, conf.Flows[0].MaxRetries, "should have parsed the correct flow.max_retries")
 	assert.Equal(t, 7, conf.Flows[0].PathPrefixCount, "should have parsed the correct flow.path_prefix_count")
 
 	assert.Equal(t, 2097152, conf.Flows[0].Accumulator.SizeInBytes, "should have parsed the correct flow.accumulator.size_in_bytes")
@@ -122,7 +118,6 @@ flows:
 	assert.Equal(t, "myflow2", conf.Flows[1].Name, "should have parsed the correct flow.name")
 	assert.Equal(t, 11, conf.Flows[1].QueueMaxSize, "should have parsed the correct flow.in_memory_queue_max_size")
 	assert.Equal(t, 1, conf.Flows[1].MaxConcurrentUploads, "should have parsed the correct flow.max_concurrent_uploads")
-	assert.Equal(t, 0, conf.Flows[1].MaxRetries, "should have parsed the correct flow.max_retries")
 	assert.Equal(t, 1, conf.Flows[1].PathPrefixCount, "should have parsed the correct flow.path_prefix_count")
 
 	assert.Equal(t, 20, conf.Flows[1].Accumulator.SizeInBytes, "should have parsed the correct flow.accumulator.size_in_bytes")

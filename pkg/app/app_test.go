@@ -35,7 +35,6 @@ flows:
   - name: "int_flow"
     in_memory_queue_max_size: 4
     max_concurrent_uploads: 2
-    max_retries: 3
     timeout: 120
     accumulator:
       size_in_bytes: 20
@@ -51,7 +50,6 @@ flows:
   - name: "int_flow2"
     in_memory_queue_max_size: 4
     max_concurrent_uploads: 3
-    max_retries: 3
     timeout: 120
     external_queue:
       type: noop
@@ -61,10 +59,8 @@ flows:
       config:
         path: "/tmp/int_test2"
   - name: "int_flow3"
-    type: async
     in_memory_queue_max_size: 4
     max_concurrent_uploads: 3
-    max_retries: 3
     timeout: 120
     external_queue:
       type: noop
@@ -85,10 +81,8 @@ api:
 
 flows:
   - name: "cb_flow"
-    type: async
     in_memory_queue_max_size: 2
     max_concurrent_uploads: 3
-    max_retries: 3
     timeout: 120
     accumulator:
       size_in_bytes: 5
