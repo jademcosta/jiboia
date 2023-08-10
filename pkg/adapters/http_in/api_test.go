@@ -70,15 +70,14 @@ func TestPassesDataFlows(t *testing.T) {
 	defer srvr.Close()
 
 	resp, err := http.Post(fmt.Sprintf("%s/flow-1/async_ingestion", srvr.URL), "application/json", strings.NewReader("helloooooo"))
-	if err != nil {
-		assert.Fail(t, "error on posting data to api", err)
-	}
+	assert.NoError(t, err, "error on posting data to flow1", err)
+	resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200) on flow 1")
 
 	resp, err = http.Post(fmt.Sprintf("%s/flow2/async_ingestion", srvr.URL), "application/json", strings.NewReader("world!"))
-	if err != nil {
-		assert.Fail(t, "error on posting data to flow 2", err)
-	}
+	assert.NoError(t, err, "error on posting data to flow2", err)
+
+	resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200) on flow 2")
 
 	assert.Equal(t, [][]byte{[]byte("helloooooo")}, mockDF.calledWith, "the posted data should have been sent to flow 1")
@@ -105,10 +104,8 @@ func TestAnswersAnErrorIfNoBodyIsSent(t *testing.T) {
 	defer srvr.Close()
 
 	resp, err := http.Post(fmt.Sprintf("%s/flow-1/async_ingestion", srvr.URL), "application/json", strings.NewReader(""))
-
-	if err != nil {
-		assert.Fail(t, "error on posting data", err)
-	}
+	assert.NoError(t, err, "error on posting data", err)
+	resp.Body.Close()
 
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode, "status should be Bad Request(400)")
 	assert.Lenf(t, mockDF.calledWith, 0, "no data should have been sent to flow")
@@ -132,10 +129,8 @@ func TestAnswersErrorIfEnqueueingFails(t *testing.T) {
 	defer srvr.Close()
 
 	resp, err := http.Post(fmt.Sprintf("%s/flow-1/async_ingestion", srvr.URL), "application/json", strings.NewReader("some data"))
-
-	if err != nil {
-		assert.Fail(t, "error on posting data", err)
-	}
+	assert.NoError(t, err, "error on posting data", err)
+	resp.Body.Close()
 
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode, "status should be Internal Server Error(500)")
 }
@@ -157,9 +152,8 @@ func TestPanicResultInStatus500(t *testing.T) {
 	defer srvr.Close()
 
 	resp, err := http.Post(fmt.Sprintf("%s/flow-1/async_ingestion", srvr.URL), "application/json", strings.NewReader("some data"))
-	if err != nil {
-		assert.Fail(t, "error on posting data", err)
-	}
+	assert.NoError(t, err, "error on posting data", err)
+	resp.Body.Close()
 
 	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode,
 		"status should be Internal Server Error(500) when panics occur")
@@ -184,33 +178,29 @@ func TestPayloadSizeLimit(t *testing.T) {
 
 	resp, err := http.Post(fmt.Sprintf("%s/flow-1/async_ingestion", srvr.URL), "application/json",
 		strings.NewReader("somedata"))
-	if err != nil {
-		assert.Fail(t, "error on posting data", err)
-	}
+	assert.NoError(t, err, "error on posting data", err)
+	resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode,
 		"status should be Internal Server Ok(200) when size is within limits")
 
 	resp, err = http.Post(fmt.Sprintf("%s/flow-1/async_ingestion", srvr.URL), "application/json",
 		strings.NewReader("1111111111")) //10 bytes
-	if err != nil {
-		assert.Fail(t, "error on posting data", err)
-	}
+	assert.NoError(t, err, "error on posting data", err)
+	resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode,
 		"status should be Internal Server Ok(200) when size is within limits")
 
 	resp, err = http.Post(fmt.Sprintf("%s/flow-1/async_ingestion", srvr.URL), "application/json",
 		strings.NewReader("abcdefghijk")) //11 bytes
-	if err != nil {
-		assert.Fail(t, "error on posting data", err)
-	}
+	assert.NoError(t, err, "error on posting data", err)
+	resp.Body.Close()
 	assert.Equal(t, http.StatusRequestEntityTooLarge, resp.StatusCode,
 		"status should be Internal Server Payload too large(413) when size is above limits (11 bytes)")
 
 	resp, err = http.Post(fmt.Sprintf("%s/flow-1/async_ingestion", srvr.URL), "application/json",
 		strings.NewReader("abcdefghijkl")) //12 bytes
-	if err != nil {
-		assert.Fail(t, "error on posting data", err)
-	}
+	assert.NoError(t, err, "error on posting data", err)
+	resp.Body.Close()
 	assert.Equal(t, http.StatusRequestEntityTooLarge, resp.StatusCode,
 		"status should be Internal Server Payload too large(413) when size is above limits (12 bytes)")
 
@@ -267,9 +257,8 @@ func TestApiToken(t *testing.T) {
 		}
 
 		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			assert.Fail(t, "error on posting data", err)
-		}
+		assert.NoError(t, err, "error on posting data", err)
+		resp.Body.Close()
 
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode, "status should be Unauthorized(401)")
 		assert.Lenf(t, mockDF.calledWith, 0, "no data should have been sent to flow1")
@@ -304,17 +293,14 @@ func TestApiToken(t *testing.T) {
 			req.Header.Set(tc.header, tc.tkn)
 
 			resp, err := http.DefaultClient.Do(req)
-			if err != nil {
-				assert.Fail(t, "error on posting data", err)
-			}
+			assert.NoError(t, err, "error on posting data", err)
+			resp.Body.Close()
 
 			assert.Equal(t, http.StatusUnauthorized, resp.StatusCode, "status should be Unauthorized(401)")
 		}
 
 		assert.Lenf(t, mockDF.calledWith, 0, "no data should have been sent to flow1")
 	})
-
-	// FIXME: Não revisei as abaixo
 
 	t.Run("accepts if correct token", func(t *testing.T) {
 
@@ -330,9 +316,8 @@ func TestApiToken(t *testing.T) {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
 		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			assert.Fail(t, "error on posting data", err)
-		}
+		assert.NoError(t, err, "error on posting data", err)
+		resp.Body.Close()
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200)")
 		assert.Lenf(t, mockDF.calledWith, 1, "the data should have been sent to flow1")
@@ -351,9 +336,8 @@ func TestApiToken(t *testing.T) {
 		}
 
 		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			assert.Fail(t, "error on posting data", err)
-		}
+		assert.NoError(t, err, "error on posting data", err)
+		resp.Body.Close()
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200)")
 
@@ -369,9 +353,8 @@ func TestApiToken(t *testing.T) {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
 		resp, err = http.DefaultClient.Do(req)
-		if err != nil {
-			assert.Fail(t, "error on posting data", err)
-		}
+		assert.NoError(t, err, "error on posting data", err)
+		resp.Body.Close()
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200)")
 
@@ -387,9 +370,8 @@ func TestApiToken(t *testing.T) {
 		req.Header.Set("Authorization", "any token")
 
 		resp, err = http.DefaultClient.Do(req)
-		if err != nil {
-			assert.Fail(t, "error on posting data", err)
-		}
+		assert.NoError(t, err, "error on posting data", err)
+		resp.Body.Close()
 		assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200)")
 
 		assert.Lenf(t, mockDF2.calledWith, 3, "the data should have been sent to flow2")
@@ -412,9 +394,8 @@ func TestApiToken(t *testing.T) {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
 		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			assert.Fail(t, "error on posting data", err)
-		}
+		assert.NoError(t, err, "error on posting data", err)
+		resp.Body.Close()
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200)")
 
@@ -430,9 +411,8 @@ func TestApiToken(t *testing.T) {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token3))
 
 		resp, err = http.DefaultClient.Do(req)
-		if err != nil {
-			assert.Fail(t, "error on posting data", err)
-		}
+		assert.NoError(t, err, "error on posting data", err)
+		resp.Body.Close()
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200)")
 
@@ -448,9 +428,8 @@ func TestApiToken(t *testing.T) {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
 
 		resp, err = http.DefaultClient.Do(req)
-		if err != nil {
-			assert.Fail(t, "error on posting data", err)
-		}
+		assert.NoError(t, err, "error on posting data", err)
+		resp.Body.Close()
 
 		assert.Equal(t, http.StatusUnauthorized, resp.StatusCode, "status should be Unauthorized(401)")
 
@@ -489,10 +468,7 @@ func TestVersionEndpointInformsTheVersion(t *testing.T) {
 	defer srvr.Close()
 
 	resp, err := http.Get(fmt.Sprintf("%s/version", srvr.URL))
-
-	if err != nil {
-		assert.Fail(t, "error on getting data", err)
-	}
+	assert.NoError(t, err, "error on GETting data", err)
 
 	buf := new(bytes.Buffer)
 	_, err = buf.ReadFrom(resp.Body)

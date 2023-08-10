@@ -311,6 +311,7 @@ func TestApiToken(t *testing.T) {
 	assert.NoError(t, err, "error creating request")
 
 	resp, err := http.DefaultClient.Do(req)
+	resp.Body.Close()
 	assert.NoError(t, err, "error posting data")
 
 	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode, "status should be Unauthorized(401)")
@@ -324,6 +325,7 @@ func TestApiToken(t *testing.T) {
 
 	req.Header.Set("Authorization", "Bearer some secure token")
 	resp, err = http.DefaultClient.Do(req)
+	resp.Body.Close()
 	assert.NoError(t, err, "error posting data")
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200)")
