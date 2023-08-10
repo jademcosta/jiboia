@@ -26,8 +26,6 @@ func RegisterIngestingRoutes(
 		if flwCopy.Token != "" {
 			api.mux.With(httpmiddleware.Auth(flwCopy.Token)).
 				Post(fmt.Sprintf("/%s/async_ingestion", flwCopy.Name), asyncIngestion(api.log, sizeHistogram, &flwCopy))
-
-			fmt.Println("Using token on ", flwCopy.Name)
 		} else {
 			api.mux.Post(fmt.Sprintf("/%s/async_ingestion", flwCopy.Name), asyncIngestion(api.log, sizeHistogram, &flwCopy))
 		}
