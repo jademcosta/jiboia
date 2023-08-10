@@ -68,7 +68,7 @@ flows:
     object_storage:
       type: httpstorage
       config:
-        url: "http://non-existent.com"
+        url: "http://non-existent-27836178236.com"
 `
 
 const confForCBYaml = `
@@ -210,7 +210,7 @@ func TestPayloadSizeLimit(t *testing.T) {
 	}))
 	defer storageServer.Close()
 
-	confFull := strings.Replace(confYaml, "http://non-existent.com",
+	confFull := strings.Replace(confYaml, "http://non-existent-27836178236.com",
 		fmt.Sprintf("%s/%s", storageServer.URL, "%s"), 1)
 
 	conf, err := config.New([]byte(confFull))
