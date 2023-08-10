@@ -246,6 +246,7 @@ func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 			ExternalQueue: externalQueue,
 			Uploader:      uploader,
 			UploadWorkers: make([]flow.Runnable, 0, flowConf.MaxConcurrentUploads),
+			Token:         flowConf.Ingestion.Token,
 		}
 
 		hasAccumulatorDeclared := flowConf.Accumulator.SizeInBytes > 0 //TODO: this is something that will need to be improved once config is localized inside packages
