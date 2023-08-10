@@ -21,16 +21,14 @@ type LogConfig struct {
 }
 
 type FlowConfig struct {
-	Name                 string `yaml:"name"`
-	Type                 string `yaml:"type"`
-	QueueMaxSize         int    `yaml:"in_memory_queue_max_size"`
-	MaxConcurrentUploads int    `yaml:"max_concurrent_uploads"`
-	PathPrefixCount      int    `yaml:"path_prefix_count"`
-	//TODO: Use it on workers.
-	MaxRetries    int           `yaml:"max_retries"`
-	Accumulator   Accumulator   `yaml:"accumulator"`
-	ExternalQueue ExternalQueue `yaml:"external_queue"`
-	ObjectStorage ObjectStorage `yaml:"object_storage"`
+	Name                 string          `yaml:"name"`
+	QueueMaxSize         int             `yaml:"in_memory_queue_max_size"`
+	MaxConcurrentUploads int             `yaml:"max_concurrent_uploads"`
+	PathPrefixCount      int             `yaml:"path_prefix_count"`
+	Ingestion            IngestionConfig `yaml:"ingestion"`
+	Accumulator          Accumulator     `yaml:"accumulator"`
+	ExternalQueue        ExternalQueue   `yaml:"external_queue"`
+	ObjectStorage        ObjectStorage   `yaml:"object_storage"`
 }
 
 type Accumulator struct {
@@ -48,6 +46,10 @@ type ExternalQueue struct {
 type ObjectStorage struct {
 	Type   string      `yaml:"type"`
 	Config interface{} `yaml:"config"`
+}
+
+type IngestionConfig struct {
+	Token string `yaml:"token"`
 }
 
 func init() {

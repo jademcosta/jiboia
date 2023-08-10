@@ -24,7 +24,6 @@ func TestDefaultValues(t *testing.T) {
 	assert.Equal(t, "info", conf.Log.Level, "default for log.level config doesn't match")
 	assert.Equal(t, 9010, conf.Api.Port, "default for api.port config doesn't match")
 	assert.Equal(t, 500, conf.Flows[0].MaxConcurrentUploads, "default for flow.max_concurrent_uploads config doesn't match")
-	assert.Equal(t, 0, conf.Flows[0].MaxRetries, "default for flow.max_retries config doesn't match")
 	assert.Equal(t, 1, conf.Flows[0].PathPrefixCount, "default value for flow path_prefix_count should be 1")
 
 	sizeInBytes, err := conf.Api.PayloadSizeLimitInBytes()
@@ -44,11 +43,11 @@ api:
 
 flows:
   - name: "my-flow"
-    type: async
     in_memory_queue_max_size: 1000
     max_concurrent_uploads: 50
-    max_retries: 3
     path_prefix_count: 7
+    ingestion:
+      token: "some token here!"
     accumulator:
       size_in_bytes: 2097152
       separator: "_a_"
@@ -70,10 +69,8 @@ flows:
         access_key: "access 2"
         secret_key: "secret 2"
   - name: "myflow2"
-    type: async
     in_memory_queue_max_size: 11
     max_concurrent_uploads: 1
-    max_retries: 0
     path_prefix_count: 1
     accumulator:
       size_in_bytes: 20
@@ -105,11 +102,11 @@ flows:
 	assert.NoError(t, err, "api.payload_size_limit should yield no error")
 
 	assert.Equal(t, "my-flow", conf.Flows[0].Name, "should have parsed the correct flow.name")
-	assert.Equal(t, "async", conf.Flows[0].Type, "should have parsed the correct flow.type")
 	assert.Equal(t, 1000, conf.Flows[0].QueueMaxSize, "should have parsed the correct flow.in_memory_queue_max_size")
 	assert.Equal(t, 50, conf.Flows[0].MaxConcurrentUploads, "should have parsed the correct flow.max_concurrent_uploads")
-	assert.Equal(t, 3, conf.Flows[0].MaxRetries, "should have parsed the correct flow.max_retries")
 	assert.Equal(t, 7, conf.Flows[0].PathPrefixCount, "should have parsed the correct flow.path_prefix_count")
+
+	assert.Equal(t, "some token here!", conf.Flows[0].Ingestion.Token, "should have parsed the correct flow.ingestion.token")
 
 	assert.Equal(t, 2097152, conf.Flows[0].Accumulator.SizeInBytes, "should have parsed the correct flow.accumulator.size_in_bytes")
 	assert.Equal(t, "_a_", conf.Flows[0].Accumulator.Separator, "should have parsed the correct flow.accumulator.separator")
@@ -123,11 +120,11 @@ flows:
 	assert.NotNil(t, conf.Flows[0].ObjectStorage.Config, "should maintain the value of flow.object_storage.config")
 
 	assert.Equal(t, "myflow2", conf.Flows[1].Name, "should have parsed the correct flow.name")
-	assert.Equal(t, "async", conf.Flows[1].Type, "should have parsed the correct flow.type")
 	assert.Equal(t, 11, conf.Flows[1].QueueMaxSize, "should have parsed the correct flow.in_memory_queue_max_size")
 	assert.Equal(t, 1, conf.Flows[1].MaxConcurrentUploads, "should have parsed the correct flow.max_concurrent_uploads")
-	assert.Equal(t, 0, conf.Flows[1].MaxRetries, "should have parsed the correct flow.max_retries")
 	assert.Equal(t, 1, conf.Flows[1].PathPrefixCount, "should have parsed the correct flow.path_prefix_count")
+
+	assert.Equal(t, "", conf.Flows[1].Ingestion.Token, "should have parsed the correct flow.ingestion.token (which is empty)")
 
 	assert.Equal(t, 20, conf.Flows[1].Accumulator.SizeInBytes, "should have parsed the correct flow.accumulator.size_in_bytes")
 	assert.Equal(t, "", conf.Flows[1].Accumulator.Separator, "should have parsed the correct flow.accumulator.separator")

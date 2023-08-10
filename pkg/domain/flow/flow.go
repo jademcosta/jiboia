@@ -24,4 +24,5 @@ type Flow struct {
 	Uploader      DataFlowRunnable
 	Accumulator   DataFlowRunnable
 	UploadWorkers []Runnable
+	Token         string
 }
