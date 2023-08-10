@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/jademcosta/jiboia/pkg/adapters/http_in/httpmiddleware"
 	"github.com/jademcosta/jiboia/pkg/domain/flow"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
@@ -21,8 +22,18 @@ func RegisterIngestingRoutes(
 
 	for _, flw := range flws {
 		flwCopy := flw
-		api.mux.Post(fmt.Sprintf("/%s/async_ingestion", flw.Name), asyncIngestion(api.log, sizeHistogram, &flwCopy))
+
+		if flwCopy.Token != "" {
+			api.mux.With(httpmiddleware.Auth(flwCopy.Token)).
+				Post(fmt.Sprintf("/%s/async_ingestion", flwCopy.Name), asyncIngestion(api.log, sizeHistogram, &flwCopy))
+
+			fmt.Println("Using token on ", flwCopy.Name)
+		} else {
+			api.mux.Post(fmt.Sprintf("/%s/async_ingestion", flwCopy.Name), asyncIngestion(api.log, sizeHistogram, &flwCopy))
+		}
 	}
+
+	api.mux.Middlewares()
 }
 
 func asyncIngestion(l *zap.SugaredLogger, sizeHistogram *prometheus.HistogramVec, flw *flow.Flow) http.HandlerFunc {
