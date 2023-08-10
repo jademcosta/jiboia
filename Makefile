@@ -53,7 +53,7 @@ lint: ## Run all available linters
 	golangci-lint run
 
 lint-experimental: ## Linters that we are still testings
-	@$(GOCMD) install github.com/alexkohler/nakedret@latest
+	@$(GOCMD) install github.com/alexkohler/nakedret/cmd/nakedret@latest
 	@$(GOCMD) install github.com/alexkohler/prealloc@latest
 	@$(GOCMD) install github.com/ashanbrown/makezero@latest
 	@$(GOCMD) install golang.org/x/tools/go/analysis/passes/fieldalignment/cmd/fieldalignment@latest
