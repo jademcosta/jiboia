@@ -23,6 +23,13 @@ flows:
     # This is used on the object storage. It tells how many different dynamic prefixes it will use.
     # Increase it in case you are receiving too many rate-limit errors.
     path_prefix_count: 1
+    # Optional. This component compresses data before sending it to object storage
+    compression:
+      # The compression algorithm. Available types are gzip, zlib, deflate, lzw
+      type: "gzip"
+      # Higher numbers mean more speed and less compression. The allowed levels
+      # varies depending on the algorithm
+      speed: "3"
     # Optional. This component merges data into memory until a user defined limit, and then sends
     # it forward to be uploaded into S3
     accumulator:

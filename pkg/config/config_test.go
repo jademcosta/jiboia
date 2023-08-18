@@ -72,6 +72,9 @@ flows:
     in_memory_queue_max_size: 11
     max_concurrent_uploads: 1
     path_prefix_count: 1
+    compression:
+      type: gzip
+      level: 2
     accumulator:
       size_in_bytes: 20
       separator: ""
@@ -105,6 +108,8 @@ flows:
 	assert.Equal(t, 1000, conf.Flows[0].QueueMaxSize, "should have parsed the correct flow.in_memory_queue_max_size")
 	assert.Equal(t, 50, conf.Flows[0].MaxConcurrentUploads, "should have parsed the correct flow.max_concurrent_uploads")
 	assert.Equal(t, 7, conf.Flows[0].PathPrefixCount, "should have parsed the correct flow.path_prefix_count")
+	assert.Equal(t, "", conf.Flows[0].Compression.Type, "should have an empty flow.compression.type")
+	assert.Equal(t, "", conf.Flows[0].Compression.Level, "should have an empty flow.compression.level")
 
 	assert.Equal(t, "some token here!", conf.Flows[0].Ingestion.Token, "should have parsed the correct flow.ingestion.token")
 
@@ -123,6 +128,8 @@ flows:
 	assert.Equal(t, 11, conf.Flows[1].QueueMaxSize, "should have parsed the correct flow.in_memory_queue_max_size")
 	assert.Equal(t, 1, conf.Flows[1].MaxConcurrentUploads, "should have parsed the correct flow.max_concurrent_uploads")
 	assert.Equal(t, 1, conf.Flows[1].PathPrefixCount, "should have parsed the correct flow.path_prefix_count")
+	assert.Equal(t, "gzip", conf.Flows[1].Compression.Type, "should have parsed the correct flow.compression.type")
+	assert.Equal(t, "2", conf.Flows[1].Compression.Level, "should have parsed the correct flow.compression.level")
 
 	assert.Equal(t, "", conf.Flows[1].Ingestion.Token, "should have parsed the correct flow.ingestion.token (which is empty)")
 
@@ -415,6 +422,90 @@ func TestApiPayloadSizeLimitValidation(t *testing.T) {
 			assert.Errorf(t, err, "size %s should result in error", tc.size)
 		} else {
 			assert.NoErrorf(t, err, "size %s should NOT result in error", tc.size)
+		}
+	}
+}
+
+func TestValidateCompressionTypesAndLevels(t *testing.T) {
+	logTemplate := `
+flows:
+  - name: flow_1
+    compression:
+      type: "{{TYPE}}"
+      level: "{{LEVEL}}"`
+
+	testCases := []struct {
+		compressionType  string
+		compressionLevel string
+		shouldError      bool
+	}{
+		{
+			compressionType: "aaa",
+			shouldError:     true,
+		},
+		{
+			compressionType:  "123random",
+			compressionLevel: "5",
+			shouldError:      true,
+		},
+		{
+			compressionType:  "gzip",
+			compressionLevel: "10",
+			shouldError:      true,
+		},
+		{
+			compressionType:  "gzip",
+			compressionLevel: "random",
+			shouldError:      true,
+		},
+		{
+			compressionType:  "gzip",
+			compressionLevel: "0",
+			shouldError:      true,
+		},
+		{
+			compressionType:  "gzip",
+			compressionLevel: "-1",
+			shouldError:      true,
+		},
+		{
+			compressionType:  "gzip",
+			compressionLevel: "9",
+		},
+		{
+			compressionType:  "gzip",
+			compressionLevel: "1",
+		},
+		{
+			compressionType:  "gzip",
+			compressionLevel: "3",
+		},
+		{
+			compressionType:  "lzw",
+			compressionLevel: "1", // lzw doesn't allow level on this project, but it is just ignored
+		},
+		{
+			compressionType:  "zlib",
+			compressionLevel: "9",
+		},
+		{
+			compressionType:  "deflate",
+			compressionLevel: "9",
+		},
+	}
+
+	for _, tc := range testCases {
+		conf := strings.ReplaceAll(logTemplate, "{{TYPE}}", tc.compressionType)
+		conf = strings.ReplaceAll(conf, "{{LEVEL}}", tc.compressionLevel)
+
+		_, err := config.New([]byte(conf))
+
+		if tc.shouldError {
+			assert.Errorf(t, err, "type %s and level %s should return error on New",
+				tc.compressionType, tc.compressionLevel)
+		} else {
+			assert.NoErrorf(t, err, "type %s and level %s should NOT return error on New",
+				tc.compressionType, tc.compressionLevel)
 		}
 	}
 }

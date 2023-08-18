@@ -29,6 +29,12 @@ type FlowConfig struct {
 	Accumulator          Accumulator     `yaml:"accumulator"`
 	ExternalQueue        ExternalQueue   `yaml:"external_queue"`
 	ObjectStorage        ObjectStorage   `yaml:"object_storage"`
+	Compression          Compression     `yaml:"compression"`
+}
+
+type Compression struct {
+	Level string `yaml:"level"`
+	Type  string `yaml:"type"`
 }
 
 type Accumulator struct {
@@ -54,7 +60,9 @@ type IngestionConfig struct {
 
 func init() {
 	allowedVals = map[string][]string{
-		"log.level": {"debug", "info", "warn", "error"},
+		"log.level":         {"debug", "info", "warn", "error"},
+		"compression":       {"lzw", "gzip", "zlib", "deflate"},
+		"compression.level": {"1", "2", "3", "4", "5", "6", "7", "8", "9"},
 	}
 }
 
@@ -105,6 +113,18 @@ func validateConfig(c *Config) error {
 		}
 
 		flowNamesSet[flow.Name] = struct{}{}
+
+		if flow.Compression.Type != "" {
+			if !allowed(allowedValues("compression"), flow.Compression.Type) {
+				return fmt.Errorf("compression type should be one of %v", allowedValues("compression"))
+			}
+
+			if flow.Compression.Level != "" {
+				if !allowed(allowedValues("compression.level"), flow.Compression.Level) {
+					return fmt.Errorf("compression level should be one of %v", allowedValues("compression.level"))
+				}
+			}
+		}
 	}
 
 	err := c.Api.validateSizeLimit()
