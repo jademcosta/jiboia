@@ -469,6 +469,11 @@ flows:
 			shouldError:      true,
 		},
 		{
+			compressionType:  "lzw",
+			compressionLevel: "1", // lzw doesn't allow level on this project, but it is just ignored
+			shouldError:      true,
+		},
+		{
 			compressionType:  "gzip",
 			compressionLevel: "9",
 		},
@@ -479,10 +484,6 @@ flows:
 		{
 			compressionType:  "gzip",
 			compressionLevel: "3",
-		},
-		{
-			compressionType:  "lzw",
-			compressionLevel: "1", // lzw doesn't allow level on this project, but it is just ignored
 		},
 		{
 			compressionType:  "zlib",

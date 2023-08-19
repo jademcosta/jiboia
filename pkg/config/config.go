@@ -60,8 +60,9 @@ type IngestionConfig struct {
 
 func init() {
 	allowedVals = map[string][]string{
-		"log.level":         {"debug", "info", "warn", "error"},
-		"compression":       {"lzw", "gzip", "zlib", "deflate"},
+		"log.level": {"debug", "info", "warn", "error"},
+		//TODO: merge strings duplicated here and on compressor package
+		"compression":       {"gzip", "zlib", "deflate"},
 		"compression.level": {"1", "2", "3", "4", "5", "6", "7", "8", "9"},
 	}
 }
