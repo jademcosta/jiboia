@@ -86,8 +86,13 @@ func (w *Worker) work(workU *domain.WorkUnit) {
 	workInFlightGauge.WithLabelValues(w.flowName).Inc()
 	defer workInFlightGauge.WithLabelValues(w.flowName).Dec()
 
-	compress(w.compressionConf, workU.Data)
+	compressedData, err := compress(w.compressionConf, workU.Data)
+	if err != nil {
+		w.l.Errorw("error compressing data", "prefix", workU.Prefix, "filename", workU.Filename, "error", err)
+		return
+	}
 
+	workU.Data = compressedData
 	uploadResult, err := w.storage.Upload(workU)
 
 	if err != nil {

@@ -1,12 +1,16 @@
 package worker_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/jademcosta/jiboia/pkg/compressor"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
@@ -135,6 +139,7 @@ func TestCallsObjUploaderWithDataPassed(t *testing.T) {
 	defer objStorage.mu.Unlock()
 	assert.Len(t, objStorage.calledWith, 1, "should have called uploader")
 	assert.Same(t, workU, objStorage.calledWith[0], "should have called objUploader with the correct data")
+	assert.Equal(t, workU.Data, objStorage.calledWith[0].Data, "should have called objUploader with the correct data")
 
 	cancel()
 }
@@ -332,4 +337,71 @@ func TestDoesNotCallEnqueueWhenObjUploadFails(t *testing.T) {
 	assert.Len(t, queue.calledWith, 0, "should not have called enqueuer")
 
 	cancel()
+}
+
+func TestUsesCompressionConfig(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	testCases := []struct {
+		compressConf config.Compression
+	}{
+		{compressConf: config.Compression{Type: "gzip"}},
+		{compressConf: config.Compression{Type: "zlib"}},
+		{compressConf: config.Compression{Type: "deflate"}},
+	}
+
+	for _, tc := range testCases {
+		var wg sync.WaitGroup
+		ctx, cancel := context.WithCancel(context.Background())
+
+		objStorage := &mockObjStorage{
+			calledWith: make([]*domain.WorkUnit, 0),
+			wg:         &wg,
+		}
+
+		queue := &mockExternalQueue{calledWith: make([]*domain.UploadResult, 0), wg: &wg}
+		workerQueueChan := make(chan chan *domain.WorkUnit, 1)
+
+		sut := worker.NewWorker("someflow", l, objStorage, queue, workerQueueChan, prometheus.NewRegistry(), tc.compressConf)
+		go sut.Run(ctx)
+
+		workerChan := <-workerQueueChan
+
+		data := strings.Repeat("a", 20480) // 20KB
+
+		workU := &domain.WorkUnit{
+			Filename: "some-filename",
+			Prefix:   "some-prefix",
+			Data:     []byte(data),
+		}
+
+		wg.Add(2)
+		workerChan <- workU
+
+		wg.Wait()
+		queue.mu.Lock()
+		defer queue.mu.Unlock()
+		objStorage.mu.Lock()
+		defer objStorage.mu.Unlock()
+		assert.Len(t, objStorage.calledWith, 1, "worker should have called upload")
+		assert.Len(t, queue.calledWith, 1, "worker should have called enqueue")
+
+		compressedData := objStorage.calledWith[0].Data
+
+		assert.NotEqualf(t, data, string(compressedData), "the compressed data should be different from original %v", tc)
+		assert.NotEqualf(t, len(data), len(compressedData), "the compressed data should have different sizes")
+
+		compressorReader, err := compressor.NewReader(&tc.compressConf, bytes.NewReader(compressedData))
+		assert.NoError(t, err, "compression reader creation should return no error")
+
+		result, err := io.ReadAll(compressorReader)
+		assert.NoError(t, err, "compression reader Read should return no error")
+
+		assert.Equal(t, len(data), len(result), "the decompression result should have the same size as the original")
+		assert.Equal(t, data, string(result), "the decompression result be the same as the original")
+
+		cancel()
+	}
 }

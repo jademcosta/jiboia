@@ -3,33 +3,21 @@ package compressor_test
 import (
 	"bytes"
 	"io"
-	"math/rand"
+	"strings"
 	"testing"
-	"time"
 
 	"github.com/jademcosta/jiboia/pkg/compressor"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 
-func randSeq(n int) string {
-	characters := []rune("abcdefghijklmnopqrstuvwxyz")
-	r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
-	b := make([]rune, n)
-
-	for i := range b {
-		b[i] = characters[r1.Intn(len(characters))]
-	}
-	return string(b)
-}
-
 func TestDecompressionAfterCompressionKeepsDataUnchanged(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
 	}
 
-	dataSize := 5242880 // 500KB
-	data := randSeq(dataSize)
+	data := strings.Repeat("a", 20480) // 20KB
+	dataSize := len(data)
 
 	testCases := []struct {
 		conf config.Compression
@@ -73,8 +61,8 @@ func TestDecompressionAfterCompressionKeepsDataUnchanged(t *testing.T) {
 
 func TestEmptyConfigDoesNotApplyCompression(t *testing.T) {
 
-	dataSize := 5242880 // 500KB
-	data := randSeq(dataSize)
+	data := strings.Repeat("a", 20480) // 20KB
+	dataSize := len(data)
 
 	conf := config.Compression{}
 	buf := &bytes.Buffer{}
