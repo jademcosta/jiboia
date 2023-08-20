@@ -1,9 +1,13 @@
 package worker
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"sync"
 
+	"github.com/jademcosta/jiboia/pkg/compressor"
+	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
@@ -28,6 +32,7 @@ type Worker struct {
 	queue                ExternalQueue
 	workVolunteeringChan chan chan *domain.WorkUnit
 	flowName             string
+	compressionConf      config.Compression
 }
 
 func NewWorker(
@@ -36,7 +41,8 @@ func NewWorker(
 	storage ObjStorage,
 	extQueue ExternalQueue,
 	workVolunteeringChan chan chan *domain.WorkUnit,
-	metricRegistry *prometheus.Registry) *Worker {
+	metricRegistry *prometheus.Registry,
+	compressionConf config.Compression) *Worker {
 
 	ensureSingleMetricRegistration.Do(func() {
 		workInFlightGauge = prometheus.NewGaugeVec(
@@ -59,6 +65,7 @@ func NewWorker(
 		workVolunteeringChan: workVolunteeringChan,
 		workChan:             workChan,
 		flowName:             flowName,
+		compressionConf:      compressionConf,
 	}
 }
 
@@ -79,6 +86,8 @@ func (w *Worker) work(workU *domain.WorkUnit) {
 	workInFlightGauge.WithLabelValues(w.flowName).Inc()
 	defer workInFlightGauge.WithLabelValues(w.flowName).Dec()
 
+	compress(w.compressionConf, workU.Data)
+
 	uploadResult, err := w.storage.Upload(workU)
 
 	if err != nil {
@@ -95,4 +104,24 @@ func (w *Worker) work(workU *domain.WorkUnit) {
 	} else {
 		w.l.Debugw("finished enqueueing data", "object_path", uploadResult.Path)
 	}
+}
+
+func compress(conf config.Compression, data []byte) ([]byte, error) {
+	buf := &bytes.Buffer{}
+	compressWorker, err := compressor.NewWriter(&conf, buf)
+	if err != nil {
+		return nil, fmt.Errorf("error creating compressor: %w", err)
+	}
+
+	_, err = compressWorker.Write(data)
+	if err != nil {
+		return nil, fmt.Errorf("error writing compressed data into memory buffer: %w", err)
+	}
+
+	err = compressWorker.Close()
+	if err != nil {
+		return nil, fmt.Errorf("error writing (at the closing finish) compressed data into memory buffer: %w", err)
+	}
+
+	return buf.Bytes(), nil
 }
