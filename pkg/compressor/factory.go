@@ -45,6 +45,8 @@ func NewReader(
 		compressor, err = zlib.NewReader(reader)
 	case DEFLATE_TYPE:
 		compressor = flate.NewReader(reader)
+	case "":
+		compressor = NewNoopCompressorReader(reader)
 	default:
 		compressor = nil
 		err = fmt.Errorf("invalid compression type %s", conf.Type)
@@ -58,8 +60,6 @@ func NewReader(
 }
 
 func NewWriter(
-	l *zap.SugaredLogger,
-	metricRegistry *prometheus.Registry,
 	conf *config.Compression,
 	writer io.Writer,
 ) (CompressorWriter, error) {
@@ -80,7 +80,6 @@ func NewWriter(
 		} else {
 			compressor = gzip.NewWriter(writer)
 		}
-
 	case ZLIB_TYPE:
 		if levelSet {
 			compressor, err = zlib.NewWriterLevel(writer, level)
@@ -93,6 +92,8 @@ func NewWriter(
 		} else {
 			compressor, err = flate.NewWriter(writer, flate.DefaultCompression)
 		}
+	case "":
+		compressor = NewNoopCompressorWriter(writer)
 	default:
 		compressor = nil
 		err = fmt.Errorf("invalid compression type %s", conf.Type)
