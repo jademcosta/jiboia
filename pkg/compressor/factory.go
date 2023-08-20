@@ -11,8 +11,6 @@ import (
 	"github.com/klauspost/compress/zlib"
 
 	"github.com/jademcosta/jiboia/pkg/config"
-	"github.com/prometheus/client_golang/prometheus"
-	"go.uber.org/zap"
 )
 
 const (
@@ -30,8 +28,6 @@ type CompressorWriter interface {
 }
 
 func NewReader(
-	l *zap.SugaredLogger,
-	metricRegistry *prometheus.Registry,
 	conf *config.Compression,
 	reader io.Reader,
 ) (CompressorReader, error) {
@@ -68,9 +64,12 @@ func NewWriter(
 	var err error
 
 	levelSet := conf.Level != ""
-	level, err := strconv.Atoi(conf.Level)
-	if err != nil {
-		return nil, fmt.Errorf("invalid compression level %s: %w", conf.Level, err)
+	var level int
+	if levelSet {
+		level, err = strconv.Atoi(conf.Level)
+		if err != nil {
+			return nil, fmt.Errorf("invalid compression level %s: %w", conf.Level, err)
+		}
 	}
 
 	switch strings.ToLower(conf.Type) {
