@@ -19,6 +19,8 @@ import (
 	"go.uber.org/zap"
 )
 
+var noCompressionConf config.Compression = config.Compression{}
+
 type mockFilePather struct {
 	prefix   string
 	filename string
@@ -249,7 +251,7 @@ func testUploader(
 			wg:             &waitG,
 		}
 
-		w := worker.NewWorker("someflow", l, objStorage, &dummyExternalQueue{}, uploader.WorkersReady, prometheus.NewRegistry())
+		w := worker.NewWorker("someflow", l, objStorage, &dummyExternalQueue{}, uploader.WorkersReady, prometheus.NewRegistry(), noCompressionConf)
 		go w.Run(ctx)
 	}
 
@@ -303,7 +305,7 @@ func testUploaderEnsuringEnqueuedItems(
 			},
 		}
 
-		w := worker.NewWorker("someflow", l, objStorage, &dummyExternalQueue{}, uploader.WorkersReady, prometheus.NewRegistry())
+		w := worker.NewWorker("someflow", l, objStorage, &dummyExternalQueue{}, uploader.WorkersReady, prometheus.NewRegistry(), noCompressionConf)
 		go w.Run(ctx)
 	}
 

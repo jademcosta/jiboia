@@ -4,6 +4,7 @@ log:
 
 api:
   port: 9099
+  payload_size_limit: 100
 
 flows:
   - name: "jiboia-flow"

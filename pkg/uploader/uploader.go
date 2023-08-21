@@ -32,7 +32,8 @@ func New(
 	queueCapacity int,
 	dataDropper domain.DataDropper,
 	filePathProvider domain.FilePathProvider,
-	metricRegistry *prometheus.Registry) *NonBlockingUploader {
+	metricRegistry *prometheus.Registry,
+) *NonBlockingUploader {
 
 	metrics := NewMetricCollector(flowName, metricRegistry)
 

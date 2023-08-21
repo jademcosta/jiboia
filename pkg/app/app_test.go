@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jademcosta/jiboia/pkg/compressor"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/stretchr/testify/assert"
@@ -71,6 +72,44 @@ flows:
       type: httpstorage
       config:
         url: "http://non-existent-27836178236.com"
+`
+
+const confForCompressionYaml = `
+log:
+  level: error
+  format: json
+
+api:
+  port: 9099
+
+flows:
+  - name: "int_flow3"
+    in_memory_queue_max_size: 4
+    max_concurrent_uploads: 3
+    timeout: 120
+    ingestion:
+      token: "some secure token"
+    external_queue:
+      type: noop
+      config: ""
+    object_storage:
+      type: httpstorage
+      config:
+        url: "http://non-existent-3.com"
+  - name: "int_flow4"
+    in_memory_queue_max_size: 4
+    max_concurrent_uploads: 3
+    timeout: 120
+    compression:
+      type: gzip
+      level: "5"
+    external_queue:
+      type: noop
+      config: ""
+    object_storage:
+      type: httpstorage
+      config:
+        url: "http://non-existent-4.com"
 `
 
 const confForCBYaml = `
@@ -334,6 +373,74 @@ func TestApiToken(t *testing.T) {
 	mu.Lock()
 	assert.Equal(t, [][]byte{[]byte(ingestedPayload)}, objStorageReceived,
 		"only the valid payload should be ingested")
+	mu.Unlock()
+
+	stopDone := app.Stop()
+	<-stopDone
+}
+
+func TestCompression(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	var mu sync.Mutex
+	objStorageReceived := make([][]byte, 0)
+	filenames := make([]string, 0)
+
+	storageServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		mu.Lock()
+		defer mu.Unlock()
+		objStorageReceived = append(objStorageReceived, body)
+
+		urlChuncks := strings.Split(r.RequestURI, "/")
+		filename := urlChuncks[len(urlChuncks)-1]
+		filenames = append(filenames, filename)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer storageServer.Close()
+
+	confFull := strings.Replace(confForCompressionYaml, "http://non-existent-4.com",
+		fmt.Sprintf("%s/%s", storageServer.URL, "%s"), 1)
+
+	conf, err := config.New([]byte(confFull))
+	assert.NoError(t, err, "should initialize config")
+	l = logger.New(conf)
+
+	app := New(conf, l)
+	go app.Start()
+	time.Sleep(2 * time.Second)
+
+	ingestedPayload := strings.Repeat("a", 10240) // 10KB
+
+	resp, err := http.Post(
+		"http://localhost:9099/int_flow4/async_ingestion",
+		"application/json",
+		strings.NewReader(ingestedPayload),
+	)
+	assert.NoError(t, err, "POSTing should not error")
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200)")
+	resp.Body.Close()
+
+	time.Sleep(100 * time.Millisecond)
+	mu.Lock()
+	assert.Len(t, objStorageReceived, 1,
+		"should have sent the data to obj storage")
+	assert.NotEqual(t, []byte(ingestedPayload), objStorageReceived[0],
+		"the data should have been compressed")
+
+	compressorReader, err := compressor.NewReader(&conf.Flows[1].Compression, bytes.NewReader(objStorageReceived[0]))
+	assert.NoError(t, err, "compression reader creation should return no error")
+
+	decompressed, err := io.ReadAll(compressorReader)
+	assert.NoError(t, err, "compression reader Read should return no error")
+
+	assert.Equal(t, len(ingestedPayload), len(decompressed), "the decompression result should have the same size as the original")
+	assert.Equal(t, ingestedPayload, string(decompressed), "the decompression result be the same as the original")
+
+	assert.Truef(t, strings.HasSuffix(filenames[0], fmt.Sprintf(".%s", "gzip")),
+		"should add the compression algorithm suffix (%s) on filename (%s)", "gzip", filenames[0])
 	mu.Unlock()
 
 	stopDone := app.Stop()

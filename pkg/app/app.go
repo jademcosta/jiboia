@@ -237,7 +237,7 @@ func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 			flowConf.MaxConcurrentUploads,
 			flowConf.QueueMaxSize,
 			domain.NewObservableDataDropper(localLogger, metricRegistry, "uploader"),
-			filepather.New(datetimeprovider.New(), flowConf.PathPrefixCount),
+			filepather.New(datetimeprovider.New(), flowConf.PathPrefixCount, flowConf.Compression.Type),
 			metricRegistry)
 
 		f := flow.Flow{
@@ -255,7 +255,7 @@ func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 		}
 
 		for i := 0; i < flowConf.MaxConcurrentUploads; i++ {
-			worker := worker.NewWorker(flowConf.Name, localLogger, objStorage, externalQueue, uploader.WorkersReady, metricRegistry)
+			worker := worker.NewWorker(flowConf.Name, localLogger, objStorage, externalQueue, uploader.WorkersReady, metricRegistry, flowConf.Compression)
 			f.UploadWorkers = append(f.UploadWorkers, worker)
 		}
 

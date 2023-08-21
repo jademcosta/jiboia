@@ -13,6 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const noFileExtension = ""
+
 type mockDateTimeProvider struct {
 	date string
 	hour string
@@ -27,8 +29,8 @@ func (mock *mockDateTimeProvider) Hour() string {
 }
 
 func TestRandomFilename(t *testing.T) {
-	sutSinglePrefix := filepather.New(&mockDateTimeProvider{}, 1)
-	sutMultiPrefix := filepather.New(&mockDateTimeProvider{}, randomIntForPrefixCount())
+	sutSinglePrefix := filepather.New(&mockDateTimeProvider{}, 1, noFileExtension)
+	sutMultiPrefix := filepather.New(&mockDateTimeProvider{}, randomIntForPrefixCount(), noFileExtension)
 
 	suts := []domain.FilePathProvider{sutSinglePrefix, sutMultiPrefix}
 
@@ -63,11 +65,48 @@ func TestRandomFilename(t *testing.T) {
 	}
 }
 
+func TestContainsFileTypeIfProvided(t *testing.T) {
+
+	testCases := []struct{ fileType string }{
+		{fileType: "abacaxi"},
+		{fileType: "gzip"},
+		{fileType: "snappy"},
+		{fileType: "arj"},
+	}
+
+	for _, tc := range testCases {
+		sutSinglePrefix := filepather.New(&mockDateTimeProvider{}, 1, tc.fileType)
+		sutMultiPrefix := filepather.New(&mockDateTimeProvider{}, randomIntForPrefixCount(), tc.fileType)
+
+		results := make([]string, 0, 10)
+		for i := 0; i < 10; i++ {
+			results = append(results, *sutSinglePrefix.Filename())
+		}
+
+		for _, filename := range results {
+			assert.Truef(t, strings.HasSuffix(filename, fmt.Sprintf(".%s", tc.fileType)),
+				"for singleFilePrefix, filename (%s) should end with provided file type (.%s)",
+				filename, tc.fileType)
+		}
+
+		results = make([]string, 0, 10)
+		for i := 0; i < 10; i++ {
+			results = append(results, *sutMultiPrefix.Filename())
+		}
+
+		for _, filename := range results {
+			assert.Truef(t, strings.HasSuffix(filename, fmt.Sprintf(".%s", tc.fileType)),
+				"for singleFilePrefix, filename (%s) should end with provided file type (.%s)",
+				filename, tc.fileType)
+		}
+	}
+}
+
 func TestPrefixContainsDateAndHour(t *testing.T) {
 
-	sutSinglePrefix := filepather.New(&mockDateTimeProvider{date: "2022-02-20", hour: "23"}, 1)
+	sutSinglePrefix := filepather.New(&mockDateTimeProvider{date: "2022-02-20", hour: "23"}, 1, noFileExtension)
 	sutMultiPrefix := filepather.New(&mockDateTimeProvider{date: "2022-02-20", hour: "23"},
-		randomIntForPrefixCount())
+		randomIntForPrefixCount(), noFileExtension)
 
 	suts := []domain.FilePathProvider{sutSinglePrefix, sutMultiPrefix}
 
@@ -82,7 +121,7 @@ func TestPrefixContainsDateAndHour(t *testing.T) {
 
 func TestSingleFilePatherPrefixLastChunkIsFixed(t *testing.T) {
 
-	sut := filepather.New(&mockDateTimeProvider{date: "2022-02-20", hour: "23"}, 1)
+	sut := filepather.New(&mockDateTimeProvider{date: "2022-02-20", hour: "23"}, 1, noFileExtension)
 
 	pathPrefixes := make([]string, 10)
 
@@ -103,7 +142,7 @@ func TestSingleFilePatherPrefixLastChunkIsFixed(t *testing.T) {
 func TestMultiPrefixesAreGenerated(t *testing.T) {
 	prefixCount := randomIntForPrefixCount()
 	sutMultiPrefix :=
-		filepather.New(&mockDateTimeProvider{date: "2022-02-20", hour: "23"}, prefixCount)
+		filepather.New(&mockDateTimeProvider{date: "2022-02-20", hour: "23"}, prefixCount, noFileExtension)
 
 	prefixPossibilities := make(map[string]bool)
 
@@ -146,7 +185,7 @@ func TestMultiPrefixesAreGenerated(t *testing.T) {
 }
 
 func TestPanicsIfPrefixCountLessThanOne(t *testing.T) {
-	assert.Panics(t, func() { filepather.New(&mockDateTimeProvider{}, 0) },
+	assert.Panics(t, func() { filepather.New(&mockDateTimeProvider{}, 0, noFileExtension) },
 		"should panic if prefixCount < 1")
 }
 
