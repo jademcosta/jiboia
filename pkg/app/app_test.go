@@ -72,17 +72,6 @@ flows:
       type: httpstorage
       config:
         url: "http://non-existent-27836178236.com"
-  - name: "int_flow4"
-    in_memory_queue_max_size: 4
-    max_concurrent_uploads: 3
-    timeout: 120
-    external_queue:
-      type: noop
-      config: ""
-    object_storage:
-      type: httpstorage
-      config:
-        url: "http://non-existent-4.com"
 `
 
 const confForCompressionYaml = `
