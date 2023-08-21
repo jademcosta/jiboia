@@ -29,7 +29,7 @@ flows:
       type: "gzip"
       # Higher numbers mean more speed and less compression. The allowed levels
       # varies depending on the algorithm
-      speed: "3"
+      level: "3"
     # Optional. This component merges data into memory until a user defined limit, and then sends
     # it forward to be uploaded into S3
     accumulator:
