@@ -237,7 +237,7 @@ func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 			flowConf.MaxConcurrentUploads,
 			flowConf.QueueMaxSize,
 			domain.NewObservableDataDropper(localLogger, metricRegistry, "uploader"),
-			filepather.New(datetimeprovider.New(), flowConf.PathPrefixCount),
+			filepather.New(datetimeprovider.New(), flowConf.PathPrefixCount, flowConf.Compression.Type),
 			metricRegistry)
 
 		f := flow.Flow{

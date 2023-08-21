@@ -397,12 +397,17 @@ func TestCompression(t *testing.T) {
 
 	var mu sync.Mutex
 	objStorageReceived := make([][]byte, 0)
+	filenames := make([]string, 0)
 
 	storageServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		mu.Lock()
 		defer mu.Unlock()
 		objStorageReceived = append(objStorageReceived, body)
+
+		urlChuncks := strings.Split(r.RequestURI, "/")
+		filename := urlChuncks[len(urlChuncks)-1]
+		filenames = append(filenames, filename)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer storageServer.Close()
@@ -444,6 +449,9 @@ func TestCompression(t *testing.T) {
 
 	assert.Equal(t, len(ingestedPayload), len(decompressed), "the decompression result should have the same size as the original")
 	assert.Equal(t, ingestedPayload, string(decompressed), "the decompression result be the same as the original")
+
+	assert.Truef(t, strings.HasSuffix(filenames[0], fmt.Sprintf(".%s", "gzip")),
+		"should add the compression algorithm suffix (%s) on filename (%s)", "gzip", filenames[0])
 	mu.Unlock()
 
 	stopDone := app.Stop()
