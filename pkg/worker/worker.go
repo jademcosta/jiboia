@@ -16,6 +16,7 @@ import (
 
 var ensureSingleMetricRegistration sync.Once
 var workInFlightGauge *prometheus.GaugeVec
+var compressionRatioHist *prometheus.HistogramVec
 
 type ObjStorage interface {
 	Upload(workU *domain.WorkUnit) (*domain.UploadResult, error)
@@ -54,7 +55,16 @@ func NewWorker(
 			},
 			[]string{"flow"})
 
-		metricRegistry.MustRegister(workInFlightGauge)
+		compressionRatioHist = prometheus.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Namespace: "jiboia",
+				Subsystem: "compression",
+				Name:      "ratio",
+				Help:      "the ratio of compressed size vs original size (the lower the better compression)",
+				Buckets:   []float64{0.01, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1},
+			}, []string{"type"})
+
+		metricRegistry.MustRegister(workInFlightGauge, compressionRatioHist)
 	})
 
 	workChan := make(chan *domain.WorkUnit, 1)
@@ -91,6 +101,8 @@ func (w *Worker) work(workU *domain.WorkUnit) {
 		w.l.Errorw("error compressing data", "prefix", workU.Prefix, "filename", workU.Filename, "error", err)
 		return
 	}
+	compressionRatioHist.WithLabelValues(w.compressionConf.Type).Observe(
+		float64(len(compressedData)) / float64(len(workU.Data)))
 
 	workU.Data = compressedData
 	uploadResult, err := w.storage.Upload(workU)
