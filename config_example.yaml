@@ -27,8 +27,7 @@ flows:
     compression:
       # The compression algorithm. Available types are gzip, zlib, deflate, lzw
       type: "gzip"
-      # Higher numbers mean more speed and less compression. The allowed levels
-      # varies depending on the algorithm
+      # Higher numbers mean more speed and less compression
       level: "3"
     # Optional. This component merges data into memory until a user defined limit, and then sends
     # it forward to be uploaded into S3
