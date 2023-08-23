@@ -10,21 +10,13 @@ type UploadResult struct {
 	SizeInBytes int
 }
 
-type Message struct {
-	SchemaVersion string `json:"schema_version"`
-	Bucket        Bucket `json:"bucket"`
-	Object        Object `json:"object"`
-}
-
-type Object struct {
-	Path        string `json:"path"`
-	FullURL     string `json:"full_url"`
-	SizeInBytes int    `json:"size_in_bytes"`
-}
-
-type Bucket struct {
-	Name   string `json:"name"`
-	Region string `json:"region"`
+type MessageContext struct {
+	Bucket          string
+	Region          string
+	Path            string
+	URL             string
+	SizeInBytes     int
+	CompressionType string
 }
 
 type DataFlow interface {

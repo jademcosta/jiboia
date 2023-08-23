@@ -42,7 +42,7 @@ func (d *dummyDataDropper) Drop(data []byte) {
 
 type dummyExternalQueue struct{}
 
-func (queue *dummyExternalQueue) Enqueue(data *domain.UploadResult) error {
+func (queue *dummyExternalQueue) Enqueue(data *domain.MessageContext) error {
 	return nil
 }
 

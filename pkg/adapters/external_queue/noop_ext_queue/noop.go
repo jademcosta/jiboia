@@ -18,7 +18,7 @@ func New(l *zap.SugaredLogger) *NoopExternalQueue {
 	}
 }
 
-func (noop *NoopExternalQueue) Enqueue(uploadResult *domain.UploadResult) error {
+func (noop *NoopExternalQueue) Enqueue(uploadResult *domain.MessageContext) error {
 	noop.log.Debugw("enqueue called on No-op ext queue", "url", uploadResult.URL)
 	return nil
 }

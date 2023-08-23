@@ -84,11 +84,11 @@ func NewExternalQueueWithMetrics(queue ExtQueueWithMetadata, metricRegistry *pro
 	}
 }
 
-func (w *queueWithMetrics) Enqueue(uploadResult *domain.UploadResult) error {
+func (w *queueWithMetrics) Enqueue(msg *domain.MessageContext) error {
 	enqueueCounter.WithLabelValues(w.wrappedType, w.wrappedName, w.name).Inc()
 	startTime := time.Now()
 
-	err := w.wrappedQueue.Enqueue(uploadResult)
+	err := w.wrappedQueue.Enqueue(msg)
 	elapsepTime := time.Since(startTime).Seconds()
 
 	if err != nil {
