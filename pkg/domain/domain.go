@@ -10,23 +10,6 @@ type UploadResult struct {
 	SizeInBytes int
 }
 
-type Message struct {
-	SchemaVersion string `json:"schema_version"`
-	Bucket        Bucket `json:"bucket"`
-	Object        Object `json:"object"`
-}
-
-type Object struct {
-	Path        string `json:"path"`
-	FullURL     string `json:"full_url"`
-	SizeInBytes int    `json:"size_in_bytes"`
-}
-
-type Bucket struct {
-	Name   string `json:"name"`
-	Region string `json:"region"`
-}
-
 type DataFlow interface {
 	// TODO: change this to Send, and the interface name to something related, like data receiver, or something like that
 	Enqueue([]byte) error

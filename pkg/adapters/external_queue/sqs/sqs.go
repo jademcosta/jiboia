@@ -16,6 +16,24 @@ import (
 
 const TYPE string = "sqs"
 
+type Message struct {
+	SchemaVersion string `json:"schema_version"`
+	Bucket        Bucket `json:"bucket"`
+	Object        Object `json:"object"`
+}
+
+type Object struct {
+	Path        string `json:"path"`
+	FullURL     string `json:"full_url"`
+	SizeInBytes int    `json:"size_in_bytes"`
+	// CompressionType string `json:"compression_algorithm,omitempty"`
+}
+
+type Bucket struct {
+	Name   string `json:"name"`
+	Region string `json:"region"`
+}
+
 type Config struct {
 	URL       string `yaml:"url"`
 	Region    string `yaml:"region"`
@@ -74,16 +92,17 @@ func ParseConfig(confData []byte) (*Config, error) {
 
 func (internalSqs *sqsRep) Enqueue(uploadResult *domain.UploadResult) error {
 	//TODO: SQS should not know about "uploadResult"
-	message := domain.Message{
+	message := Message{
 		SchemaVersion: domain.MESSAGE_SCHEMA_VERSION,
-		Bucket: domain.Bucket{
+		Bucket: Bucket{
 			Name:   uploadResult.Bucket,
 			Region: uploadResult.Region,
 		},
-		Object: domain.Object{
+		Object: Object{
 			Path:        uploadResult.Path,
 			FullURL:     uploadResult.URL,
 			SizeInBytes: uploadResult.SizeInBytes,
+			// CompressionType: ,
 		},
 	}
 
