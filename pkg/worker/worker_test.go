@@ -59,12 +59,12 @@ func (queue *dummyObjStorage) Upload(workU *domain.WorkUnit) (*domain.UploadResu
 }
 
 type mockExternalQueue struct {
-	calledWith []*domain.UploadResult
+	calledWith []*domain.MessageContext
 	mu         sync.Mutex
 	wg         *sync.WaitGroup
 }
 
-func (queue *mockExternalQueue) Enqueue(data *domain.UploadResult) error {
+func (queue *mockExternalQueue) Enqueue(data *domain.MessageContext) error {
 	queue.mu.Lock()
 	defer queue.mu.Unlock()
 	defer queue.wg.Done()
@@ -75,7 +75,7 @@ func (queue *mockExternalQueue) Enqueue(data *domain.UploadResult) error {
 
 type dummyExternalQueue struct{}
 
-func (queue *dummyExternalQueue) Enqueue(data *domain.UploadResult) error {
+func (queue *dummyExternalQueue) Enqueue(data *domain.MessageContext) error {
 	return nil
 }
 
@@ -152,6 +152,7 @@ func TestCallsEnqueuerWithUploaderResult(t *testing.T) {
 		Bucket:      "some-bucket",
 		Region:      "some-region",
 		Path:        "some/path/file.txt",
+		URL:         "some-url!",
 		SizeInBytes: 1234}
 	objStorage := &mockObjStorage{
 		calledWith: make([]*domain.WorkUnit, 0),
@@ -159,7 +160,7 @@ func TestCallsEnqueuerWithUploaderResult(t *testing.T) {
 		returning:  uploadResult,
 	}
 
-	queue := &mockExternalQueue{calledWith: make([]*domain.UploadResult, 0), wg: &wg}
+	queue := &mockExternalQueue{calledWith: make([]*domain.MessageContext, 0), wg: &wg}
 	workerQueueChan := make(chan chan *domain.WorkUnit, 1)
 
 	sut := worker.NewWorker("someflow", l, objStorage, queue, workerQueueChan, prometheus.NewRegistry(), noCompressionConf)
@@ -184,11 +185,19 @@ func TestCallsEnqueuerWithUploaderResult(t *testing.T) {
 	workerChan <- workU
 	time.Sleep(1 * time.Millisecond)
 
+	expected := &domain.MessageContext{
+		Bucket:      uploadResult.Bucket,
+		Region:      uploadResult.Region,
+		Path:        uploadResult.Path,
+		URL:         uploadResult.URL,
+		SizeInBytes: uploadResult.SizeInBytes,
+	}
+
 	wg.Wait()
 	queue.mu.Lock()
 	defer queue.mu.Unlock()
 	assert.Len(t, queue.calledWith, 1, "should have called enqueuer")
-	assert.Same(t, uploadResult, queue.calledWith[0], "should have called enqueuer with the correct data")
+	assert.Equal(t, expected, queue.calledWith[0], "should have called enqueuer with the correct data")
 
 	cancel()
 }
@@ -303,7 +312,7 @@ func TestDoesNotCallEnqueueWhenObjUploadFails(t *testing.T) {
 		err:        fmt.Errorf("Some error"),
 	}
 
-	queue := &mockExternalQueue{calledWith: make([]*domain.UploadResult, 0), wg: &wg}
+	queue := &mockExternalQueue{calledWith: make([]*domain.MessageContext, 0), wg: &wg}
 	workerQueueChan := make(chan chan *domain.WorkUnit, 1)
 
 	sut := worker.NewWorker("someflow", l, objStorage, queue, workerQueueChan, prometheus.NewRegistry(), noCompressionConf)
@@ -356,12 +365,20 @@ func TestUsesCompressionConfig(t *testing.T) {
 		var wg sync.WaitGroup
 		ctx, cancel := context.WithCancel(context.Background())
 
+		uploadResult := &domain.UploadResult{
+			Bucket:      "some-bucket",
+			Region:      "some-region",
+			Path:        "some/path/file.txt",
+			URL:         "some-url!",
+			SizeInBytes: 1234}
+
 		objStorage := &mockObjStorage{
 			calledWith: make([]*domain.WorkUnit, 0),
 			wg:         &wg,
+			returning:  uploadResult,
 		}
 
-		queue := &mockExternalQueue{calledWith: make([]*domain.UploadResult, 0), wg: &wg}
+		queue := &mockExternalQueue{calledWith: make([]*domain.MessageContext, 0), wg: &wg}
 		workerQueueChan := make(chan chan *domain.WorkUnit, 1)
 
 		sut := worker.NewWorker("someflow", l, objStorage, queue, workerQueueChan, prometheus.NewRegistry(), tc.compressConf)
@@ -402,6 +419,15 @@ func TestUsesCompressionConfig(t *testing.T) {
 		assert.Equal(t, len(data), len(result), "the decompression result should have the same size as the original")
 		assert.Equal(t, data, string(result), "the decompression result be the same as the original")
 
+		expectedEnqueue := &domain.MessageContext{
+			Bucket:          uploadResult.Bucket,
+			Region:          uploadResult.Region,
+			Path:            uploadResult.Path,
+			URL:             uploadResult.URL,
+			SizeInBytes:     uploadResult.SizeInBytes,
+			CompressionType: tc.compressConf.Type,
+		}
+		assert.Equal(t, expectedEnqueue, queue.calledWith[0], "worker should have called enqueue with correct message context")
 		cancel()
 	}
 }

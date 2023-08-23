@@ -23,10 +23,10 @@ type Message struct {
 }
 
 type Object struct {
-	Path        string `json:"path"`
-	FullURL     string `json:"full_url"`
-	SizeInBytes int    `json:"size_in_bytes"`
-	// CompressionType string `json:"compression_algorithm,omitempty"`
+	Path            string `json:"path"`
+	FullURL         string `json:"full_url"`
+	SizeInBytes     int    `json:"size_in_bytes"`
+	CompressionType string `json:"compression_algorithm,omitempty"`
 }
 
 type Bucket struct {
@@ -90,19 +90,19 @@ func ParseConfig(confData []byte) (*Config, error) {
 	return conf, nil
 }
 
-func (internalSqs *sqsRep) Enqueue(uploadResult *domain.UploadResult) error {
+func (internalSqs *sqsRep) Enqueue(msg *domain.MessageContext) error {
 	//TODO: SQS should not know about "uploadResult"
 	message := Message{
 		SchemaVersion: domain.MESSAGE_SCHEMA_VERSION,
 		Bucket: Bucket{
-			Name:   uploadResult.Bucket,
-			Region: uploadResult.Region,
+			Name:   msg.Bucket,
+			Region: msg.Region,
 		},
 		Object: Object{
-			Path:        uploadResult.Path,
-			FullURL:     uploadResult.URL,
-			SizeInBytes: uploadResult.SizeInBytes,
-			// CompressionType: ,
+			Path:            msg.Path,
+			FullURL:         msg.URL,
+			SizeInBytes:     msg.SizeInBytes,
+			CompressionType: msg.CompressionType,
 		},
 	}
 

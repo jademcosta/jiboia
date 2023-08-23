@@ -54,15 +54,16 @@ func TestMessageContainsTheData(t *testing.T) {
 		assert.Fail(t, "failed to create SQS struct")
 	}
 
-	err = sut.Enqueue(&domain.UploadResult{
-		Bucket:      "my-bucket1",
-		Region:      "region-a",
-		Path:        "filepath",
-		URL:         "some_url",
-		SizeInBytes: 1111})
+	err = sut.Enqueue(&domain.MessageContext{
+		Bucket:          "my-bucket1",
+		Region:          "region-a",
+		Path:            "filepath",
+		URL:             "some_url",
+		SizeInBytes:     1111,
+		CompressionType: "some-compression"})
 	assert.NoError(t, err, "should not err on enqueue")
 
-	jsonMsg := "{\"schema_version\":\"0.0.1\",\"bucket\":{\"name\":\"my-bucket1\",\"region\":\"region-a\"},\"object\":{\"path\":\"filepath\",\"full_url\":\"some_url\",\"size_in_bytes\":1111}}"
+	jsonMsg := "{\"schema_version\":\"0.0.1\",\"bucket\":{\"name\":\"my-bucket1\",\"region\":\"region-a\"},\"object\":{\"path\":\"filepath\",\"full_url\":\"some_url\",\"size_in_bytes\":1111,\"compression_algorithm\":\"some-compression\"}}"
 
 	expected := &sqs.SendMessageInput{
 		QueueUrl:    &queueUrl,

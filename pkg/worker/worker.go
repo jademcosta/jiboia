@@ -23,7 +23,7 @@ type ObjStorage interface {
 }
 
 type ExternalQueue interface {
-	Enqueue(*domain.UploadResult) error
+	Enqueue(*domain.MessageContext) error
 }
 
 type Worker struct {
@@ -114,7 +114,15 @@ func (w *Worker) work(workU *domain.WorkUnit) {
 		w.l.Debugw("finished uploading object", "prefix", workU.Prefix, "filename", workU.Filename)
 	}
 
-	err = w.queue.Enqueue(uploadResult)
+	msgContext := &domain.MessageContext{
+		Bucket:          uploadResult.Bucket,
+		Region:          uploadResult.Region,
+		Path:            uploadResult.Path,
+		URL:             uploadResult.URL,
+		SizeInBytes:     uploadResult.SizeInBytes,
+		CompressionType: w.compressionConf.Type,
+	}
+	err = w.queue.Enqueue(msgContext)
 
 	if err != nil {
 		w.l.Errorw("failed to enqueue data", "object_path", uploadResult.Path, "error", err)
