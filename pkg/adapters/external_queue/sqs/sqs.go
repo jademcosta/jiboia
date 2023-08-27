@@ -50,7 +50,7 @@ type sqsRep struct {
 }
 
 func New(l *zap.SugaredLogger, c *Config) (*sqsRep, error) {
-	//TODO: session claims to be safe to read concurrently. Can we use a single one?
+	//TODO: session claims to be safe to read concurrently. Can I use a single one?
 	sess, err := session.NewSession(&aws.Config{
 		Region:   aws.String(c.Region),
 		Endpoint: aws.String(c.Endpoint),
@@ -91,7 +91,6 @@ func ParseConfig(confData []byte) (*Config, error) {
 }
 
 func (internalSqs *sqsRep) Enqueue(msg *domain.MessageContext) error {
-	//TODO: SQS should not know about "uploadResult"
 	message := Message{
 		SchemaVersion: domain.MESSAGE_SCHEMA_VERSION,
 		Bucket: Bucket{
@@ -124,10 +123,9 @@ func (internalSqs *sqsRep) Enqueue(msg *domain.MessageContext) error {
 	}
 
 	internalSqs.log.Debugw("sending SQS message", "queue_url", internalSqs.queueUrl)
-	enqueueOutput, err := internalSqs.client.SendMessage(messageInput) //TODO: test error case
-
+	enqueueOutput, err := internalSqs.client.SendMessage(messageInput)
 	if err == nil {
-		internalSqs.log.Debug("enqueued message on SQS", "message_id", enqueueOutput.MessageId)
+		internalSqs.log.Debugw("enqueued message on SQS", "message_id", enqueueOutput.MessageId)
 	}
 
 	return err
