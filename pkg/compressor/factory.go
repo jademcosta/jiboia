@@ -8,6 +8,7 @@ import (
 
 	"github.com/klauspost/compress/flate"
 	"github.com/klauspost/compress/gzip"
+	"github.com/klauspost/compress/snappy"
 	"github.com/klauspost/compress/zlib"
 
 	"github.com/jademcosta/jiboia/pkg/config"
@@ -17,10 +18,11 @@ const (
 	GZIP_TYPE    = "gzip"
 	ZLIB_TYPE    = "zlib"
 	DEFLATE_TYPE = "deflate"
+	SNAPPY_TYPE  = "snappy"
 )
 
 type CompressorReader interface {
-	io.ReadCloser
+	io.Reader
 }
 
 type CompressorWriter interface {
@@ -41,6 +43,8 @@ func NewReader(
 		compressor, err = zlib.NewReader(reader)
 	case DEFLATE_TYPE:
 		compressor = flate.NewReader(reader)
+	case SNAPPY_TYPE:
+		compressor = snappy.NewReader(reader)
 	case "":
 		compressor = NewNoopCompressorReader(reader)
 	default:
@@ -91,6 +95,8 @@ func NewWriter(
 		} else {
 			compressor, err = flate.NewWriter(writer, flate.DefaultCompression)
 		}
+	case SNAPPY_TYPE:
+		compressor = snappy.NewBufferedWriter(writer)
 	case "":
 		compressor = NewNoopCompressorWriter(writer)
 	default:

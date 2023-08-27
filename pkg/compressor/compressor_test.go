@@ -31,6 +31,9 @@ func TestDecompressionAfterCompressionKeepsDataUnchanged(t *testing.T) {
 		{conf: config.Compression{Type: "deflate"}},
 		{conf: config.Compression{Type: "deflate", Level: "9"}},
 		{conf: config.Compression{Type: "deflate", Level: "1"}},
+		{conf: config.Compression{Type: "snappy"}},
+		{conf: config.Compression{Type: "snappy", Level: "9"}},
+		{conf: config.Compression{Type: "snappy", Level: "1"}},
 	}
 
 	for _, tc := range testCases {
@@ -89,3 +92,5 @@ func TestEmptyConfigDoesNotApplyCompression(t *testing.T) {
 	assert.Equal(t, dataSize, len(result), "the decompression result should have the same size as the original")
 	assert.Equal(t, data, string(result), "the decompression result be the same as the original")
 }
+
+//TODO: teste that unrecognized compression leads to error
