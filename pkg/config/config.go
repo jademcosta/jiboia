@@ -8,6 +8,15 @@ import (
 
 var allowedVals map[string][]string
 
+func init() {
+	allowedVals = map[string][]string{
+		"log.level": {"debug", "info", "warn", "error"},
+		//TODO: merge strings duplicated here and on compressor package
+		"compression":       {"gzip", "zlib", "deflate", "snappy", "zstd"},
+		"compression.level": {"1", "2", "3", "4", "5", "6", "7", "8", "9"},
+	}
+}
+
 type Config struct {
 	Log     LogConfig    `yaml:"log"`
 	Version string       `yaml:"version"` //FIXME: fill the version
@@ -56,15 +65,6 @@ type ObjectStorage struct {
 
 type IngestionConfig struct {
 	Token string `yaml:"token"`
-}
-
-func init() {
-	allowedVals = map[string][]string{
-		"log.level": {"debug", "info", "warn", "error"},
-		//TODO: merge strings duplicated here and on compressor package
-		"compression":       {"gzip", "zlib", "deflate"},
-		"compression.level": {"1", "2", "3", "4", "5", "6", "7", "8", "9"},
-	}
 }
 
 func New(confData []byte) (*Config, error) {

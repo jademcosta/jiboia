@@ -493,6 +493,14 @@ flows:
 			compressionType:  "deflate",
 			compressionLevel: "9",
 		},
+		{
+			compressionType:  "snappy",
+			compressionLevel: "9",
+		},
+		{
+			compressionType:  "zstd",
+			compressionLevel: "9",
+		},
 	}
 
 	for _, tc := range testCases {

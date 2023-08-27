@@ -8,7 +8,9 @@ import (
 
 	"github.com/klauspost/compress/flate"
 	"github.com/klauspost/compress/gzip"
+	"github.com/klauspost/compress/snappy"
 	"github.com/klauspost/compress/zlib"
+	"github.com/klauspost/compress/zstd"
 
 	"github.com/jademcosta/jiboia/pkg/config"
 )
@@ -17,10 +19,12 @@ const (
 	GZIP_TYPE    = "gzip"
 	ZLIB_TYPE    = "zlib"
 	DEFLATE_TYPE = "deflate"
+	SNAPPY_TYPE  = "snappy"
+	ZSTD_TYPE    = "zstd"
 )
 
 type CompressorReader interface {
-	io.ReadCloser
+	io.Reader
 }
 
 type CompressorWriter interface {
@@ -41,6 +45,10 @@ func NewReader(
 		compressor, err = zlib.NewReader(reader)
 	case DEFLATE_TYPE:
 		compressor = flate.NewReader(reader)
+	case SNAPPY_TYPE:
+		compressor = snappy.NewReader(reader)
+	case ZSTD_TYPE:
+		compressor, err = zstd.NewReader(reader)
 	case "":
 		compressor = NewNoopCompressorReader(reader)
 	default:
@@ -90,6 +98,16 @@ func NewWriter(
 			compressor, err = flate.NewWriter(writer, level)
 		} else {
 			compressor, err = flate.NewWriter(writer, flate.DefaultCompression)
+		}
+	case SNAPPY_TYPE:
+		compressor = snappy.NewBufferedWriter(writer)
+	case ZSTD_TYPE:
+		if levelSet {
+			opts := zstd.WithEncoderLevel(zstd.EncoderLevel(level))
+			//TODO: level works differently on this package, we should not allow so many levels
+			compressor, err = zstd.NewWriter(writer, opts)
+		} else {
+			compressor, err = zstd.NewWriter(writer)
 		}
 	case "":
 		compressor = NewNoopCompressorWriter(writer)

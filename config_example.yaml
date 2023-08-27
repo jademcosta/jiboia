@@ -25,7 +25,7 @@ flows:
     path_prefix_count: 1
     # Optional. This component compresses data before sending it to object storage
     compression:
-      # The compression algorithm. Available types are gzip, zlib, deflate, lzw
+      # The compression algorithm. Available types are gzip, zlib, deflate, lzw, zstd, snappy
       type: "gzip"
       # Higher numbers mean more speed and less compression
       level: "3"

@@ -359,6 +359,7 @@ func TestUsesCompressionConfig(t *testing.T) {
 		{compressConf: config.Compression{Type: "gzip"}},
 		{compressConf: config.Compression{Type: "zlib"}},
 		{compressConf: config.Compression{Type: "deflate"}},
+		{compressConf: config.Compression{Type: "snappy"}},
 	}
 
 	for _, tc := range testCases {
