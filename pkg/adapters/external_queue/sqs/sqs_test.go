@@ -1,7 +1,7 @@
 package sqs
 
 import (
-	"sync"
+	"errors"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/service/sqs"
@@ -22,14 +22,16 @@ secret_key: "secret sqs!"
 type mockedSendMsgs struct {
 	sqsiface.SQSAPI
 	msgs      []*sqs.SendMessageInput
-	mu        sync.Mutex
 	returnFor func(*sqs.SendMessageInput) *sqs.SendMessageOutput
+	err       error
 }
 
 func (mock *mockedSendMsgs) SendMessage(input *sqs.SendMessageInput) (*sqs.SendMessageOutput, error) {
-	mock.mu.Lock()
-	defer mock.mu.Unlock()
 	mock.msgs = append(mock.msgs, input)
+
+	if mock.err != nil {
+		return nil, mock.err
+	}
 
 	if mock.returnFor != nil {
 		return mock.returnFor(input), nil
@@ -44,7 +46,7 @@ func TestMessageContainsTheData(t *testing.T) {
 		Region: "us-east-1",
 	}
 
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
+	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
 
 	sut, err := New(l, c)
 	mockSQS := &mockedSendMsgs{msgs: make([]*sqs.SendMessageInput, 0)}
@@ -71,6 +73,39 @@ func TestMessageContainsTheData(t *testing.T) {
 
 	assert.Lenf(t, mockSQS.msgs, 1, "1 message should have been sent to SQS client")
 	assert.Equal(t, expected, mockSQS.msgs[0], "the correct message format should've been enqueued")
+}
+
+func TestReturnsTheErrorOnEnqueueingError(t *testing.T) {
+	queueUrl := "some-queue-url"
+	c := &Config{
+		URL:    queueUrl,
+		Region: "us-east-1",
+	}
+
+	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
+
+	sut, err := New(l, c)
+	mockErr := errors.New("mock error!")
+	mockSQS := &mockedSendMsgs{msgs: make([]*sqs.SendMessageInput, 0), err: mockErr}
+	sut.client = mockSQS
+
+	if err != nil {
+		assert.Fail(t, "failed to create SQS struct")
+	}
+
+	err = sut.Enqueue(
+		&domain.MessageContext{
+			Bucket:          "my-bucket1",
+			Region:          "region-a",
+			Path:            "filepath",
+			URL:             "some_url",
+			SizeInBytes:     1111,
+			CompressionType: "some-compression"},
+	)
+	assert.Error(t, err, "should have error on enqueue")
+
+	assert.Lenf(t, mockSQS.msgs, 1, "1 message should have been sent to SQS client")
+	assert.Same(t, mockErr, err, "the underlying SQS error should have been sent as return")
 }
 
 func TestParseConfig(t *testing.T) {
