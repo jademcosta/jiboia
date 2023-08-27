@@ -45,9 +45,9 @@ flows:
       type: noop
       config: ""
     object_storage:
-      type: localstorage
+      type: httpstorage
       config:
-        path: "/tmp/int_test"
+        url: "http://non-existent-flow1.com"
   - name: "int_flow2"
     in_memory_queue_max_size: 4
     max_concurrent_uploads: 3
@@ -138,7 +138,6 @@ flows:
         url: "{{OBJ_STORAGE_URL}}"
 `
 
-var testingPathAcc string = "/tmp/int_test"
 var testingPathNoAcc string = "/tmp/int_test2"
 
 var characters = []rune("abcdefghijklmnopqrstuvwxyz")
@@ -232,10 +231,8 @@ func TestPayloadSizeLimit(t *testing.T) {
 	}
 
 	// Needed for the other ingestion endpoints
-	createDir(t, testingPathAcc)
 	createDir(t, testingPathNoAcc)
 	defer func() {
-		deleteDir(t, testingPathAcc)
 		deleteDir(t, testingPathNoAcc)
 	}()
 
@@ -309,10 +306,8 @@ func TestApiToken(t *testing.T) {
 	}
 
 	// Needed for the other ingestion endpoints
-	createDir(t, testingPathAcc)
 	createDir(t, testingPathNoAcc)
 	defer func() {
-		deleteDir(t, testingPathAcc)
 		deleteDir(t, testingPathNoAcc)
 	}()
 
@@ -452,53 +447,67 @@ func TestAppIntegration(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 
-	conf, err := config.New([]byte(confYaml))
-	assert.NoError(t, err, "should initialize config")
-	l = logger.New(conf)
-
-	deleteDir(t, testingPathAcc)
 	deleteDir(t, testingPathNoAcc)
 
 	t.Run("with not enough data to hit the limit", func(t *testing.T) {
-		testWithBatchSize(t, conf, 1)
-		testWithBatchSize(t, conf, 1, 2)
-		testWithBatchSize(t, conf, 1, 1, 1)
+		testWithBatchSize(t, confYaml, 1)
+		testWithBatchSize(t, confYaml, 1, 2)
+		testWithBatchSize(t, confYaml, 1, 1, 1)
 	})
 
 	t.Run("single entry", func(t *testing.T) {
-		testWithBatchSize(t, conf, 10)
-		testWithBatchSize(t, conf, 18)
-		testWithBatchSize(t, conf, 19)
-		testWithBatchSize(t, conf, 20)
-		testWithBatchSize(t, conf, 21)
-		testWithBatchSize(t, conf, 55)
+		testWithBatchSize(t, confYaml, 10)
+		testWithBatchSize(t, confYaml, 18)
+		testWithBatchSize(t, confYaml, 19)
+		testWithBatchSize(t, confYaml, 20)
+		testWithBatchSize(t, confYaml, 21)
+		testWithBatchSize(t, confYaml, 55)
 	})
 
 	t.Run("dual entries", func(t *testing.T) {
-		testWithBatchSize(t, conf, 11, 5)
-		testWithBatchSize(t, conf, 11, 6)
-		testWithBatchSize(t, conf, 10, 6)
-		testWithBatchSize(t, conf, 12, 5)
-		testWithBatchSize(t, conf, 13, 5)
-		testWithBatchSize(t, conf, 55, 66)
+		testWithBatchSize(t, confYaml, 11, 5)
+		testWithBatchSize(t, confYaml, 11, 6)
+		testWithBatchSize(t, confYaml, 10, 6)
+		testWithBatchSize(t, confYaml, 12, 5)
+		testWithBatchSize(t, confYaml, 13, 5)
+		testWithBatchSize(t, confYaml, 55, 66)
 	})
 
 	t.Run("only big entries", func(t *testing.T) {
-		testWithBatchSize(t, conf,
+		testWithBatchSize(t, confYaml,
 			66, 67, 119)
 	})
 
 	t.Run("multiple entries", func(t *testing.T) {
-		testWithBatchSize(t, conf,
+		testWithBatchSize(t, confYaml,
 			1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27)
 	})
 }
 
-func testWithBatchSize(t *testing.T, conf *config.Config, stringExemplarSizes ...int) {
+func testWithBatchSize(t *testing.T, confYaml string, stringExemplarSizes ...int) {
 
-	deleteDir(t, testingPathAcc)
+	var mu sync.Mutex
+	objStorageReceivedFlow1 := make([][]byte, 0)
+	// var wgStorage1 sync.WaitGroup
+	// FIXME: implementar o wg pra esperar os dados, assim poupa tempo
+
+	storageServer1 := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		mu.Lock()
+		defer mu.Unlock()
+		objStorageReceivedFlow1 = append(objStorageReceivedFlow1, body)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer storageServer1.Close()
+
+	confFull := strings.Replace(confYaml, "http://non-existent-flow1.com",
+		fmt.Sprintf("%s/%s", storageServer1.URL, "%s"), 1)
+
+	conf, err := config.New([]byte(confFull))
+	assert.NoError(t, err, "should initialize config")
+	l = logger.New(conf)
+
 	deleteDir(t, testingPathNoAcc)
-	createDir(t, testingPathAcc)
 	createDir(t, testingPathNoAcc)
 
 	app := New(conf, l)
@@ -517,7 +526,6 @@ func testWithBatchSize(t *testing.T, conf *config.Config, stringExemplarSizes ..
 		assert.Equal(t, 200, response.StatusCode, "data enqueueing should have been successful on int_flow2")
 		response.Body.Close()
 
-		// expected = randSeq(size)
 		generatedValuesWithoutAcc = append(generatedValuesWithoutAcc, expected)
 
 		response, err = http.Post("http://localhost:9099/int_flow2/async_ingestion", "application/json", strings.NewReader(expected))
@@ -529,22 +537,26 @@ func testWithBatchSize(t *testing.T, conf *config.Config, stringExemplarSizes ..
 	}
 	time.Sleep(10 * time.Millisecond)
 
+	//FIXME: esperar pelo sync.WG terminar aqui
+
 	stopDone := app.Stop()
 	<-stopDone
 
-	resultingValuesWithAcc := readFilesFromDir(t, testingPathAcc)
 	resultingValuesWithoutAcc := readFilesFromDir(t, testingPathNoAcc)
 
 	var expectedValues []string
+	var receivedValues []string = make([]string, 0, len(objStorageReceivedFlow1))
+	for _, data := range objStorageReceivedFlow1 {
+		receivedValues = append(receivedValues, string(data))
+	}
 	expectedValues = assembleResult(20, "_n_", generatedValuesWithAcc)
-	assert.ElementsMatch(t, expectedValues, resultingValuesWithAcc,
-		"all the data sent should have been found on the disk for with accumulator case")
+	assert.ElementsMatch(t, expectedValues, receivedValues,
+		"all the data sent should have been found on the disk for flow 1 (with accumulator)")
 
 	expectedValues = generatedValuesWithoutAcc
 	assert.ElementsMatch(t, expectedValues, resultingValuesWithoutAcc,
-		"all the data sent should have been found on the disk for without accumulator case")
+		"all the data sent should have been found on the disk for flow 2 (without accumulator)")
 
-	deleteDir(t, testingPathAcc)
 	deleteDir(t, testingPathNoAcc)
 }
 
