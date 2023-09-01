@@ -18,6 +18,7 @@ const TYPE string = "sqs"
 
 type Message struct {
 	SchemaVersion string `json:"schema_version"`
+	FlowName      string `json:"flow_name"`
 	Bucket        Bucket `json:"bucket"`
 	Object        Object `json:"object"`
 }
@@ -46,10 +47,10 @@ type sqsRep struct {
 	log      *zap.SugaredLogger
 	client   sqsiface.SQSAPI
 	queueUrl string
-	alias    string
+	flowName string
 }
 
-func New(l *zap.SugaredLogger, c *Config) (*sqsRep, error) {
+func New(l *zap.SugaredLogger, c *Config, flowName string) (*sqsRep, error) {
 	//TODO: session claims to be safe to read concurrently. Can I use a single one?
 	sess, err := session.NewSession(&aws.Config{
 		Region:   aws.String(c.Region),
@@ -75,7 +76,7 @@ func New(l *zap.SugaredLogger, c *Config) (*sqsRep, error) {
 		log:      l.With(logger.EXT_QUEUE_TYPE_KEY, "sqs"),
 		client:   sqsClient,
 		queueUrl: queueUrl,
-		alias:    "mainFlow", //TODO: make this dynamic, from config. This can be the name of the queue
+		flowName: flowName,
 	}, nil
 }
 
@@ -93,6 +94,7 @@ func ParseConfig(confData []byte) (*Config, error) {
 func (internalSqs *sqsRep) Enqueue(msg *domain.MessageContext) error {
 	message := Message{
 		SchemaVersion: domain.MESSAGE_SCHEMA_VERSION,
+		FlowName:      internalSqs.Name(),
 		Bucket: Bucket{
 			Name:   msg.Bucket,
 			Region: msg.Region,
@@ -141,5 +143,5 @@ func (s *sqsRep) Type() string {
 }
 
 func (s *sqsRep) Name() string {
-	return s.alias
+	return s.flowName
 }
