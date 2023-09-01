@@ -19,6 +19,8 @@ access_key: "access sqs!"
 secret_key: "secret sqs!"
 `
 
+const fakeFlowName = "some-flow-name"
+
 type mockedSendMsgs struct {
 	sqsiface.SQSAPI
 	msgs      []*sqs.SendMessageInput
@@ -45,10 +47,10 @@ func TestMessageContainsTheData(t *testing.T) {
 		URL:    queueUrl,
 		Region: "us-east-1",
 	}
-
+	flowName := "this-flow-name"
 	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
 
-	sut, err := New(l, c)
+	sut, err := New(l, c, flowName)
 	mockSQS := &mockedSendMsgs{msgs: make([]*sqs.SendMessageInput, 0)}
 	sut.client = mockSQS
 
@@ -65,7 +67,7 @@ func TestMessageContainsTheData(t *testing.T) {
 		CompressionType: "some-compression"})
 	assert.NoError(t, err, "should not err on enqueue")
 
-	jsonMsg := "{\"schema_version\":\"0.0.1\",\"bucket\":{\"name\":\"my-bucket1\",\"region\":\"region-a\"},\"object\":{\"path\":\"filepath\",\"full_url\":\"some_url\",\"size_in_bytes\":1111,\"compression_algorithm\":\"some-compression\"}}"
+	jsonMsg := "{\"schema_version\":\"0.0.1\",\"flow_name\":\"this-flow-name\",\"bucket\":{\"name\":\"my-bucket1\",\"region\":\"region-a\"},\"object\":{\"path\":\"filepath\",\"full_url\":\"some_url\",\"size_in_bytes\":1111,\"compression_algorithm\":\"some-compression\"}}"
 
 	expected := &sqs.SendMessageInput{
 		QueueUrl:    &queueUrl,
@@ -84,7 +86,7 @@ func TestReturnsTheErrorOnEnqueueingError(t *testing.T) {
 
 	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
 
-	sut, err := New(l, c)
+	sut, err := New(l, c, fakeFlowName)
 	mockErr := errors.New("mock error!")
 	mockSQS := &mockedSendMsgs{msgs: make([]*sqs.SendMessageInput, 0), err: mockErr}
 	sut.client = mockSQS

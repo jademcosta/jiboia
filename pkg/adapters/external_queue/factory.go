@@ -35,7 +35,7 @@ func New(l *zap.SugaredLogger, metricRegistry *prometheus.Registry, flowName str
 			return nil, fmt.Errorf("error parsing SQS-specific config: %w", err)
 		}
 
-		externalQueue, err = sqs.New(l, c)
+		externalQueue, err = sqs.New(l, c, flowName)
 		if err != nil {
 			return nil, fmt.Errorf("error creating SQS: %w", err)
 		}
