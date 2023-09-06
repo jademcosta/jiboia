@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 
 	"gopkg.in/yaml.v2"
 )
@@ -107,6 +108,11 @@ func validateConfig(c *Config) error {
 	for _, flow := range c.Flows {
 		if flow.Name == "" {
 			return fmt.Errorf("all flows must have a name")
+		}
+
+		flowNameContainsSpace := strings.Contains(flow.Name, " ")
+		if flowNameContainsSpace {
+			return fmt.Errorf("flow name must not have spaces")
 		}
 
 		if _, exists := flowNamesSet[flow.Name]; exists {
