@@ -270,6 +270,22 @@ flows:
 	assert.Equal(t, "all flows must have a name", err.Error(), "error string should make the error explicit")
 }
 
+func TestErrorOnSpaceInFlowName(t *testing.T) {
+	configFlowWithNoNameYaml := `
+log:
+  level: warn
+
+flows:
+  - name: my flow1
+  - name: myflow2
+  - name: my_flow_3
+`
+	_, err := config.New([]byte(configFlowWithNoNameYaml))
+	assert.Errorf(t, err, "return error when flows have repeated names")
+	assert.Equal(t, "flow name must not have spaces", err.Error(),
+		"error string should make the error explicit")
+}
+
 func TestErrorOnRepeatedFlowName(t *testing.T) {
 	configFlowWithNoNameYaml := `
 log:
