@@ -8,6 +8,7 @@ import (
 
 var ensureMetricRegisteringOnce sync.Once
 var sizeHist *prometheus.HistogramVec
+var reqsErrorCount *prometheus.CounterVec
 
 func initializeMetrics(metricRegistry *prometheus.Registry) {
 
@@ -26,7 +27,24 @@ func initializeMetrics(metricRegistry *prometheus.Registry) {
 			[]string{"path"},
 		)
 
-		metricRegistry.MustRegister(sizeHist)
-	})
+		reqsErrorCount = prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name:      "request_errors_total",
+				Subsystem: "http",
+				Namespace: "jiboia",
+				Help:      "Information about which type of error happened on HTTP request",
+			},
+			[]string{"error_type", "path"},
+		)
 
+		metricRegistry.MustRegister(sizeHist, reqsErrorCount)
+	})
+}
+
+func increaseErrorCount(errType string, path string) {
+	reqsErrorCount.WithLabelValues(errType, path)
+}
+
+func observeSize(path string, size float64) {
+	sizeHist.WithLabelValues(path).Observe(size)
 }

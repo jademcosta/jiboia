@@ -46,7 +46,7 @@ func New(l *zap.SugaredLogger, conf config.ApiConfig, metricRegistry *prometheus
 	initializeMetrics(metricRegistry)
 	registerDefaultMiddlewares(api, sizeLimit, logg, metricRegistry)
 
-	RegisterIngestingRoutes(api, sizeHist, flws)
+	RegisterIngestingRoutes(api, flws)
 	RegisterOperatinalRoutes(api, appVersion, metricRegistry)
 	api.mux.Mount("/debug", middleware.Profiler())
 
