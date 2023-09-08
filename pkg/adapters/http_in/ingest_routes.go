@@ -15,19 +15,22 @@ var payloadMaxSizeErr *http.MaxBytesError
 
 func RegisterIngestingRoutes(
 	api *Api,
+	version string,
 	flws []flow.Flow,
 ) {
 
 	for _, flw := range flws {
 		flwCopy := flw
 
+		path := fmt.Sprintf("/%s/async_ingestion", flwCopy.Name)
 		if flwCopy.Token != "" {
 			api.mux.With(httpmiddleware.Auth(flwCopy.Token)).
-				Post(fmt.Sprintf("/%s/async_ingestion", flwCopy.Name),
-					asyncIngestion(api.log, &flwCopy))
+				Post(path, asyncIngestion(api.log, &flwCopy))
+			api.mux.With(httpmiddleware.Auth(flwCopy.Token)).
+				Post("/"+version+path, asyncIngestion(api.log, &flwCopy))
 		} else {
-			api.mux.Post(fmt.Sprintf("/%s/async_ingestion", flwCopy.Name),
-				asyncIngestion(api.log, &flwCopy))
+			api.mux.Post(path, asyncIngestion(api.log, &flwCopy))
+			api.mux.Post("/"+version+path, asyncIngestion(api.log, &flwCopy))
 		}
 	}
 

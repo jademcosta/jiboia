@@ -528,7 +528,7 @@ func testWithBatchSize(t *testing.T, confYaml string, stringExemplarSizes ...int
 
 		generatedValuesWithoutAcc = append(generatedValuesWithoutAcc, expected)
 
-		response, err = http.Post("http://localhost:9099/int_flow2/async_ingestion", "application/json", strings.NewReader(expected))
+		response, err = http.Post("http://localhost:9099/v1/int_flow2/async_ingestion", "application/json", strings.NewReader(expected))
 		assert.NoError(t, err, "enqueueing items should not return error on int_flow2")
 		assert.Equal(t, 200, response.StatusCode, "data enqueueing should have been successful on int_flow2")
 		response.Body.Close()

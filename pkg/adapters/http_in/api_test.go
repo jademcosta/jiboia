@@ -76,12 +76,24 @@ func TestPassesDataFlows(t *testing.T) {
 
 	resp, err = http.Post(fmt.Sprintf("%s/flow2/async_ingestion", srvr.URL), "application/json", strings.NewReader("world!"))
 	assert.NoError(t, err, "error on posting data to flow2", err)
-
 	resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200) on flow 2")
 
-	assert.Equal(t, [][]byte{[]byte("helloooooo")}, mockDF.calledWith, "the posted data should have been sent to flow 1")
-	assert.Equal(t, [][]byte{[]byte("world!")}, mockDF2.calledWith, "the posted data should have been sent to flow 2")
+	//Same test, but with v1 on URL
+	resp, err = http.Post(fmt.Sprintf("%s/v1/flow-1/async_ingestion", srvr.URL), "application/json", strings.NewReader("helloooooo1"))
+	assert.NoError(t, err, "error on posting data to flow1", err)
+	resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200) on flow 1")
+
+	resp, err = http.Post(fmt.Sprintf("%s/v1/flow2/async_ingestion", srvr.URL), "application/json", strings.NewReader("world2"))
+	assert.NoError(t, err, "error on posting data to flow2", err)
+	resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200) on flow 2")
+
+	assert.Equal(t, [][]byte{[]byte("helloooooo"), []byte("helloooooo1")},
+		mockDF.calledWith, "the posted data should have been sent to flow 1")
+	assert.Equal(t, [][]byte{[]byte("world!"), []byte("world2")},
+		mockDF2.calledWith, "the posted data should have been sent to flow 2")
 }
 
 func TestAnswersAnErrorIfNoBodyIsSent(t *testing.T) {

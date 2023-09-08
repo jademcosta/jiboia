@@ -17,6 +17,7 @@ import (
 )
 
 const API_COMPONENT_TYPE = "api"
+const apiVersion = "v1"
 
 type Api struct {
 	mux  *chi.Mux
@@ -46,7 +47,7 @@ func New(l *zap.SugaredLogger, conf config.ApiConfig, metricRegistry *prometheus
 	initializeMetrics(metricRegistry)
 	registerDefaultMiddlewares(api, sizeLimit, logg, metricRegistry)
 
-	RegisterIngestingRoutes(api, flws)
+	RegisterIngestingRoutes(api, apiVersion, flws)
 	RegisterOperatinalRoutes(api, appVersion, metricRegistry)
 	api.mux.Mount("/debug", middleware.Profiler())
 
