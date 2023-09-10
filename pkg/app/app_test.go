@@ -455,6 +455,8 @@ func TestIngestionDecompression(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be Ok(200)")
 
+	time.Sleep(100 * time.Millisecond)
+
 	req, err = http.NewRequest(
 		http.MethodPost,
 		"http://localhost:9099/int_flow4/async_ingestion",
@@ -468,6 +470,8 @@ func TestIngestionDecompression(t *testing.T) {
 	assert.NoError(t, err, "error posting data")
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200)")
+
+	time.Sleep(100 * time.Millisecond)
 
 	req, err = http.NewRequest(
 		http.MethodPost,
