@@ -549,8 +549,10 @@ func TestDecompressionOnIngestion(t *testing.T) {
 			buf1 := &bytes.Buffer{}
 			writer, err := compressor.NewWriter(&config.Compression{Type: algorithm}, buf1)
 			assert.NoError(t, err, "error on compressor writer creation", err)
-			writer.Write([]byte(decompressedData1))
-			writer.Close()
+			_, err = writer.Write([]byte(decompressedData1))
+			assert.NoError(t, err, "error on compressing data", err)
+			err = writer.Close()
+			assert.NoError(t, err, "error on compressor Close", err)
 
 			assert.NotEqual(t, decompressedData1, buf1.Bytes(), "the data should have been compressed before sending")
 
@@ -570,8 +572,10 @@ func TestDecompressionOnIngestion(t *testing.T) {
 			buf2 := &bytes.Buffer{}
 			writer, err = compressor.NewWriter(&config.Compression{Type: algorithm}, buf2)
 			assert.NoError(t, err, "error on compressor writer creation", err)
-			writer.Write([]byte(decompressedData2))
-			writer.Close()
+			_, err = writer.Write([]byte(decompressedData2))
+			assert.NoError(t, err, "error on compressing data", err)
+			err = writer.Close()
+			assert.NoError(t, err, "error on compressor Close", err)
 
 			assert.NotEqual(t, decompressedData2, buf2.Bytes(), "the data should have been compressed before sending")
 
