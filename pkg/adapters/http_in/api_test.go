@@ -605,7 +605,7 @@ func TestDecompressionOnIngestion(t *testing.T) {
 			{
 				Name:                    "flow-1",
 				Entrypoint:              df,
-				DecompressionAlgorithms: []string{"gzip", "zlib"},
+				DecompressionAlgorithms: []string{"gzip"},
 			},
 		}
 
