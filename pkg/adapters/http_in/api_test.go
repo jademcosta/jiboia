@@ -3,12 +3,15 @@ package http_in
 import (
 	"bytes"
 	"fmt"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
+	"github.com/jademcosta/jiboia/pkg/compressor"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/domain/flow"
 	"github.com/jademcosta/jiboia/pkg/logger"
@@ -17,6 +20,18 @@ import (
 )
 
 const version string = "0.0.0"
+
+var characters = []rune("abcdefghijklmnopqrstuvwxyz")
+
+func randString(n int) string {
+	r1 := rand.New(rand.NewSource(time.Now().UnixNano()))
+	b := make([]rune, n)
+
+	for i := range b {
+		b[i] = characters[r1.Intn(len(characters))]
+	}
+	return string(b)
+}
 
 type mockDataFlow struct {
 	calledWith [][]byte
@@ -490,6 +505,91 @@ func TestVersionEndpointInformsTheVersion(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be Ok(200)")
 	assert.Equal(t, fmt.Sprintf("{\"version\":\"%s\"}", version), body, "version informed should be the current one")
+}
+
+func TestDecompressionOnIngestion(t *testing.T) {
+	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
+	c := config.ApiConfig{Port: 9111}
+
+	testCases := []struct {
+		algorithms []string
+	}{
+		{algorithms: []string{"snappy"}},
+		{algorithms: []string{"gzip"}},
+		{algorithms: []string{"zstd"}},
+		{algorithms: []string{"deflate"}},
+		{algorithms: []string{"zlib"}},
+		{algorithms: []string{"zlib", "gzip"}},
+		{algorithms: []string{"snappy", "gzip", "zstd"}},
+		{algorithms: []string{"snappy", "gzip", "zstd", "deflate", "zlib"}},
+	}
+
+	for _, tc := range testCases {
+		df := &mockDataFlow{calledWith: make([][]byte, 0)}
+
+		flws := []flow.Flow{
+			{
+				Name:                    "flow-1",
+				Entrypoint:              df,
+				DecompressionAlgorithms: tc.algorithms,
+			},
+		}
+
+		api := New(l, c, prometheus.NewRegistry(), version, flws)
+		srvr := httptest.NewServer(api.mux)
+		defer srvr.Close()
+
+		expected := make([][]byte, 0)
+
+		for _, algorithm := range tc.algorithms {
+
+			decompressedData1 := strings.Repeat("ab", 90)
+			expected = append(expected, []byte(decompressedData1))
+
+			buf1 := &bytes.Buffer{}
+			writer, err := compressor.NewWriter(&config.Compression{Type: algorithm}, buf1)
+			assert.NoError(t, err, "error on compressor writer creation", err)
+			writer.Write([]byte(decompressedData1))
+			writer.Close()
+
+			assert.NotEqual(t, decompressedData1, buf1.Bytes(), "the data should have been compressed before sending")
+
+			req, err := http.NewRequest(http.MethodPost,
+				fmt.Sprintf("%s/flow-1/async_ingestion", srvr.URL), buf1)
+			assert.NoError(t, err, "error on request creation", err)
+			req.Header.Add("Content-Encoding", algorithm)
+
+			resp, err := http.DefaultClient.Do(req)
+			assert.NoError(t, err, "error on posting data", err)
+			resp.Body.Close()
+			assert.Equal(t, http.StatusOK, resp.StatusCode,
+				"status should be Internal Server Ok(200) when size is within limits")
+
+			decompressedData2 := randString(300)
+			expected = append(expected, []byte(decompressedData2))
+			buf2 := &bytes.Buffer{}
+			writer, err = compressor.NewWriter(&config.Compression{Type: algorithm}, buf2)
+			assert.NoError(t, err, "error on compressor writer creation", err)
+			writer.Write([]byte(decompressedData2))
+			writer.Close()
+
+			assert.NotEqual(t, decompressedData2, buf2.Bytes(), "the data should have been compressed before sending")
+
+			req, err = http.NewRequest(http.MethodPost,
+				fmt.Sprintf("%s/flow-1/async_ingestion", srvr.URL), buf2)
+			assert.NoError(t, err, "error on request creation", err)
+			req.Header.Add("Content-Encoding", algorithm)
+
+			resp, err = http.DefaultClient.Do(req)
+			assert.NoError(t, err, "error on posting data", err)
+			resp.Body.Close()
+			assert.Equal(t, http.StatusOK, resp.StatusCode,
+				"status should be Internal Server Ok(200) when size is within limits")
+		}
+
+		assert.Equal(t, expected, df.calledWith,
+			"payloads should be decompressed before being sent to dataflow")
+	}
 }
 
 //TODO: test the graceful shutdown
