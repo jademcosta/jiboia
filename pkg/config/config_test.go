@@ -51,6 +51,7 @@ flows:
       token: "some token here!"
       decompress:
         active: ["gzip", "zstd"]
+        max_concurrency: 90
     accumulator:
       size_in_bytes: 2097152
       separator: "_a_"
@@ -116,7 +117,9 @@ flows:
 
 	assert.Equal(t, "some token here!", conf.Flows[0].Ingestion.Token, "should have parsed the correct flow.ingestion.token")
 	assert.Equal(t, []string{"gzip", "zstd"}, conf.Flows[0].Ingestion.Decompression.ActiveDecompressions,
-		"should have parsed the correct flow.ingestion.decompress_ingested_data")
+		"should have parsed the correct flow.ingestion.decompress.active")
+	assert.Equal(t, 90, conf.Flows[0].Ingestion.Decompression.MaxConcurrency,
+		"should have parsed the correct flow.ingestion.decompress.max_concurrency")
 
 	assert.Equal(t, 2097152, conf.Flows[0].Accumulator.SizeInBytes, "should have parsed the correct flow.accumulator.size_in_bytes")
 	assert.Equal(t, "_a_", conf.Flows[0].Accumulator.Separator, "should have parsed the correct flow.accumulator.separator")
@@ -137,7 +140,10 @@ flows:
 	assert.Equal(t, "2", conf.Flows[1].Compression.Level, "should have parsed the correct flow.compression.level")
 
 	assert.Equal(t, "", conf.Flows[1].Ingestion.Token, "should have parsed the correct flow.ingestion.token (which is empty)")
-	assert.Equal(t, []string(nil), conf.Flows[1].Ingestion.Decompression.ActiveDecompressions, "should have parsed the correct flow.ingestion.decompress_ingested_data (which is empty)")
+	assert.Equal(t, []string(nil), conf.Flows[1].Ingestion.Decompression.ActiveDecompressions,
+		"should have parsed the correct flow.ingestion.decompress.active (which is empty)")
+	assert.Equal(t, 0, conf.Flows[1].Ingestion.Decompression.MaxConcurrency,
+		"should have parsed the correct flow.ingestion.decompress.max_concurrency")
 
 	assert.Equal(t, 20, conf.Flows[1].Accumulator.SizeInBytes, "should have parsed the correct flow.accumulator.size_in_bytes")
 	assert.Equal(t, "", conf.Flows[1].Accumulator.Separator, "should have parsed the correct flow.accumulator.separator")

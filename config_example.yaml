@@ -20,6 +20,12 @@ flows:
         # If no header is set the data will be ingested as is.
         # Possible values are only: gzip, zlib, deflate, lzw, zstd, snappy
         active: ['gzip', 'snappy']
+        # Optional. If left empty or zero, it will be unrestricted, which can cause CPU
+        # starvation if it receives too many requests at the same time.
+        # This is the number of concurrent decompression that can happen.
+        # In case more than this number of decompressions are happening,
+        # it will block and enqueue the incoming ingestion requests
+        max_concurrency: 6
     # The amount of items in memory, waiting to be sent to storage. If this queue is full,
     # data starts to be dropped (lost)
     in_memory_queue_max_size: 1000

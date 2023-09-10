@@ -66,6 +66,7 @@ type ObjectStorage struct {
 
 type DescompressionConfig struct {
 	ActiveDecompressions []string `yaml:"active"`
+	MaxConcurrency       int      `yaml:"max_concurrency"`
 }
 
 type IngestionConfig struct {

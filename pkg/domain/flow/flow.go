@@ -17,13 +17,14 @@ type DataFlowRunnable interface {
 }
 
 type Flow struct {
-	Name                    string
-	ObjStorage              worker.ObjStorage
-	ExternalQueue           worker.ExternalQueue
-	Entrypoint              domain.DataFlow
-	Uploader                DataFlowRunnable
-	Accumulator             DataFlowRunnable
-	UploadWorkers           []Runnable
-	Token                   string
-	DecompressionAlgorithms []string
+	Name                        string
+	ObjStorage                  worker.ObjStorage
+	ExternalQueue               worker.ExternalQueue
+	Entrypoint                  domain.DataFlow
+	Uploader                    DataFlowRunnable
+	Accumulator                 DataFlowRunnable
+	UploadWorkers               []Runnable
+	Token                       string
+	DecompressionAlgorithms     []string
+	DecompressionMaxConcurrency int
 }
