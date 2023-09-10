@@ -565,7 +565,7 @@ func TestDecompressionOnIngestion(t *testing.T) {
 			assert.NoError(t, err, "error on posting data", err)
 			resp.Body.Close()
 			assert.Equal(t, http.StatusOK, resp.StatusCode,
-				"status should be Internal Server Ok(200) when size is within limits")
+				"status should be Internal Server Ok(200)")
 
 			decompressedData2 := randString(300)
 			expected = append(expected, []byte(decompressedData2))
@@ -588,7 +588,7 @@ func TestDecompressionOnIngestion(t *testing.T) {
 			assert.NoError(t, err, "error on posting data", err)
 			resp.Body.Close()
 			assert.Equal(t, http.StatusOK, resp.StatusCode,
-				"status should be Internal Server Ok(200) when size is within limits")
+				"status should be Internal Server Ok(200)")
 		}
 
 		assert.Equal(t, expected, df.calledWith,
