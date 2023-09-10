@@ -72,6 +72,23 @@ flows:
       type: httpstorage
       config:
         url: "http://non-existent-27836178236.com"
+  - name: "int_flow4"
+    in_memory_queue_max_size: 4
+    max_concurrent_uploads: 2
+    timeout: 120
+    ingestion:
+      decompress_ingested_data: ['gzip', 'snappy']
+    accumulator:
+      size_in_bytes: 20
+      separator: ""
+      queue_capacity: 10
+    external_queue:
+      type: noop
+      config: ""
+    object_storage:
+      type: httpstorage
+      config:
+        url: "http://non-existent-flow4.com"
 `
 
 const confForCompressionYaml = `
@@ -368,6 +385,119 @@ func TestApiToken(t *testing.T) {
 	mu.Lock()
 	assert.Equal(t, [][]byte{[]byte(ingestedPayload)}, objStorageReceived,
 		"only the valid payload should be ingested")
+	mu.Unlock()
+
+	stopDone := app.Stop()
+	<-stopDone
+}
+
+func TestIngestionDecompression(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	// Needed for the other ingestion endpoints
+	createDir(t, testingPathNoAcc)
+	defer func() {
+		deleteDir(t, testingPathNoAcc)
+	}()
+
+	var mu sync.Mutex
+	objStorageReceived := make([][]byte, 0)
+
+	storageServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		mu.Lock()
+		defer mu.Unlock()
+		objStorageReceived = append(objStorageReceived, body)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer storageServer.Close()
+
+	confFull := strings.Replace(confYaml, "http://non-existent-flow4.com",
+		fmt.Sprintf("%s/%s", storageServer.URL, "%s"), 1)
+
+	conf, err := config.New([]byte(confFull))
+	assert.NoError(t, err, "should initialize config")
+	l = logger.New(conf)
+
+	app := New(conf, l)
+	go app.Start()
+	time.Sleep(2 * time.Second)
+
+	payload := randSeq(100)
+	buf1 := &bytes.Buffer{}
+	writer, err := compressor.NewWriter(&config.Compression{Type: "snappy"}, buf1)
+	assert.NoError(t, err, "error on compressor writer creation", err)
+	_, err = writer.Write([]byte(payload))
+	assert.NoError(t, err, "error compressing data")
+	err = writer.Close()
+	assert.NoError(t, err, "error closing compressor")
+
+	highlyCompressRatioPayload := strings.Repeat("ab", 50)
+	buf2 := &bytes.Buffer{}
+	writer, err = compressor.NewWriter(&config.Compression{Type: "gzip"}, buf2)
+	assert.NoError(t, err, "error on compressor writer creation", err)
+	_, err = writer.Write([]byte(highlyCompressRatioPayload))
+	assert.NoError(t, err, "error compressing data")
+	err = writer.Close()
+	assert.NoError(t, err, "error closing compressor")
+
+	nonCompressedPayload := randSeq(120)
+
+	req, err := http.NewRequest(
+		http.MethodPost,
+		"http://localhost:9099/int_flow4/async_ingestion",
+		buf1,
+	)
+	assert.NoError(t, err, "error creating request")
+
+	req.Header.Add("Content-Encoding", "snappy")
+	resp, err := http.DefaultClient.Do(req)
+	resp.Body.Close()
+	assert.NoError(t, err, "error posting data")
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be Ok(200)")
+
+	time.Sleep(100 * time.Millisecond)
+
+	req, err = http.NewRequest(
+		http.MethodPost,
+		"http://localhost:9099/int_flow4/async_ingestion",
+		buf2,
+	)
+	assert.NoError(t, err, "error creating request")
+
+	req.Header.Add("Content-Encoding", "gzip")
+	resp, err = http.DefaultClient.Do(req)
+	resp.Body.Close()
+	assert.NoError(t, err, "error posting data")
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200)")
+
+	time.Sleep(100 * time.Millisecond)
+
+	req, err = http.NewRequest(
+		http.MethodPost,
+		"http://localhost:9099/int_flow4/async_ingestion",
+		strings.NewReader(nonCompressedPayload),
+	)
+	assert.NoError(t, err, "error creating request")
+
+	resp, err = http.DefaultClient.Do(req)
+	resp.Body.Close()
+	assert.NoError(t, err, "error posting data")
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200)")
+
+	time.Sleep(100 * time.Millisecond)
+	mu.Lock()
+	assert.Equal(
+		t,
+		[][]byte{[]byte(payload), []byte(highlyCompressRatioPayload), []byte(nonCompressedPayload)},
+		objStorageReceived,
+		"all payloads should be decompressed, in case it needs, and ingested",
+	)
 	mu.Unlock()
 
 	stopDone := app.Stop()

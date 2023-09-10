@@ -14,6 +14,10 @@ flows:
     ingestion:
       # When a token is defined, requests that arrive without it are denied
       token: "some-token-here"
+      # Optional. Adding values here means the data will be decompressed before being ingested.
+      # But decompression will only happen in case the correct "Content-Encoding" header is set.
+      # Possible values are only: gzip, zlib, deflate, lzw, zstd, snappy
+      decompress_ingested_data: ['gzip', 'snappy']
     # The amount of items in memory, waiting to be sent to storage. If this queue is full,
     # data starts to be dropped (lost)
     in_memory_queue_max_size: 1000
