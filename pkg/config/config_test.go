@@ -25,7 +25,7 @@ func TestDefaultValues(t *testing.T) {
 	assert.Equal(t, 9010, conf.Api.Port, "default for api.port config doesn't match")
 	assert.Equal(t, 500, conf.Flows[0].MaxConcurrentUploads, "default for flow.max_concurrent_uploads config doesn't match")
 	assert.Equal(t, 1, conf.Flows[0].PathPrefixCount, "default value for flow path_prefix_count should be 1")
-	assert.Empty(t, conf.Flows[0].Ingestion.DecompressTypes, "default flows.ingestion.decompress_ingested_data is empty")
+	assert.Empty(t, conf.Flows[0].Ingestion.Decompression.ActiveDecompressions, "default flows.ingestion.decompress_ingested_data is empty")
 
 	sizeInBytes, err := conf.Api.PayloadSizeLimitInBytes()
 	assert.Equal(t, 0, sizeInBytes, "default for api.payload_size_limit config doesn't match")
@@ -49,7 +49,8 @@ flows:
     path_prefix_count: 7
     ingestion:
       token: "some token here!"
-      decompress_ingested_data: ["gzip", "zstd"]
+      decompress:
+        active: ["gzip", "zstd"]
     accumulator:
       size_in_bytes: 2097152
       separator: "_a_"
@@ -114,7 +115,8 @@ flows:
 	assert.Equal(t, "", conf.Flows[0].Compression.Level, "should have an empty flow.compression.level")
 
 	assert.Equal(t, "some token here!", conf.Flows[0].Ingestion.Token, "should have parsed the correct flow.ingestion.token")
-	assert.Equal(t, []string{"gzip", "zstd"}, conf.Flows[0].Ingestion.DecompressTypes, "should have parsed the correct flow.ingestion.decompress_ingested_data")
+	assert.Equal(t, []string{"gzip", "zstd"}, conf.Flows[0].Ingestion.Decompression.ActiveDecompressions,
+		"should have parsed the correct flow.ingestion.decompress_ingested_data")
 
 	assert.Equal(t, 2097152, conf.Flows[0].Accumulator.SizeInBytes, "should have parsed the correct flow.accumulator.size_in_bytes")
 	assert.Equal(t, "_a_", conf.Flows[0].Accumulator.Separator, "should have parsed the correct flow.accumulator.separator")
@@ -135,7 +137,7 @@ flows:
 	assert.Equal(t, "2", conf.Flows[1].Compression.Level, "should have parsed the correct flow.compression.level")
 
 	assert.Equal(t, "", conf.Flows[1].Ingestion.Token, "should have parsed the correct flow.ingestion.token (which is empty)")
-	assert.Equal(t, []string(nil), conf.Flows[1].Ingestion.DecompressTypes, "should have parsed the correct flow.ingestion.decompress_ingested_data (which is empty)")
+	assert.Equal(t, []string(nil), conf.Flows[1].Ingestion.Decompression.ActiveDecompressions, "should have parsed the correct flow.ingestion.decompress_ingested_data (which is empty)")
 
 	assert.Equal(t, 20, conf.Flows[1].Accumulator.SizeInBytes, "should have parsed the correct flow.accumulator.size_in_bytes")
 	assert.Equal(t, "", conf.Flows[1].Accumulator.Separator, "should have parsed the correct flow.accumulator.separator")
@@ -544,7 +546,8 @@ func TestValidateFlowDecompressionTypes(t *testing.T) {
 flows:
   - name: flow_1
     ingestion:
-      decompress_ingested_data: [{{TYPES}}]`
+      decompress:
+        active: [{{TYPES}}]`
 
 	testCases := []struct {
 		types       []string

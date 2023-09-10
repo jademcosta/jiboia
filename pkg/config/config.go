@@ -64,9 +64,13 @@ type ObjectStorage struct {
 	Config interface{} `yaml:"config"`
 }
 
+type DescompressionConfig struct {
+	ActiveDecompressions []string `yaml:"active"`
+}
+
 type IngestionConfig struct {
-	Token           string   `yaml:"token"`
-	DecompressTypes []string `yaml:"decompress_ingested_data"`
+	Token         string               `yaml:"token"`
+	Decompression DescompressionConfig `yaml:"decompress"`
 }
 
 func New(confData []byte) (*Config, error) {
@@ -134,8 +138,8 @@ func validateConfig(c *Config) error {
 			}
 		}
 
-		if len(flow.Ingestion.DecompressTypes) > 0 {
-			for _, decompressionType := range flow.Ingestion.DecompressTypes {
+		if len(flow.Ingestion.Decompression.ActiveDecompressions) > 0 {
+			for _, decompressionType := range flow.Ingestion.Decompression.ActiveDecompressions {
 				if !allowed(allowedValues("compression"), decompressionType) {
 					return fmt.Errorf("ingestion.decompress_ingested_data option should be one of %v",
 						allowedValues("compression"))
