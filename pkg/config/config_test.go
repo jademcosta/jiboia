@@ -114,7 +114,7 @@ flows:
 	assert.Equal(t, "", conf.Flows[0].Compression.Level, "should have an empty flow.compression.level")
 
 	assert.Equal(t, "some token here!", conf.Flows[0].Ingestion.Token, "should have parsed the correct flow.ingestion.token")
-	assert.Equal(t, []string{"gzip", "zstd"}, conf.Flows[0].Ingestion.DecompressTypes, "should have parsed the correct flow.ingestion.decompress_ingested_data (which is empty)")
+	assert.Equal(t, []string{"gzip", "zstd"}, conf.Flows[0].Ingestion.DecompressTypes, "should have parsed the correct flow.ingestion.decompress_ingested_data")
 
 	assert.Equal(t, 2097152, conf.Flows[0].Accumulator.SizeInBytes, "should have parsed the correct flow.accumulator.size_in_bytes")
 	assert.Equal(t, "_a_", conf.Flows[0].Accumulator.Separator, "should have parsed the correct flow.accumulator.separator")
