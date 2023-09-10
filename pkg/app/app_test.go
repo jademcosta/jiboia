@@ -429,15 +429,19 @@ func TestIngestionDecompression(t *testing.T) {
 	buf1 := &bytes.Buffer{}
 	writer, err := compressor.NewWriter(&config.Compression{Type: "snappy"}, buf1)
 	assert.NoError(t, err, "error on compressor writer creation", err)
-	writer.Write([]byte(payload))
-	writer.Close()
+	_, err = writer.Write([]byte(payload))
+	assert.NoError(t, err, "error compressing data")
+	err = writer.Close()
+	assert.NoError(t, err, "error closing compressor")
 
 	highlyCompressRatioPayload := strings.Repeat("ab", 50)
 	buf2 := &bytes.Buffer{}
 	writer, err = compressor.NewWriter(&config.Compression{Type: "gzip"}, buf2)
 	assert.NoError(t, err, "error on compressor writer creation", err)
-	writer.Write([]byte(highlyCompressRatioPayload))
-	writer.Close()
+	_, err = writer.Write([]byte(highlyCompressRatioPayload))
+	assert.NoError(t, err, "error compressing data")
+	err = writer.Close()
+	assert.NoError(t, err, "error closing compressor")
 
 	nonCompressedPayload := randSeq(120)
 
