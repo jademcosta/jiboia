@@ -613,7 +613,7 @@ func TestDecompressionOnIngestion(t *testing.T) {
 		srvr := httptest.NewServer(api.mux)
 		defer srvr.Close()
 
-		expectedNotCompressed := randString(10)
+		expectedNotCompressed := randString(100)
 
 		bufExpected := &bytes.Buffer{}
 		writer, err := compressor.NewWriter(&config.Compression{Type: "gzip"}, bufExpected)
@@ -636,7 +636,7 @@ func TestDecompressionOnIngestion(t *testing.T) {
 		assert.Equal(t, http.StatusOK, resp.StatusCode,
 			"status should be Internal Server Ok(200) for GZIP")
 
-		expectedCompressed := randString(10)
+		expectedCompressed := randString(100)
 		bufUnexpected := &bytes.Buffer{}
 		writer, err = compressor.NewWriter(&config.Compression{Type: "snappy"}, bufUnexpected)
 		assert.NoError(t, err, "error on compressor writer creation", err)
