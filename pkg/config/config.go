@@ -65,7 +65,8 @@ type ObjectStorage struct {
 }
 
 type IngestionConfig struct {
-	Token string `yaml:"token"`
+	Token           string   `yaml:"token"`
+	DecompressTypes []string `yaml:"decompress_ingested_data"`
 }
 
 func New(confData []byte) (*Config, error) {
@@ -132,11 +133,20 @@ func validateConfig(c *Config) error {
 				}
 			}
 		}
+
+		if len(flow.Ingestion.DecompressTypes) > 0 {
+			for _, decompressionType := range flow.Ingestion.DecompressTypes {
+				if !allowed(allowedValues("compression"), decompressionType) {
+					return fmt.Errorf("ingestion.decompress_ingested_data option should be one of %v",
+						allowedValues("compression"))
+				}
+			}
+		}
 	}
 
 	err := c.Api.validateSizeLimit()
 	if err != nil {
-		return fmt.Errorf("invalid api size limit format")
+		return err
 	}
 
 	return nil
