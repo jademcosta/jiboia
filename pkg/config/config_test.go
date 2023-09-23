@@ -629,6 +629,19 @@ flows:
 	}
 }
 
+func TestErrorsIfMaxConcurrencyIsSetButActiveAlgorithmsIsNot(t *testing.T) {
+	conf := `
+flows:
+  - name: flow_1
+    ingestion:
+      decompress:
+        max_concurrency: 4`
+
+	_, err := config.New([]byte(conf))
+
+	assert.Errorf(t, err, "should error when max_concurrency is set but active is not (on ingestion option, inside flow)")
+}
+
 func TestErrorOnInvalidLogFormat(t *testing.T) {
 	//TODO: implement me
 }

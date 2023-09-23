@@ -24,7 +24,8 @@ flows:
         # starvation if it receives too many requests at the same time.
         # This is the number of concurrent decompression that can happen.
         # In case more than this number of decompressions are happening,
-        # it will block and enqueue the incoming ingestion requests
+        # it will block and enqueue the incoming ingestion requests.
+        # Default is unrestricted concurrency.
         max_concurrency: 6
     # The amount of items in memory, waiting to be sent to storage. If this queue is full,
     # data starts to be dropped (lost)
