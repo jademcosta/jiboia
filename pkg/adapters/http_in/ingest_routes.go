@@ -16,6 +16,89 @@ import (
 
 var payloadMaxSizeErr *http.MaxBytesError
 
+type ingestionRoute struct {
+	l   *zap.SugaredLogger
+	flw *flow.Flow
+	// decompressionSemaphor        chan struct{}
+	validDecompressionAlgorithms map[string]struct{}
+}
+
+func (handler *ingestionRoute) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	currentPath := r.URL.Path
+	buf := &bytes.Buffer{}
+	dataLen, err := buf.ReadFrom(r.Body)
+
+	observeSize(currentPath, float64(dataLen))
+
+	if err != nil {
+		handler.l.Warnw("async http request failed", "error", err)
+		//TODO: send a JSON response with the error
+		//TODO: which should be the response in this case?
+		if errors.As(err, &payloadMaxSizeErr) {
+			w.WriteHeader(http.StatusRequestEntityTooLarge)
+			increaseErrorCount("request_entity_too_large", currentPath)
+			return
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		increaseErrorCount("error_reading_body", currentPath)
+		return
+	}
+
+	if dataLen <= 0 {
+		handler.l.Warn("request without body, ignoring")
+		w.Header().Set("Content-Type", "application/json")
+		//TODO: send a JSON response with the error
+		//TODO: which should be the response in this case?
+		w.WriteHeader(http.StatusBadRequest)
+		increaseErrorCount("request_without_body", currentPath)
+		return
+	}
+
+	data := buf.Bytes()
+	handler.l.Debugw("data received on async handler", "length", dataLen)
+
+	decompressAlgorithm :=
+		selectDecompressionAlgorithm(handler.validDecompressionAlgorithms, r.Header["Content-Encoding"])
+
+	if decompressAlgorithm != "" {
+		data, err = decompress(data, decompressAlgorithm)
+		if err != nil {
+			handler.l.Warnw("failed to decompress data", "algorithm", decompressAlgorithm, "error", err)
+			//TODO: send a JSON response with the error
+			w.WriteHeader(http.StatusBadRequest)
+			increaseErrorCount("enqueue_failed", currentPath)
+			return
+		}
+	}
+
+	err = handler.flw.Entrypoint.Enqueue(data)
+	if err != nil {
+		handler.l.Warnw("failed while enqueueing data from http request", "error", err)
+		//TODO: send a JSON response with the error
+		w.WriteHeader(http.StatusInternalServerError)
+		increaseErrorCount("enqueue_failed", currentPath)
+		return
+	}
+
+	//TODO: Maybe send back a JSON with the length of the content read?
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+}
+
+func newIngestionRoute(l *zap.SugaredLogger, flw *flow.Flow) *ingestionRoute {
+
+	validDecompressionAlgorithms := make(map[string]struct{})
+	for _, alg := range flw.DecompressionAlgorithms {
+		validDecompressionAlgorithms[alg] = struct{}{}
+	}
+
+	return &ingestionRoute{
+		l:                            l,
+		flw:                          flw,
+		validDecompressionAlgorithms: validDecompressionAlgorithms,
+	}
+}
+
 func RegisterIngestingRoutes(
 	api *Api,
 	version string,
@@ -42,73 +125,10 @@ func RegisterIngestingRoutes(
 
 func asyncIngestion(l *zap.SugaredLogger, flw *flow.Flow) http.HandlerFunc {
 
-	// This is just for perf
-	acceptedDecompressionAlgorithms := make(map[string]struct{})
-	for _, alg := range flw.DecompressionAlgorithms {
-		acceptedDecompressionAlgorithms[alg] = struct{}{}
-	}
+	h := newIngestionRoute(l, flw)
 
 	return func(w http.ResponseWriter, r *http.Request) {
-
-		currentPath := r.URL.Path
-		buf := &bytes.Buffer{}
-		dataLen, err := buf.ReadFrom(r.Body)
-
-		observeSize(currentPath, float64(dataLen))
-
-		if err != nil {
-			l.Warnw("async http request failed", "error", err)
-			//TODO: send a JSON response with the error
-			//TODO: which should be the response in this case?
-			if errors.As(err, &payloadMaxSizeErr) {
-				w.WriteHeader(http.StatusRequestEntityTooLarge)
-				increaseErrorCount("request_entity_too_large", currentPath)
-				return
-			}
-			w.WriteHeader(http.StatusBadRequest)
-			increaseErrorCount("error_reading_body", currentPath)
-			return
-		}
-
-		if dataLen <= 0 {
-			l.Warn("request without body, ignoring")
-			w.Header().Set("Content-Type", "application/json")
-			//TODO: send a JSON response with the error
-			//TODO: which should be the response in this case?
-			w.WriteHeader(http.StatusBadRequest)
-			increaseErrorCount("request_without_body", currentPath)
-			return
-		}
-
-		data := buf.Bytes()
-		l.Debugw("data received on async handler", "length", dataLen)
-
-		decompressAlgorithm :=
-			selectDecompressionAlgorithm(acceptedDecompressionAlgorithms, r.Header["Content-Encoding"])
-
-		if decompressAlgorithm != "" {
-			data, err = decompress(data, decompressAlgorithm)
-			if err != nil {
-				l.Warnw("failed to decompress data", "algorithm", decompressAlgorithm, "error", err)
-				//TODO: send a JSON response with the error
-				w.WriteHeader(http.StatusBadRequest)
-				increaseErrorCount("enqueue_failed", currentPath)
-				return
-			}
-		}
-
-		err = flw.Entrypoint.Enqueue(data)
-		if err != nil {
-			l.Warnw("failed while enqueueing data from http request", "error", err)
-			//TODO: send a JSON response with the error
-			w.WriteHeader(http.StatusInternalServerError)
-			increaseErrorCount("enqueue_failed", currentPath)
-			return
-		}
-
-		//TODO: Maybe send back a JSON with the length of the content read?
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
+		h.ServeHTTP(w, r)
 	}
 }
 
