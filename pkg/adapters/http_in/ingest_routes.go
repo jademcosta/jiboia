@@ -58,7 +58,6 @@ func (handler *ingestionRoute) ServeHTTP(w http.ResponseWriter, r *http.Request)
 
 	if err != nil {
 		handler.l.Warnw("async http request failed", "error", err)
-		//TODO: send a JSON response with the error
 		//TODO: which should be the response in this case?
 		if errors.As(err, &payloadMaxSizeErr) {
 			w.WriteHeader(http.StatusRequestEntityTooLarge)
@@ -73,7 +72,6 @@ func (handler *ingestionRoute) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	if dataLen <= 0 {
 		handler.l.Warn("request without body, ignoring")
 		w.Header().Set("Content-Type", "application/json")
-		//TODO: send a JSON response with the error
 		//TODO: which should be the response in this case?
 		w.WriteHeader(http.StatusBadRequest)
 		increaseErrorCount("request_without_body", currentPath)
@@ -87,10 +85,14 @@ func (handler *ingestionRoute) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		selectDecompressionAlgorithm(handler.validDecompressionAlgorithms, r.Header["Content-Encoding"])
 
 	if decompressAlgorithm != "" {
+
+		token, needToReturnToken := <-handler.decompressionSemaphor
 		data, err = decompress(data, decompressAlgorithm)
+		if needToReturnToken {
+			handler.decompressionSemaphor <- token
+		}
 		if err != nil {
 			handler.l.Warnw("failed to decompress data", "algorithm", decompressAlgorithm, "error", err)
-			//TODO: send a JSON response with the error
 			w.WriteHeader(http.StatusBadRequest)
 			increaseErrorCount("enqueue_failed", currentPath)
 			return
@@ -100,7 +102,6 @@ func (handler *ingestionRoute) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	err = handler.flw.Entrypoint.Enqueue(data)
 	if err != nil {
 		handler.l.Warnw("failed while enqueueing data from http request", "error", err)
-		//TODO: send a JSON response with the error
 		w.WriteHeader(http.StatusInternalServerError)
 		increaseErrorCount("enqueue_failed", currentPath)
 		return

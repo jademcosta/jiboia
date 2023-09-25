@@ -17,6 +17,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/exp/slices"
 )
 
 const version string = "0.0.0"
@@ -34,14 +35,19 @@ func randString(n int) string {
 }
 
 type mockDataFlow struct {
-	calledWith [][]byte
-	mu         sync.Mutex
+	calledWith  [][]byte
+	mu          sync.Mutex
+	enqueueFunc func([]byte) error
 }
 
 func (mockDF *mockDataFlow) Enqueue(data []byte) error {
 	mockDF.mu.Lock()
-	defer mockDF.mu.Unlock()
 	mockDF.calledWith = append(mockDF.calledWith, data)
+	mockDF.mu.Unlock()
+
+	if mockDF.enqueueFunc != nil {
+		return mockDF.enqueueFunc(data)
+	}
 	return nil
 }
 
@@ -592,8 +598,10 @@ func TestDecompressionOnIngestion(t *testing.T) {
 					"status should be Internal Server Ok(200)")
 			}
 
+			df.mu.Lock()
 			assert.Equal(t, expected, df.calledWith,
 				"payloads should be decompressed before being sent to dataflow")
+			df.mu.Unlock()
 		}
 	})
 
@@ -661,6 +669,170 @@ func TestDecompressionOnIngestion(t *testing.T) {
 
 		assert.Equal(t, [][]byte{[]byte(expectedNotCompressed), secondPayloadBytes}, df.calledWith,
 			"only payloads with supported algorithm should be accepted")
+	})
+}
+
+func TestDecompressionOnIngestionConcurrencyLimit(t *testing.T) {
+	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
+	c := config.ApiConfig{Port: 9111}
+
+	t.Run("when the load is smaller than the limit", func(t *testing.T) {
+		algorithm := "snappy"
+
+		df := &mockDataFlow{calledWith: make([][]byte, 0)}
+
+		flws := []flow.Flow{
+			{
+				Name:                        "flow-1",
+				Entrypoint:                  df,
+				DecompressionAlgorithms:     []string{algorithm},
+				DecompressionMaxConcurrency: 10,
+			},
+		}
+
+		api := New(l, c, prometheus.NewRegistry(), version, flws)
+		srvr := httptest.NewServer(api.mux)
+		defer srvr.Close()
+
+		expected := make([][]byte, 0)
+
+		decompressedData1 := strings.Repeat("ab", 90)
+		expected = append(expected, []byte(decompressedData1))
+
+		buf1 := &bytes.Buffer{}
+		writer, err := compressor.NewWriter(&config.Compression{Type: algorithm}, buf1)
+		assert.NoError(t, err, "error on compressor writer creation", err)
+		_, err = writer.Write([]byte(decompressedData1))
+		assert.NoError(t, err, "error on compressing data", err)
+		err = writer.Close()
+		assert.NoError(t, err, "error on compressor Close", err)
+
+		req, err := http.NewRequest(http.MethodPost,
+			fmt.Sprintf("%s/flow-1/async_ingestion", srvr.URL), buf1)
+		assert.NoError(t, err, "error on request creation", err)
+		req.Header.Add("Content-Encoding", algorithm)
+
+		resp, err := http.DefaultClient.Do(req)
+		assert.NoError(t, err, "error on posting data", err)
+		resp.Body.Close()
+		assert.Equal(t, http.StatusOK, resp.StatusCode,
+			"status should be Internal Server Ok(200)")
+
+		decompressedData2 := randString(300)
+		expected = append(expected, []byte(decompressedData2))
+		buf2 := &bytes.Buffer{}
+		writer, err = compressor.NewWriter(&config.Compression{Type: algorithm}, buf2)
+		assert.NoError(t, err, "error on compressor writer creation", err)
+		_, err = writer.Write([]byte(decompressedData2))
+		assert.NoError(t, err, "error on compressing data", err)
+		err = writer.Close()
+		assert.NoError(t, err, "error on compressor Close", err)
+
+		req, err = http.NewRequest(http.MethodPost,
+			fmt.Sprintf("%s/flow-1/async_ingestion", srvr.URL), buf2)
+		assert.NoError(t, err, "error on request creation", err)
+		req.Header.Add("Content-Encoding", algorithm)
+
+		resp, err = http.DefaultClient.Do(req)
+		assert.NoError(t, err, "error on posting data", err)
+		resp.Body.Close()
+		assert.Equal(t, http.StatusOK, resp.StatusCode,
+			"status should be Internal Server Ok(200)")
+
+		assert.Equal(t, expected, df.calledWith, "all data should have been ingested")
+	})
+
+	t.Run("when the load is higher than the limit", func(t *testing.T) {
+		if testing.Short() {
+			t.Skip("skipping slow test")
+		}
+
+		algorithm := "snappy"
+		delayFunc := func(_ []byte) error {
+			time.Sleep(1 * time.Second)
+			return nil
+		}
+
+		var wg sync.WaitGroup
+		df := &mockDataFlow{calledWith: make([][]byte, 0), enqueueFunc: delayFunc}
+		maxConcurrency := 5
+
+		flws := []flow.Flow{
+			{
+				Name:                        "flow-1",
+				Entrypoint:                  df,
+				DecompressionAlgorithms:     []string{algorithm},
+				DecompressionMaxConcurrency: maxConcurrency,
+			},
+		}
+
+		api := New(l, c, prometheus.NewRegistry(), version, flws)
+		srvr := httptest.NewServer(api.mux)
+		defer srvr.Close()
+
+		expected := make([][]byte, 0)
+
+		decompressedData1 := strings.Repeat("ab", 90)
+
+		for i := 0; i < maxConcurrency; i++ {
+			expected = append(expected, []byte(decompressedData1))
+			wg.Add(1)
+
+			go func() {
+				buf1 := &bytes.Buffer{}
+				writer, err := compressor.NewWriter(&config.Compression{Type: algorithm}, buf1)
+				assert.NoError(t, err, "error on compressor writer creation", err)
+				_, err = writer.Write([]byte(decompressedData1))
+				assert.NoError(t, err, "error on compressing data", err)
+				err = writer.Close()
+				assert.NoError(t, err, "error on compressor Close", err)
+
+				req, err := http.NewRequest(http.MethodPost,
+					fmt.Sprintf("%s/flow-1/async_ingestion", srvr.URL), buf1)
+				assert.NoError(t, err, "error on request creation", err)
+				req.Header.Add("Content-Encoding", algorithm)
+
+				resp, err := http.DefaultClient.Do(req)
+				assert.NoError(t, err, "error on posting data", err)
+				resp.Body.Close()
+				assert.Equal(t, http.StatusOK, resp.StatusCode,
+					"status should be Internal Server Ok(200)")
+				wg.Done()
+			}()
+		}
+
+		decompressedData2 := randString(300)
+		expected = append(expected, []byte(decompressedData2))
+		wg.Add(1)
+
+		go func() {
+			buf2 := &bytes.Buffer{}
+			writer, err := compressor.NewWriter(&config.Compression{Type: algorithm}, buf2)
+			assert.NoError(t, err, "error on compressor writer creation", err)
+			_, err = writer.Write([]byte(decompressedData2))
+			assert.NoError(t, err, "error on compressing data", err)
+			err = writer.Close()
+			assert.NoError(t, err, "error on compressor Close", err)
+
+			req, err := http.NewRequest(http.MethodPost,
+				fmt.Sprintf("%s/flow-1/async_ingestion", srvr.URL), buf2)
+			assert.NoError(t, err, "error on request creation", err)
+			req.Header.Add("Content-Encoding", algorithm)
+
+			resp, err := http.DefaultClient.Do(req)
+			assert.NoError(t, err, "error on posting data", err)
+			resp.Body.Close()
+			assert.Equal(t, http.StatusOK, resp.StatusCode,
+				"status should be Internal Server Ok(200)")
+			wg.Done()
+		}()
+
+		wg.Wait()
+
+		df.mu.Lock()
+		assert.Equal(t, slices.Sort(expected), slices.Sort(df.calledWith), "all data should have been ingested")
+		assert.Lenf(t, df.calledWith, maxConcurrency+1, "all data should have been ingested")
+		df.mu.Unlock()
 	})
 }
 
