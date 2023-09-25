@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -17,7 +18,6 @@ import (
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/exp/slices"
 )
 
 const version string = "0.0.0"
@@ -830,10 +830,23 @@ func TestDecompressionOnIngestionConcurrencyLimit(t *testing.T) {
 		wg.Wait()
 
 		df.mu.Lock()
-		assert.Equal(t, slices.Sort(expected), slices.Sort(df.calledWith), "all data should have been ingested")
+		expectedStr := byteslcToStringslc(expected)
+		sort.Strings(expectedStr)
+		resultStr := byteslcToStringslc(df.calledWith)
+		sort.Strings(resultStr)
+		assert.Equal(t, expectedStr,
+			resultStr, "all data should have been ingested")
 		assert.Lenf(t, df.calledWith, maxConcurrency+1, "all data should have been ingested")
 		df.mu.Unlock()
 	})
+}
+
+func byteslcToStringslc(in [][]byte) []string {
+	result := make([]string, 0, len(in))
+	for _, btSlc := range in {
+		result = append(result, string(btSlc))
+	}
+	return result
 }
 
 //TODO: test the graceful shutdown
