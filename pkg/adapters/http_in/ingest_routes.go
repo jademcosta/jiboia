@@ -17,10 +17,36 @@ import (
 var payloadMaxSizeErr *http.MaxBytesError
 
 type ingestionRoute struct {
-	l   *zap.SugaredLogger
-	flw *flow.Flow
-	// decompressionSemaphor        chan struct{}
+	l                            *zap.SugaredLogger
+	flw                          *flow.Flow
+	decompressionSemaphor        chan struct{}
 	validDecompressionAlgorithms map[string]struct{}
+}
+
+func newIngestionRoute(l *zap.SugaredLogger, flw *flow.Flow) *ingestionRoute {
+
+	validDecompressionAlgorithms := make(map[string]struct{})
+	for _, alg := range flw.DecompressionAlgorithms {
+		validDecompressionAlgorithms[alg] = struct{}{}
+	}
+
+	var decompressionSemaphor chan struct{}
+	if flw.DecompressionMaxConcurrency != 0 {
+		decompressionSemaphor = make(chan struct{}, flw.DecompressionMaxConcurrency)
+		for i := 0; i < flw.DecompressionMaxConcurrency; i++ {
+			decompressionSemaphor <- struct{}{}
+		}
+	} else {
+		decompressionSemaphor = make(chan struct{})
+		close(decompressionSemaphor)
+	}
+
+	return &ingestionRoute{
+		l:                            l,
+		flw:                          flw,
+		validDecompressionAlgorithms: validDecompressionAlgorithms,
+		decompressionSemaphor:        decompressionSemaphor,
+	}
 }
 
 func (handler *ingestionRoute) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -83,20 +109,6 @@ func (handler *ingestionRoute) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	//TODO: Maybe send back a JSON with the length of the content read?
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-}
-
-func newIngestionRoute(l *zap.SugaredLogger, flw *flow.Flow) *ingestionRoute {
-
-	validDecompressionAlgorithms := make(map[string]struct{})
-	for _, alg := range flw.DecompressionAlgorithms {
-		validDecompressionAlgorithms[alg] = struct{}{}
-	}
-
-	return &ingestionRoute{
-		l:                            l,
-		flw:                          flw,
-		validDecompressionAlgorithms: validDecompressionAlgorithms,
-	}
 }
 
 func RegisterIngestingRoutes(
