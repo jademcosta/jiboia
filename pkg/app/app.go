@@ -241,13 +241,14 @@ func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 			metricRegistry)
 
 		f := flow.Flow{
-			Name:                    flowConf.Name,
-			ObjStorage:              objStorage,
-			ExternalQueue:           externalQueue,
-			Uploader:                uploader,
-			UploadWorkers:           make([]flow.Runnable, 0, flowConf.MaxConcurrentUploads),
-			Token:                   flowConf.Ingestion.Token,
-			DecompressionAlgorithms: flowConf.Ingestion.DecompressTypes,
+			Name:                        flowConf.Name,
+			ObjStorage:                  objStorage,
+			ExternalQueue:               externalQueue,
+			Uploader:                    uploader,
+			UploadWorkers:               make([]flow.Runnable, 0, flowConf.MaxConcurrentUploads),
+			Token:                       flowConf.Ingestion.Token,
+			DecompressionAlgorithms:     flowConf.Ingestion.Decompression.ActiveDecompressions,
+			DecompressionMaxConcurrency: flowConf.Ingestion.Decompression.MaxConcurrency,
 		}
 
 		hasAccumulatorDeclared := flowConf.Accumulator.SizeInBytes > 0 //TODO: this is something that will need to be improved once config is localized inside packages

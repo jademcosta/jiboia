@@ -77,7 +77,8 @@ flows:
     max_concurrent_uploads: 2
     timeout: 120
     ingestion:
-      decompress_ingested_data: ['gzip', 'snappy']
+      decompress:
+        active: ['gzip', 'snappy']
     accumulator:
       size_in_bytes: 20
       separator: ""

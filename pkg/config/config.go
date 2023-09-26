@@ -64,9 +64,14 @@ type ObjectStorage struct {
 	Config interface{} `yaml:"config"`
 }
 
+type DescompressionConfig struct {
+	ActiveDecompressions []string `yaml:"active"`
+	MaxConcurrency       int      `yaml:"max_concurrency"`
+}
+
 type IngestionConfig struct {
-	Token           string   `yaml:"token"`
-	DecompressTypes []string `yaml:"decompress_ingested_data"`
+	Token         string               `yaml:"token"`
+	Decompression DescompressionConfig `yaml:"decompress"`
 }
 
 func New(confData []byte) (*Config, error) {
@@ -134,12 +139,18 @@ func validateConfig(c *Config) error {
 			}
 		}
 
-		if len(flow.Ingestion.DecompressTypes) > 0 {
-			for _, decompressionType := range flow.Ingestion.DecompressTypes {
+		if len(flow.Ingestion.Decompression.ActiveDecompressions) > 0 {
+			for _, decompressionType := range flow.Ingestion.Decompression.ActiveDecompressions {
 				if !allowed(allowedValues("compression"), decompressionType) {
-					return fmt.Errorf("ingestion.decompress_ingested_data option should be one of %v",
+					return fmt.Errorf("ingestion.decompress.active option should be one of %v",
 						allowedValues("compression"))
 				}
+			}
+		} else {
+			if flow.Ingestion.Decompression.MaxConcurrency != 0 {
+				return fmt.Errorf(
+					"ingestion.decompress.max_concurrency should not be set without setting ingestion.decompress.active (flow %s)",
+					flow.Name)
 			}
 		}
 	}
