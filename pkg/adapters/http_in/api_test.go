@@ -739,7 +739,9 @@ func TestDecompressionOnIngestionConcurrencyLimit(t *testing.T) {
 		assert.Equal(t, http.StatusOK, resp.StatusCode,
 			"status should be Internal Server Ok(200)")
 
+		df.mu.Lock()
 		assert.Equal(t, expected, df.calledWith, "all data should have been ingested")
+		df.mu.Unlock()
 	})
 
 	t.Run("when the load is higher than the limit", func(t *testing.T) {

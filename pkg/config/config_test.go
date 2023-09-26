@@ -25,7 +25,8 @@ func TestDefaultValues(t *testing.T) {
 	assert.Equal(t, 9010, conf.Api.Port, "default for api.port config doesn't match")
 	assert.Equal(t, 500, conf.Flows[0].MaxConcurrentUploads, "default for flow.max_concurrent_uploads config doesn't match")
 	assert.Equal(t, 1, conf.Flows[0].PathPrefixCount, "default value for flow path_prefix_count should be 1")
-	assert.Empty(t, conf.Flows[0].Ingestion.Decompression.ActiveDecompressions, "default flows.ingestion.decompress_ingested_data is empty")
+	assert.Empty(t, conf.Flows[0].Ingestion.Decompression.ActiveDecompressions, "default flows.ingestion.decompress.active is empty")
+	assert.Equal(t, 0, conf.Flows[0].Ingestion.Decompression.MaxConcurrency, "default flows.ingestion.decompress.max_concurrency is zero")
 
 	sizeInBytes, err := conf.Api.PayloadSizeLimitInBytes()
 	assert.Equal(t, 0, sizeInBytes, "default for api.payload_size_limit config doesn't match")
