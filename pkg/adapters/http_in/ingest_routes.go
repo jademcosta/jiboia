@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/jademcosta/jiboia/pkg/adapters/http_in/httpmiddleware"
 	"github.com/jademcosta/jiboia/pkg/compressor"
@@ -87,7 +88,7 @@ func (handler *ingestionRoute) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	if decompressAlgorithm != "" {
 
 		token, needToReturnToken := <-handler.decompressionSemaphor
-		data, err = decompress(data, decompressAlgorithm)
+		data, err = decompress(data, decompressAlgorithm, r.URL.Path)
 		if needToReturnToken {
 			handler.decompressionSemaphor <- token
 		}
@@ -159,7 +160,9 @@ func selectDecompressionAlgorithm(acceptedAlgorithms map[string]struct{}, conten
 	return ""
 }
 
-func decompress(data []byte, algorithm string) ([]byte, error) {
+func decompress(data []byte, algorithm string, pathForMetrics string) ([]byte, error) {
+	increaseDecompressionCount(algorithm)
+	timeStart := time.Now()
 
 	decompressor, err := compressor.NewReader(&config.Compression{Type: algorithm}, bytes.NewReader(data))
 	if err != nil {
@@ -170,6 +173,9 @@ func decompress(data []byte, algorithm string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	elapsedTime := time.Since(timeStart).Seconds()
+	observeDecompressionTime(pathForMetrics, elapsedTime)
 
 	return decompressedData, nil
 }
