@@ -9,6 +9,8 @@ import (
 var ensureMetricRegisteringOnce sync.Once
 var sizeHist *prometheus.HistogramVec
 var reqsErrorCount *prometheus.CounterVec
+var decompressionLatencyHist *prometheus.HistogramVec
+var decompressionCount *prometheus.CounterVec
 
 func initializeMetrics(metricRegistry *prometheus.Registry) {
 
@@ -37,14 +39,43 @@ func initializeMetrics(metricRegistry *prometheus.Registry) {
 			[]string{"error_type", "path"},
 		)
 
-		metricRegistry.MustRegister(sizeHist, reqsErrorCount)
+		decompressionLatencyHist = prometheus.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name:      "decompression_duration_seconds",
+				Subsystem: "http",
+				Namespace: "jiboia",
+				Help:      "The time it took to decompress the incoming payload, in seconds",
+				Buckets:   []float64{0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 15.0, 30.0, 60.0, 120.0},
+			},
+			[]string{"path"},
+		)
+
+		decompressionCount = prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name:      "decompression_total",
+				Subsystem: "http",
+				Namespace: "jiboia",
+				Help:      "Counter for the total decompressions performed, be it successful or not",
+			},
+			[]string{"type"},
+		)
+
+		metricRegistry.MustRegister(sizeHist, reqsErrorCount, decompressionLatencyHist, decompressionCount)
 	})
 }
 
 func increaseErrorCount(errType string, path string) {
-	reqsErrorCount.WithLabelValues(errType, path)
+	reqsErrorCount.WithLabelValues(errType, path).Inc()
 }
 
 func observeSize(path string, size float64) {
 	sizeHist.WithLabelValues(path).Observe(size)
+}
+
+func observeDecompressionTime(path string, elapsedTime float64) {
+	decompressionLatencyHist.WithLabelValues(path).Observe(elapsedTime)
+}
+
+func increaseDecompressionCount(algorithm string) {
+	decompressionCount.WithLabelValues(algorithm).Inc()
 }
