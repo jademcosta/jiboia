@@ -29,11 +29,13 @@ func (midd *loggingMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request)
 
 	midd.next.ServeHTTP(wrapper, r)
 
-	defer midd.l.Infow("HTTP response",
-		"method", r.Method,
-		"path", r.URL.Path,
-		"status", wrapper.statusCode,
-		"size", wrapper.responseSize, //TODO: append the unit on the size
-		"from", r.RemoteAddr,
-		"latency_time", time.Since(timeStart).String())
+	defer func() {
+		midd.l.Infow("HTTP response",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", wrapper.statusCode,
+			"size", wrapper.responseSize, //TODO: append the unit on the size
+			"from", r.RemoteAddr,
+			"latency_time", time.Since(timeStart).String())
+	}()
 }
