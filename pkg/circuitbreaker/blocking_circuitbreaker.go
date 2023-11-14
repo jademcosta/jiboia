@@ -6,39 +6,40 @@ import (
 )
 
 type BlockingCircuitBreaker struct {
-	semaphor chan struct{}
-	mu       sync.Mutex
-	cState   circuitState
+	semaphor         chan struct{}
+	tripped          bool
+	mu               sync.Mutex
+	o11y             *CBObservability
+	failsInARowLimit int
+	failsInARow      int
 }
 
-func NewBlockingCircuitBreaker(o11y *CBObservability) *BlockingCircuitBreaker {
+func NewBlockingCircuitBreaker(o11y *CBObservability, failsInARowLimit int) *BlockingCircuitBreaker {
 	sema := make(chan struct{})
 	defer close(sema)
 
 	return &BlockingCircuitBreaker{
 		semaphor: sema,
-		cState: &circuitClosedState{
-			o11y: o11y,
-		},
+		o11y:     o11y,
 	}
 }
 
 func (cb *BlockingCircuitBreaker) Tripped() bool {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
-	return cb.cState.isCallBlocked()
+	return cb.tripped
 }
 
 func (cb *BlockingCircuitBreaker) Fail() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
-	cb.cState = cb.cState.fail()
+	cb.fail()
 }
 
 func (cb *BlockingCircuitBreaker) Success() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
-	cb.cState = cb.cState.success()
+	cb.success()
 }
 
 func (cb *BlockingCircuitBreaker) CallBlockingWithTimeout(ctx context.Context, f func() error) error {
@@ -57,4 +58,24 @@ func (cb *BlockingCircuitBreaker) CallBlockingWithTimeout(ctx context.Context, f
 	}
 
 	return err
+}
+
+func (cb *BlockingCircuitBreaker) fail() {
+	if cb.tripped {
+		return
+	}
+
+	cb.failsInARow += 1
+	if cb.failsInARow >= cb.failsInARowLimit {
+		cb.tripped = true
+		cb.semaphor = make(chan struct{})
+	}
+}
+
+func (cb *BlockingCircuitBreaker) success() {
+	cb.failsInARow = 0
+	if cb.tripped {
+		defer close(cb.semaphor)
+	}
+	cb.tripped = false
 }
