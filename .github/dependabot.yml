@@ -8,9 +8,14 @@ updates:
   - package-ecosystem: "gomod"
     directory: "/" # Location of package manifests
     schedule:
-      interval: "monthly"
-      
+      interval: "weekly"
+    groups:
+      non_major:
+        update-types:
+          - "minor"
+          - "patch"
+
   - package-ecosystem: "github-actions"
-    directory: "/.github/workflows" 
+    directory: "/.github/workflows"
     schedule:
       interval: "monthly"
