@@ -123,8 +123,8 @@ func (b *BucketAccumulator) append(data []byte) {
 		return
 	}
 
+	b.metrics.incDataInBytesBy(dataLen)
 	receivedDataTooBigForBuffer := dataLen >= b.limitOfBytes
-
 	if receivedDataTooBigForBuffer {
 		b.flush()
 		b.enqueueOnNext(data)
@@ -189,6 +189,8 @@ func (b *BucketAccumulator) dataDropped(data []byte) {
 }
 
 func (b *BucketAccumulator) enqueueOnNext(data []byte) {
+	dataSize := len(data)
+
 	err := b.circBreaker.Call(func() error {
 		return b.next.Enqueue(data)
 	})
@@ -202,6 +204,7 @@ func (b *BucketAccumulator) enqueueOnNext(data []byte) {
 		)
 	}
 
+	b.metrics.incDataOutBytesBy(dataSize)
 	b.metrics.increaseNextCounter()
 }
 
