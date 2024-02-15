@@ -17,7 +17,7 @@ jobs:
     - name: Setup Go
       uses: actions/setup-go@v5
       with:
-        go-version: "1.21.4"
+        go-version: "1.21.7"
         cache: true
     - name: Test
       run: make test
@@ -29,7 +29,7 @@ jobs:
     - name: Setup Go
       uses: actions/setup-go@v5
       with:
-        go-version: "1.21.4"
+        go-version: "1.21.7"
         cache: true
     - name: Lint
       run: make lint
@@ -42,7 +42,7 @@ jobs:
     - name: Setup Go
       uses: actions/setup-go@v5
       with:
-        go-version: "1.21.4"
+        go-version: "1.21.7"
         cache: true
     - name: Local-E2E tests
       env:
