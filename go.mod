@@ -3,14 +3,14 @@ module github.com/jademcosta/jiboia
 go 1.21
 
 require (
-	github.com/aws/aws-sdk-go v1.50.15
-	github.com/go-chi/chi/v5 v5.0.11
-	github.com/klauspost/compress v1.17.6
+	github.com/aws/aws-sdk-go v1.50.25
+	github.com/go-chi/chi/v5 v5.0.12
+	github.com/klauspost/compress v1.17.7
 	github.com/oklog/run v1.1.0
 	github.com/prometheus/client_golang v1.18.0
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.8.4
-	go.uber.org/zap v1.26.0
+	go.uber.org/zap v1.27.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
