@@ -164,7 +164,7 @@ func decompress(data []byte, algorithm string, pathForMetrics string) ([]byte, e
 	increaseDecompressionCount(algorithm)
 	timeStart := time.Now()
 
-	decompressor, err := compressor.NewReader(&config.Compression{Type: algorithm}, bytes.NewReader(data))
+	decompressor, err := compressor.NewReader(&config.CompressionConfig{Type: algorithm}, bytes.NewReader(data))
 	if err != nil {
 		return nil, err
 	}

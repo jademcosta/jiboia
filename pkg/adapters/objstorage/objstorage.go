@@ -19,7 +19,7 @@ type ObjStorageWithMetadata interface {
 	Name() string
 }
 
-func New(l *zap.SugaredLogger, metricRegistry *prometheus.Registry, flowName string, conf *config.ObjectStorage) (ObjStorageWithMetadata, error) {
+func New(l *zap.SugaredLogger, metricRegistry *prometheus.Registry, flowName string, conf *config.ObjectStorageConfig) (ObjStorageWithMetadata, error) {
 
 	var objStorage ObjStorageWithMetadata
 	specificConf, err := yaml.Marshal(conf.Config)

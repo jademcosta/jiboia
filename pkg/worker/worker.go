@@ -33,7 +33,7 @@ type Worker struct {
 	queue                ExternalQueue
 	workVolunteeringChan chan chan *domain.WorkUnit
 	flowName             string
-	compressionConf      config.Compression
+	compressionConf      config.CompressionConfig
 }
 
 func NewWorker(
@@ -43,7 +43,7 @@ func NewWorker(
 	extQueue ExternalQueue,
 	workVolunteeringChan chan chan *domain.WorkUnit,
 	metricRegistry *prometheus.Registry,
-	compressionConf config.Compression) *Worker {
+	compressionConf config.CompressionConfig) *Worker {
 
 	ensureSingleMetricRegistration.Do(func() {
 		workInFlightGauge = prometheus.NewGaugeVec(
@@ -131,7 +131,7 @@ func (w *Worker) work(workU *domain.WorkUnit) {
 	}
 }
 
-func compress(conf config.Compression, data []byte) ([]byte, error) {
+func compress(conf config.CompressionConfig, data []byte) ([]byte, error) {
 	buf := &bytes.Buffer{}
 	compressWorker, err := compressor.NewWriter(&conf, buf)
 	if err != nil {

@@ -428,7 +428,7 @@ func TestIngestionDecompression(t *testing.T) {
 
 	payload := randSeq(100)
 	buf1 := &bytes.Buffer{}
-	writer, err := compressor.NewWriter(&config.Compression{Type: "snappy"}, buf1)
+	writer, err := compressor.NewWriter(&config.CompressionConfig{Type: "snappy"}, buf1)
 	assert.NoError(t, err, "error on compressor writer creation", err)
 	_, err = writer.Write([]byte(payload))
 	assert.NoError(t, err, "error compressing data")
@@ -437,7 +437,7 @@ func TestIngestionDecompression(t *testing.T) {
 
 	highlyCompressRatioPayload := strings.Repeat("ab", 50)
 	buf2 := &bytes.Buffer{}
-	writer, err = compressor.NewWriter(&config.Compression{Type: "gzip"}, buf2)
+	writer, err = compressor.NewWriter(&config.CompressionConfig{Type: "gzip"}, buf2)
 	assert.NoError(t, err, "error on compressor writer creation", err)
 	_, err = writer.Write([]byte(highlyCompressRatioPayload))
 	assert.NoError(t, err, "error compressing data")

@@ -25,55 +25,6 @@ type Config struct {
 	Flows   []FlowConfig `yaml:"flows"`
 }
 
-type LogConfig struct {
-	Level  string `yaml:"level"`
-	Format string `yaml:"format"`
-}
-
-type FlowConfig struct {
-	Name                 string          `yaml:"name"`
-	QueueMaxSize         int             `yaml:"in_memory_queue_max_size"`
-	MaxConcurrentUploads int             `yaml:"max_concurrent_uploads"`
-	PathPrefixCount      int             `yaml:"path_prefix_count"`
-	Ingestion            IngestionConfig `yaml:"ingestion"`
-	Accumulator          Accumulator     `yaml:"accumulator"`
-	ExternalQueue        ExternalQueue   `yaml:"external_queue"`
-	ObjectStorage        ObjectStorage   `yaml:"object_storage"`
-	Compression          Compression     `yaml:"compression"`
-}
-
-type Compression struct {
-	Level string `yaml:"level"`
-	Type  string `yaml:"type"`
-}
-
-type Accumulator struct {
-	SizeInBytes    int               `yaml:"size_in_bytes"`
-	Separator      string            `yaml:"separator"`
-	QueueCapacity  int               `yaml:"queue_capacity"`
-	CircuitBreaker map[string]string `yaml:"circuit_breaker"`
-}
-
-type ExternalQueue struct {
-	Type   string      `yaml:"type"`
-	Config interface{} `yaml:"config"`
-}
-
-type ObjectStorage struct {
-	Type   string      `yaml:"type"`
-	Config interface{} `yaml:"config"`
-}
-
-type DescompressionConfig struct {
-	ActiveDecompressions []string `yaml:"active"`
-	MaxConcurrency       int      `yaml:"max_concurrency"`
-}
-
-type IngestionConfig struct {
-	Token         string               `yaml:"token"`
-	Decompression DescompressionConfig `yaml:"decompress"`
-}
-
 func New(confData []byte) (*Config, error) {
 	c := &Config{
 		Log: LogConfig{

@@ -554,7 +554,7 @@ func TestDecompressionOnIngestion(t *testing.T) {
 				expected = append(expected, []byte(decompressedData1))
 
 				buf1 := &bytes.Buffer{}
-				writer, err := compressor.NewWriter(&config.Compression{Type: algorithm}, buf1)
+				writer, err := compressor.NewWriter(&config.CompressionConfig{Type: algorithm}, buf1)
 				assert.NoError(t, err, "error on compressor writer creation", err)
 				_, err = writer.Write([]byte(decompressedData1))
 				assert.NoError(t, err, "error on compressing data", err)
@@ -577,7 +577,7 @@ func TestDecompressionOnIngestion(t *testing.T) {
 				decompressedData2 := randString(300)
 				expected = append(expected, []byte(decompressedData2))
 				buf2 := &bytes.Buffer{}
-				writer, err = compressor.NewWriter(&config.Compression{Type: algorithm}, buf2)
+				writer, err = compressor.NewWriter(&config.CompressionConfig{Type: algorithm}, buf2)
 				assert.NoError(t, err, "error on compressor writer creation", err)
 				_, err = writer.Write([]byte(decompressedData2))
 				assert.NoError(t, err, "error on compressing data", err)
@@ -624,7 +624,7 @@ func TestDecompressionOnIngestion(t *testing.T) {
 		expectedNotCompressed := randString(100)
 
 		bufExpected := &bytes.Buffer{}
-		writer, err := compressor.NewWriter(&config.Compression{Type: "gzip"}, bufExpected)
+		writer, err := compressor.NewWriter(&config.CompressionConfig{Type: "gzip"}, bufExpected)
 		assert.NoError(t, err, "error on compressor writer creation", err)
 		_, err = writer.Write([]byte(expectedNotCompressed))
 		assert.NoError(t, err, "error on compressing data", err)
@@ -646,7 +646,7 @@ func TestDecompressionOnIngestion(t *testing.T) {
 
 		expectedCompressed := randString(100)
 		bufUnexpected := &bytes.Buffer{}
-		writer, err = compressor.NewWriter(&config.Compression{Type: "snappy"}, bufUnexpected)
+		writer, err = compressor.NewWriter(&config.CompressionConfig{Type: "snappy"}, bufUnexpected)
 		assert.NoError(t, err, "error on compressor writer creation", err)
 		_, err = writer.Write([]byte(expectedCompressed))
 		assert.NoError(t, err, "error on compressing data", err)
@@ -700,7 +700,7 @@ func TestDecompressionOnIngestionConcurrencyLimit(t *testing.T) {
 		expected = append(expected, []byte(decompressedData1))
 
 		buf1 := &bytes.Buffer{}
-		writer, err := compressor.NewWriter(&config.Compression{Type: algorithm}, buf1)
+		writer, err := compressor.NewWriter(&config.CompressionConfig{Type: algorithm}, buf1)
 		assert.NoError(t, err, "error on compressor writer creation", err)
 		_, err = writer.Write([]byte(decompressedData1))
 		assert.NoError(t, err, "error on compressing data", err)
@@ -721,7 +721,7 @@ func TestDecompressionOnIngestionConcurrencyLimit(t *testing.T) {
 		decompressedData2 := randString(300)
 		expected = append(expected, []byte(decompressedData2))
 		buf2 := &bytes.Buffer{}
-		writer, err = compressor.NewWriter(&config.Compression{Type: algorithm}, buf2)
+		writer, err = compressor.NewWriter(&config.CompressionConfig{Type: algorithm}, buf2)
 		assert.NoError(t, err, "error on compressor writer creation", err)
 		_, err = writer.Write([]byte(decompressedData2))
 		assert.NoError(t, err, "error on compressing data", err)
@@ -782,7 +782,7 @@ func TestDecompressionOnIngestionConcurrencyLimit(t *testing.T) {
 
 			go func() {
 				buf1 := &bytes.Buffer{}
-				writer, err := compressor.NewWriter(&config.Compression{Type: algorithm}, buf1)
+				writer, err := compressor.NewWriter(&config.CompressionConfig{Type: algorithm}, buf1)
 				assert.NoError(t, err, "error on compressor writer creation", err)
 				_, err = writer.Write([]byte(decompressedData1))
 				assert.NoError(t, err, "error on compressing data", err)
@@ -809,7 +809,7 @@ func TestDecompressionOnIngestionConcurrencyLimit(t *testing.T) {
 
 		go func() {
 			buf2 := &bytes.Buffer{}
-			writer, err := compressor.NewWriter(&config.Compression{Type: algorithm}, buf2)
+			writer, err := compressor.NewWriter(&config.CompressionConfig{Type: algorithm}, buf2)
 			assert.NoError(t, err, "error on compressor writer creation", err)
 			_, err = writer.Write([]byte(decompressedData2))
 			assert.NoError(t, err, "error on compressing data", err)

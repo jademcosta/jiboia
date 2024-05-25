@@ -19,7 +19,7 @@ import (
 	"go.uber.org/zap"
 )
 
-var noCompressionConf config.Compression = config.Compression{}
+var noCompressionConf config.CompressionConfig = config.CompressionConfig{}
 
 type mockFilePather struct {
 	prefix   string
