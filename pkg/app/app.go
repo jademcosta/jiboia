@@ -186,7 +186,10 @@ func registerDefaultMetrics(registry *prometheus.Registry) {
 	)
 }
 
-func createObjStorage(l *zap.SugaredLogger, c config.ObjectStorageConfig, metricRegistry *prometheus.Registry, flowName string) worker.ObjStorage {
+func createObjStorage(
+	l *zap.SugaredLogger, c config.ObjectStorageConfig, metricRegistry *prometheus.Registry,
+	flowName string,
+) worker.ObjStorage {
 	objStorage, err := objstorage.New(l, metricRegistry, flowName, &c)
 	if err != nil {
 		l.Panicw("error creating object storage", "error", err)
@@ -195,7 +198,10 @@ func createObjStorage(l *zap.SugaredLogger, c config.ObjectStorageConfig, metric
 	return objStorage
 }
 
-func createExternalQueue(l *zap.SugaredLogger, c config.ExternalQueueConfig, metricRegistry *prometheus.Registry, flowName string) worker.ExternalQueue {
+func createExternalQueue(
+	l *zap.SugaredLogger, c config.ExternalQueueConfig, metricRegistry *prometheus.Registry,
+	flowName string,
+) worker.ExternalQueue {
 	externalQueue, err := external_queue.New(l, metricRegistry, flowName, &c)
 	if err != nil {
 		l.Panicw("error creating external queue", "error", err)
@@ -204,11 +210,11 @@ func createExternalQueue(l *zap.SugaredLogger, c config.ExternalQueueConfig, met
 	return externalQueue
 }
 
-func createAccumulator(flowName string, logger *zap.SugaredLogger, c config.AccumulatorConfig, registry *prometheus.Registry, uploader domain.DataFlow) *accumulator.BucketAccumulator {
-	cb, err := circuitbreaker.FromConfig(logger, registry, c.CircuitBreaker, accumulator.COMPONENT_NAME, flowName)
-	if err != nil {
-		logger.Panicw("error on accumulator creation", "error", err)
-	}
+func createAccumulator(
+	flowName string, logger *zap.SugaredLogger, c config.AccumulatorConfig,
+	registry *prometheus.Registry, uploader domain.DataFlow,
+) *accumulator.BucketAccumulator {
+	cb := createCircuitBreaker(flowName, c.CircuitBreaker)
 
 	return accumulator.New(
 		flowName,
@@ -242,15 +248,6 @@ func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 			filepather.New(datetimeprovider.New(), flowConf.PathPrefixCount, flowConf.Compression.Type),
 			metricRegistry)
 
-		flowCB := gobreaker.NewTwoStepCircuitBreaker(gobreaker.Settings{
-			Name:        fmt.Sprintf("%s_ingestion_cb", flowConf.Name),
-			MaxRequests: 1, //FIXME: magic number. This should be extracted into a const
-			Timeout:     flowConf.Ingestion.CircuitBreaker.OpenIntervalAsDuration(),
-			ReadyToTrip: func(counts gobreaker.Counts) bool {
-				return true
-			},
-		})
-
 		f := flow.Flow{
 			Name:                        flowConf.Name,
 			ObjStorage:                  objStorage,
@@ -260,16 +257,20 @@ func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 			Token:                       flowConf.Ingestion.Token,
 			DecompressionAlgorithms:     flowConf.Ingestion.Decompression.ActiveDecompressions,
 			DecompressionMaxConcurrency: flowConf.Ingestion.Decompression.MaxConcurrency,
-			CircuitBreaker:              flowCB,
+			CircuitBreaker:              createTwoStepCircuitBreaker(flowConf.Name, flowConf.Ingestion.CircuitBreaker),
 		}
 
 		hasAccumulatorDeclared := flowConf.Accumulator.SizeInBytes > 0 //TODO: this is something that will need to be improved once config is localized inside packages
 		if hasAccumulatorDeclared {
-			f.Accumulator = createAccumulator(flowConf.Name, localLogger, flowConf.Accumulator, metricRegistry, uploader)
+			f.Accumulator = createAccumulator(flowConf.Name, localLogger, flowConf.Accumulator,
+				metricRegistry, uploader)
 		}
 
 		for i := 0; i < flowConf.MaxConcurrentUploads; i++ {
-			worker := worker.NewWorker(flowConf.Name, localLogger, objStorage, externalQueue, uploader.WorkersReady, metricRegistry, flowConf.Compression)
+			worker := worker.NewWorker(
+				flowConf.Name, localLogger, objStorage, externalQueue, uploader.WorkersReady,
+				metricRegistry, flowConf.Compression,
+			)
 			f.UploadWorkers = append(f.UploadWorkers, worker)
 		}
 
@@ -282,4 +283,40 @@ func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 	}
 
 	return flows
+}
+
+func createTwoStepCircuitBreaker(
+	flowName string, cbConf config.CircuitBreakerConfig,
+) circuitbreaker.TwoStepCircuitBreaker {
+
+	if cbConf.TurnOn {
+		return gobreaker.NewTwoStepCircuitBreaker(gobreaker.Settings{
+			Name:        fmt.Sprintf("%s_ingestion_cb", flowName),
+			MaxRequests: 1, //FIXME: magic number. This should be extracted into a const
+			Timeout:     cbConf.OpenIntervalAsDuration(),
+			ReadyToTrip: func(counts gobreaker.Counts) bool {
+				return true
+			},
+		})
+	}
+
+	return circuitbreaker.NewDummyTwoStepCircuitBreaker()
+}
+
+func createCircuitBreaker(
+	flowName string, cbConf config.CircuitBreakerConfig,
+) circuitbreaker.CircuitBreaker {
+
+	if cbConf.TurnOn {
+		return gobreaker.NewCircuitBreaker(gobreaker.Settings{
+			Name:        fmt.Sprintf("%s_ingestion_cb", flowName),
+			MaxRequests: 1, //FIXME: magic number. This should be extracted into a const
+			Timeout:     cbConf.OpenIntervalAsDuration(),
+			ReadyToTrip: func(counts gobreaker.Counts) bool {
+				return true
+			},
+		})
+	}
+
+	return circuitbreaker.NewDummyCircuitBreaker()
 }

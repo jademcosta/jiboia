@@ -3,6 +3,7 @@ package flow
 import (
 	"context"
 
+	"github.com/jademcosta/jiboia/pkg/circuitbreaker"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/worker"
 )
@@ -16,10 +17,6 @@ type DataFlowRunnable interface {
 	Runnable
 }
 
-type TwoStepCircuitBreaker interface {
-	Allow() (func(bool), error)
-}
-
 type Flow struct {
 	Name                        string
 	ObjStorage                  worker.ObjStorage
@@ -31,5 +28,5 @@ type Flow struct {
 	Token                       string
 	DecompressionAlgorithms     []string
 	DecompressionMaxConcurrency int
-	CircuitBreaker              TwoStepCircuitBreaker
+	CircuitBreaker              circuitbreaker.TwoStepCircuitBreaker
 }

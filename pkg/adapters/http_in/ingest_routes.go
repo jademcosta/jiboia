@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jademcosta/jiboia/pkg/adapters/http_in/httpmiddleware"
+	"github.com/jademcosta/jiboia/pkg/circuitbreaker"
 	"github.com/jademcosta/jiboia/pkg/compressor"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/domain/flow"
@@ -22,7 +23,7 @@ type ingestionRoute struct {
 	flw                          *flow.Flow
 	decompressionSemaphor        chan struct{}
 	validDecompressionAlgorithms map[string]struct{}
-	circuitBreaker               flow.TwoStepCircuitBreaker
+	circuitBreaker               circuitbreaker.TwoStepCircuitBreaker
 }
 
 func newIngestionRoute(l *zap.SugaredLogger, flw *flow.Flow) *ingestionRoute {

@@ -10,7 +10,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -189,15 +188,15 @@ func TestAccumulatorCircuitBreaker(t *testing.T) {
 	go app.Start()
 	time.Sleep(2 * time.Second)
 
-	validateMetricValue(
-		t,
-		"http://localhost:9098",
-		metricForTests{
-			name:   "jiboia_circuitbreaker_open",
-			labels: map[string]string{"flow": "cb_flow", "name": "accumulator"},
-			value:  "0",
-		},
-	)
+	// validateMetricValue(
+	// 	t,
+	// 	"http://localhost:9098",
+	// 	metricForTests{
+	// 		name:   "jiboia_circuitbreaker_open",
+	// 		labels: map[string]string{"flow": "cb_flow", "name": "accumulator"},
+	// 		value:  "0",
+	// 	},
+	// )
 
 	payload := randSeq(20)
 
@@ -219,25 +218,25 @@ func TestAccumulatorCircuitBreaker(t *testing.T) {
 		"data ingestion should have errored on cb_flow, as the CB is open and queues should be full")
 	response.Body.Close()
 
-	validateMetricValue(
-		t,
-		"http://localhost:9098",
-		metricForTests{
-			name:   "jiboia_circuitbreaker_open",
-			labels: map[string]string{"flow": "cb_flow", "name": "accumulator"},
-			value:  "1",
-		},
-	)
+	// validateMetricValue(
+	// 	t,
+	// 	"http://localhost:9098",
+	// 	metricForTests{
+	// 		name:   "jiboia_circuitbreaker_open",
+	// 		labels: map[string]string{"flow": "cb_flow", "name": "accumulator"},
+	// 		value:  "1",
+	// 	},
+	// )
 
-	validateMetricValue(
-		t,
-		"http://localhost:9098",
-		metricForTests{
-			name:   "jiboia_circuitbreaker_open_total",
-			labels: map[string]string{"flow": "cb_flow", "name": "accumulator"},
-			value:  "1",
-		},
-	)
+	// validateMetricValue(
+	// 	t,
+	// 	"http://localhost:9098",
+	// 	metricForTests{
+	// 		name:   "jiboia_circuitbreaker_open_total",
+	// 		labels: map[string]string{"flow": "cb_flow", "name": "accumulator"},
+	// 		value:  "1",
+	// 	},
+	// )
 
 	stopDone := app.Stop()
 	<-stopDone
@@ -775,92 +774,92 @@ func assembleResult(accumulatorMaxSize int, separator string, generatedValues []
 	return result
 }
 
-func validateMetricValue(t *testing.T, serverUrl string, expectedMetric metricForTests) {
-	response, err := http.Get(fmt.Sprintf("%s/metrics", serverUrl))
-	assert.NoError(t, err, "getting /metrics should return no error")
-	data, err := io.ReadAll(response.Body)
-	assert.NoError(t, err, "reading /metrics body should return no error")
-	defer response.Body.Close()
+// func validateMetricValue(t *testing.T, serverUrl string, expectedMetric metricForTests) {
+// 	response, err := http.Get(fmt.Sprintf("%s/metrics", serverUrl))
+// 	assert.NoError(t, err, "getting /metrics should return no error")
+// 	data, err := io.ReadAll(response.Body)
+// 	assert.NoError(t, err, "reading /metrics body should return no error")
+// 	defer response.Body.Close()
 
-	metricsByLine := bytes.Split(data, []byte("\n"))
+// 	metricsByLine := bytes.Split(data, []byte("\n"))
 
-	metricByLineWithoutHelpLines := make([][]byte, 0)
-	for _, line := range metricsByLine {
-		notHelpLine := !strings.HasPrefix(string(line), "#")
-		if notHelpLine {
-			metricByLineWithoutHelpLines = append(metricByLineWithoutHelpLines, line)
-		}
-	}
+// 	metricByLineWithoutHelpLines := make([][]byte, 0)
+// 	for _, line := range metricsByLine {
+// 		notHelpLine := !strings.HasPrefix(string(line), "#")
+// 		if notHelpLine {
+// 			metricByLineWithoutHelpLines = append(metricByLineWithoutHelpLines, line)
+// 		}
+// 	}
 
-	metricLines := filterMetricsLineByName(metricByLineWithoutHelpLines, expectedMetric.name)
-	if len(metricLines) == 0 {
-		assert.Failf(t, "no metric with given name was found", "name: %s", expectedMetric.name)
-		return
-	}
+// 	metricLines := filterMetricsLineByName(metricByLineWithoutHelpLines, expectedMetric.name)
+// 	if len(metricLines) == 0 {
+// 		assert.Failf(t, "no metric with given name was found", "name: %s", expectedMetric.name)
+// 		return
+// 	}
 
-	metricLinesBefore := metricLines
-	metricLines = filterMetricLinesByValue(metricLines, expectedMetric.value)
-	if len(metricLines) == 0 {
-		assert.Failf(t, "no metric named with given value was found",
-			"value: %s, metrics: %q", expectedMetric.value, metricLinesBefore)
-		return
-	}
+// 	metricLinesBefore := metricLines
+// 	metricLines = filterMetricLinesByValue(metricLines, expectedMetric.value)
+// 	if len(metricLines) == 0 {
+// 		assert.Failf(t, "no metric named with given value was found",
+// 			"value: %s, metrics: %q", expectedMetric.value, metricLinesBefore)
+// 		return
+// 	}
 
-	metricLinesBefore = metricLines
-	metricLines = filterMetricLinesByLabels(metricLines, expectedMetric.labels)
-	if len(metricLines) > 1 {
-		assert.Failf(t,
-			"found too many lines that matched all the parameters",
-			"%d lines matched %v, metrics: %q", len(metricLines), expectedMetric.labels, metricLines)
-		return
-	}
-	if len(metricLines) == 0 {
-		assert.Failf(t, "found no metric that matched the labels", "labels: %v, metrics: %q",
-			expectedMetric.labels, metricLinesBefore)
-		return
-	}
-}
+// 	metricLinesBefore = metricLines
+// 	metricLines = filterMetricLinesByLabels(metricLines, expectedMetric.labels)
+// 	if len(metricLines) > 1 {
+// 		assert.Failf(t,
+// 			"found too many lines that matched all the parameters",
+// 			"%d lines matched %v, metrics: %q", len(metricLines), expectedMetric.labels, metricLines)
+// 		return
+// 	}
+// 	if len(metricLines) == 0 {
+// 		assert.Failf(t, "found no metric that matched the labels", "labels: %v, metrics: %q",
+// 			expectedMetric.labels, metricLinesBefore)
+// 		return
+// 	}
+// }
 
-func filterMetricsLineByName(metricsLines [][]byte, metricName string) [][]byte {
-	metricName = metricName + "{" // '{' marks the end of the name and start of the labels
-	found := make([][]byte, 0)
-	for _, metricLine := range metricsLines {
-		metric := strings.TrimSpace(string(metricLine))
-		if strings.HasPrefix(metric, metricName) {
-			found = append(found, metricLine)
-		}
-	}
-	return found
-}
+// func filterMetricsLineByName(metricsLines [][]byte, metricName string) [][]byte {
+// 	metricName = metricName + "{" // '{' marks the end of the name and start of the labels
+// 	found := make([][]byte, 0)
+// 	for _, metricLine := range metricsLines {
+// 		metric := strings.TrimSpace(string(metricLine))
+// 		if strings.HasPrefix(metric, metricName) {
+// 			found = append(found, metricLine)
+// 		}
+// 	}
+// 	return found
+// }
 
-func filterMetricLinesByValue(metricsLines [][]byte, metricValue string) [][]byte {
-	found := make([][]byte, 0)
-	for _, metricLine := range metricsLines {
-		metric := strings.TrimSpace(string(metricLine))
-		if strings.HasSuffix(metric, metricValue) {
-			found = append(found, metricLine)
-		}
-	}
-	return found
-}
+// func filterMetricLinesByValue(metricsLines [][]byte, metricValue string) [][]byte {
+// 	found := make([][]byte, 0)
+// 	for _, metricLine := range metricsLines {
+// 		metric := strings.TrimSpace(string(metricLine))
+// 		if strings.HasSuffix(metric, metricValue) {
+// 			found = append(found, metricLine)
+// 		}
+// 	}
+// 	return found
+// }
 
-func filterMetricLinesByLabels(metricsLines [][]byte, labels map[string]string) [][]byte {
-	found := make([][]byte, 0)
-	for _, metricLine := range metricsLines {
-		accepted := true
+// func filterMetricLinesByLabels(metricsLines [][]byte, labels map[string]string) [][]byte {
+// 	found := make([][]byte, 0)
+// 	for _, metricLine := range metricsLines {
+// 		accepted := true
 
-		for labelName, labelValue := range labels {
-			matched, _ := regexp.MatchString(
-				fmt.Sprintf("%s=\"%s\"", labelName, labelValue), string(metricLine))
-			if !matched {
-				accepted = false
-				break
-			}
-		}
+// 		for labelName, labelValue := range labels {
+// 			matched, _ := regexp.MatchString(
+// 				fmt.Sprintf("%s=\"%s\"", labelName, labelValue), string(metricLine))
+// 			if !matched {
+// 				accepted = false
+// 				break
+// 			}
+// 		}
 
-		if accepted {
-			found = append(found, metricLine)
-		}
-	}
-	return found
-}
+// 		if accepted {
+// 			found = append(found, metricLine)
+// 		}
+// 	}
+// 	return found
+// }

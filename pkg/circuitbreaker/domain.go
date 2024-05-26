@@ -1,14 +1,9 @@
 package circuitbreaker
 
-type CircuitBreaker interface {
-	Call(func() error) error
-	Tripped() bool
-	Fail()
-	Success()
+type TwoStepCircuitBreaker interface {
+	Allow() (func(bool), error)
 }
 
-type circuitState interface {
-	fail() circuitState
-	success() circuitState
-	isCallBlocked() bool
+type CircuitBreaker interface {
+	Execute(func() (interface{}, error)) (interface{}, error)
 }
