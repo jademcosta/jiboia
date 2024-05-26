@@ -6,6 +6,7 @@ type DescompressionConfig struct {
 }
 
 type IngestionConfig struct {
-	Token         string               `yaml:"token"`
-	Decompression DescompressionConfig `yaml:"decompress"`
+	Token          string               `yaml:"token"`
+	Decompression  DescompressionConfig `yaml:"decompress"`
+	CircuitBreaker CircuitBreakerConfig `yaml:"circuit_breaker"`
 }

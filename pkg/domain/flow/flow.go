@@ -16,6 +16,10 @@ type DataFlowRunnable interface {
 	Runnable
 }
 
+type TwoStepCircuitBreaker interface {
+	Allow() (func(bool), error)
+}
+
 type Flow struct {
 	Name                        string
 	ObjStorage                  worker.ObjStorage
@@ -27,4 +31,5 @@ type Flow struct {
 	Token                       string
 	DecompressionAlgorithms     []string
 	DecompressionMaxConcurrency int
+	CircuitBreaker              TwoStepCircuitBreaker
 }

@@ -8,6 +8,7 @@ require (
 	github.com/klauspost/compress v1.17.7
 	github.com/oklog/run v1.1.0
 	github.com/prometheus/client_golang v1.19.0
+	github.com/sony/gobreaker v1.0.0
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.27.0

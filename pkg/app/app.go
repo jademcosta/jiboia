@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -25,6 +26,7 @@ import (
 	"github.com/oklog/run"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
+	"github.com/sony/gobreaker"
 	"go.uber.org/zap"
 )
 
@@ -240,6 +242,15 @@ func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 			filepather.New(datetimeprovider.New(), flowConf.PathPrefixCount, flowConf.Compression.Type),
 			metricRegistry)
 
+		flowCB := gobreaker.NewTwoStepCircuitBreaker(gobreaker.Settings{
+			Name:        fmt.Sprintf("%s_ingestion_cb", flowConf.Name),
+			MaxRequests: 1, //FIXME: magic number. This should be extracted into a const
+			Timeout:     flowConf.Ingestion.CircuitBreaker.OpenIntervalAsDuration(),
+			ReadyToTrip: func(counts gobreaker.Counts) bool {
+				return true
+			},
+		})
+
 		f := flow.Flow{
 			Name:                        flowConf.Name,
 			ObjStorage:                  objStorage,
@@ -249,6 +260,7 @@ func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 			Token:                       flowConf.Ingestion.Token,
 			DecompressionAlgorithms:     flowConf.Ingestion.Decompression.ActiveDecompressions,
 			DecompressionMaxConcurrency: flowConf.Ingestion.Decompression.MaxConcurrency,
+			CircuitBreaker:              flowCB,
 		}
 
 		hasAccumulatorDeclared := flowConf.Accumulator.SizeInBytes > 0 //TODO: this is something that will need to be improved once config is localized inside packages
