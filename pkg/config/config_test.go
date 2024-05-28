@@ -65,6 +65,8 @@ flows:
       size_in_bytes: 2097152
       separator: "_a_"
       queue_capacity: 123
+      circuit_breaker:
+        disable: true
     external_queue:
       type: sqs
       config:
@@ -141,7 +143,7 @@ flows:
 		"should have parsed the correct flow.accumulator.separator")
 	assert.Equal(t, 123, conf.Flows[0].Accumulator.QueueCapacity,
 		"should have parsed the correct flow.accumulator.queue_capacity")
-	assert.Equal(t, false, conf.Flows[0].Accumulator.CircuitBreaker.Disable,
+	assert.Equal(t, true, conf.Flows[0].Accumulator.CircuitBreaker.Disable,
 		"should have parsed the correct flow.accumulator.circuit_breaker.disable")
 	assert.Equal(t, int64(100), conf.Flows[0].Accumulator.CircuitBreaker.OpenInterval,
 		"should have set the default flow.accumulator.circuit_breaker.open_interval_in_ms")
@@ -164,6 +166,10 @@ flows:
 		"should have parsed the correct flow.ingestion.decompress.active (which is empty)")
 	assert.Equal(t, 0, conf.Flows[1].Ingestion.Decompression.MaxConcurrency,
 		"should have parsed the correct flow.ingestion.decompress.max_concurrency")
+	assert.Equal(t, false, conf.Flows[1].Ingestion.CircuitBreaker.Disable,
+		"should have parsed the correct flow.accumulator.circuit_breaker.disable")
+	assert.Equal(t, int64(1234), conf.Flows[1].Ingestion.CircuitBreaker.OpenInterval,
+		"should have set the default flow.accumulator.circuit_breaker.open_interval_in_ms")
 
 	assert.Equal(t, 20, conf.Flows[1].Accumulator.SizeInBytes, "should have parsed the correct flow.accumulator.size_in_bytes")
 	assert.Equal(t, "", conf.Flows[1].Accumulator.Separator, "should have parsed the correct flow.accumulator.separator")

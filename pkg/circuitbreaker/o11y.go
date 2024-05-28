@@ -8,8 +8,13 @@ import (
 	"go.uber.org/zap"
 )
 
-const FLOW_METRIC_KEY string = "flow"
-const NAME_METRIC_KEY string = "name"
+const (
+	FLOW_METRIC_KEY string = "flow"
+	NAME_METRIC_KEY string = "name"
+
+	cbClosed = 0.0
+	cbOpen   = 1.0
+)
 
 var ensureMetricRegisteringOnce sync.Once
 
@@ -22,7 +27,7 @@ type CBObservability struct {
 	log  *zap.SugaredLogger
 }
 
-func NewObservability(
+func NewCBObservability(
 	registry *prometheus.Registry,
 	log *zap.SugaredLogger,
 	name string,
@@ -58,13 +63,13 @@ func NewObservability(
 	}
 }
 
-func (cbO11y *CBObservability) cbClosed() {
-	openCBGauge.WithLabelValues(cbO11y.flow, cbO11y.name).Set(0.0)
+func (cbO11y *CBObservability) SetCBClosed() {
+	openCBGauge.WithLabelValues(cbO11y.flow, cbO11y.name).Set(cbClosed)
 	cbO11y.log.Info("circuitbreaker is closed")
 }
 
-func (cbO11y *CBObservability) cbOpen() {
-	openCBGauge.WithLabelValues(cbO11y.flow, cbO11y.name).Set(1.0)
+func (cbO11y *CBObservability) SetCBOpen() {
+	openCBGauge.WithLabelValues(cbO11y.flow, cbO11y.name).Set(cbOpen)
 	openCBTotal.WithLabelValues(cbO11y.flow, cbO11y.name).Inc()
 	cbO11y.log.Warn("circuitbreaker is open")
 }

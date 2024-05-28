@@ -312,7 +312,7 @@ func createCircuitBreaker(
 	}
 
 	return gobreaker.NewCircuitBreaker(gobreaker.Settings{
-		Name:        fmt.Sprintf("%s_ingestion_cb", flowName),
+		Name:        fmt.Sprintf("%s_accumulator_cb", flowName),
 		MaxRequests: 1, //FIXME: magic number. This should be extracted into a const
 		Timeout:     cbConf.OpenIntervalAsDuration(),
 		ReadyToTrip: func(counts gobreaker.Counts) bool {
