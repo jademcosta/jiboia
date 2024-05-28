@@ -32,11 +32,11 @@ flows:
         # It will avoid the overload of the service, trying to answer requests
         # (as the circuit breaker it is located at the beginning of the request)
         circuit_breaker:
-          # [Optinal] The default is `true`. It is NOT recommended to turn it off, as the
+          # [Optinal] The default is `false`. It is NOT recommended to disable it, as the
           # service can be overloaded with requests and waste of CPU, as the data being
           # ingested will not be enqueued (which will result in am error status code).
-          # Setting it to false will disable the circuit breaker
-          turn_on: true
+          # Setting it to `true` will disable the circuit breaker
+          disable: false
           # [Optinal] Once the circuit breaker is opened (meaning it is not
           # accepting data), how long it will take to try to start allowing to accept calls again.
           # If you set it as zero it will be automatically set to the default, which is 100.
@@ -69,11 +69,11 @@ flows:
       # [Optinal] Configuration for the circuit breaker the accumulator uses to enqueue items for
       # upload
       circuit_breaker:
-        # [Optinal] The default is `true`. It is NOT recommended to turn it off, as the
-          # service can be overloaded with requests and waste of CPU, as the data being
-          # ingested will not be enqueued (which will result in am error status code).
-          # Setting it to false will disable the circuit breaker
-        turn_on: true
+        # [Optinal] The default is `false`. It is NOT recommended to disable it, as the
+        # service can be overloaded with requests and waste of CPU, as the data being
+        # ingested will not be enqueued (which will result in am error status code).
+        # Setting it to `true` will disable the circuit breaker
+        disable: true
         # [Optinal] Once the circuit breaker is opened (meaning it is not
         # accepting calls), how long it will take to try to accept calls again. If you set it as
         # zero it will be automatically set to the default, which is 100.
