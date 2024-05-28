@@ -214,7 +214,7 @@ func createAccumulator(
 	flowName string, logger *zap.SugaredLogger, c config.AccumulatorConfig,
 	registry *prometheus.Registry, uploader domain.DataFlow,
 ) *accumulator.BucketAccumulator {
-	cb := createCircuitBreaker(flowName, c.CircuitBreaker)
+	cb := createCircuitBreaker(registry, logger, flowName, c.CircuitBreaker)
 
 	return accumulator.New(
 		flowName,
@@ -228,8 +228,10 @@ func createAccumulator(
 		registry)
 }
 
-func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
-	confs []config.FlowConfig) []flow.Flow {
+func createFlows(
+	llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
+	confs []config.FlowConfig,
+) []flow.Flow {
 
 	flows := make([]flow.Flow, 0, len(confs))
 
@@ -257,7 +259,7 @@ func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 			Token:                       flowConf.Ingestion.Token,
 			DecompressionAlgorithms:     flowConf.Ingestion.Decompression.ActiveDecompressions,
 			DecompressionMaxConcurrency: flowConf.Ingestion.Decompression.MaxConcurrency,
-			CircuitBreaker:              createTwoStepCircuitBreaker(flowConf.Name, flowConf.Ingestion.CircuitBreaker),
+			CircuitBreaker:              createTwoStepCircuitBreaker(metricRegistry, llog, flowConf.Name, flowConf.Ingestion.CircuitBreaker),
 		}
 
 		hasAccumulatorDeclared := flowConf.Accumulator.SizeInBytes > 0 //TODO: this is something that will need to be improved once config is localized inside packages
@@ -286,37 +288,59 @@ func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 }
 
 func createTwoStepCircuitBreaker(
-	flowName string, cbConf config.CircuitBreakerConfig,
+	registry *prometheus.Registry, logg *zap.SugaredLogger, flowName string,
+	cbConf config.CircuitBreakerConfig,
 ) circuitbreaker.TwoStepCircuitBreaker {
 
 	if cbConf.Disable {
 		return circuitbreaker.NewDummyTwoStepCircuitBreaker()
 	}
 
+	name := fmt.Sprintf("%s_ingestion_cb", flowName)
+	cbO11y := circuitbreaker.NewCBObservability(registry, logg, name, flowName)
+
 	return gobreaker.NewTwoStepCircuitBreaker(gobreaker.Settings{
-		Name:        fmt.Sprintf("%s_ingestion_cb", flowName),
+		Name:        name,
 		MaxRequests: 1, //FIXME: magic number. This should be extracted into a const
 		Timeout:     cbConf.OpenIntervalAsDuration(),
 		ReadyToTrip: func(counts gobreaker.Counts) bool {
 			return true
 		},
+		OnStateChange: func(name string, from, to gobreaker.State) {
+			if to == gobreaker.StateOpen {
+				cbO11y.SetCBOpen()
+			} else {
+				cbO11y.SetCBClosed()
+			}
+		},
 	})
 }
 
 func createCircuitBreaker(
-	flowName string, cbConf config.CircuitBreakerConfig,
+	registry *prometheus.Registry, llog *zap.SugaredLogger, flowName string,
+	cbConf config.CircuitBreakerConfig,
 ) circuitbreaker.CircuitBreaker {
 
 	if cbConf.Disable {
 		return circuitbreaker.NewDummyCircuitBreaker()
 	}
 
+	name := fmt.Sprintf("%s_accumulator_cb", flowName)
+	cbO11y := circuitbreaker.NewCBObservability(registry, llog, name, flowName)
+
 	return gobreaker.NewCircuitBreaker(gobreaker.Settings{
-		Name:        fmt.Sprintf("%s_accumulator_cb", flowName),
+		Name:        name,
 		MaxRequests: 1, //FIXME: magic number. This should be extracted into a const
 		Timeout:     cbConf.OpenIntervalAsDuration(),
 		ReadyToTrip: func(counts gobreaker.Counts) bool {
 			return true
+		},
+		OnStateChange: func(name string, from, to gobreaker.State) {
+			if to == gobreaker.StateOpen {
+				cbO11y.SetCBOpen()
+			} else {
+				cbO11y.SetCBClosed()
+			}
 		},
 	})
 
