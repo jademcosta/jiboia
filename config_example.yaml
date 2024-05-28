@@ -24,8 +24,8 @@ flows:
         # starvation if it receives too many requests at the same time.
         # This is the number of concurrent decompression that can happen.
         # In case more than this number of decompressions are happening,
-        # it will block and enqueue the incoming ingestion requests.
-        # Default is unrestricted concurrency.
+        # it will block and enqueue the incoming decompression requests.
+        # Default is 0 (unrestricted concurrency).
         max_concurrency: 6
         # [Optional] Configuration for the circuit breaker that the ingestion flow uses to send itens
         # either to the accumulator (in case it is used) or to the upload queue.

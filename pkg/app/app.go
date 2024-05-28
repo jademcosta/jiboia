@@ -289,34 +289,35 @@ func createTwoStepCircuitBreaker(
 	flowName string, cbConf config.CircuitBreakerConfig,
 ) circuitbreaker.TwoStepCircuitBreaker {
 
-	if cbConf.TurnOn {
-		return gobreaker.NewTwoStepCircuitBreaker(gobreaker.Settings{
-			Name:        fmt.Sprintf("%s_ingestion_cb", flowName),
-			MaxRequests: 1, //FIXME: magic number. This should be extracted into a const
-			Timeout:     cbConf.OpenIntervalAsDuration(),
-			ReadyToTrip: func(counts gobreaker.Counts) bool {
-				return true
-			},
-		})
+	if cbConf.Disable {
+		return circuitbreaker.NewDummyTwoStepCircuitBreaker()
 	}
 
-	return circuitbreaker.NewDummyTwoStepCircuitBreaker()
+	return gobreaker.NewTwoStepCircuitBreaker(gobreaker.Settings{
+		Name:        fmt.Sprintf("%s_ingestion_cb", flowName),
+		MaxRequests: 1, //FIXME: magic number. This should be extracted into a const
+		Timeout:     cbConf.OpenIntervalAsDuration(),
+		ReadyToTrip: func(counts gobreaker.Counts) bool {
+			return true
+		},
+	})
 }
 
 func createCircuitBreaker(
 	flowName string, cbConf config.CircuitBreakerConfig,
 ) circuitbreaker.CircuitBreaker {
 
-	if cbConf.TurnOn {
-		return gobreaker.NewCircuitBreaker(gobreaker.Settings{
-			Name:        fmt.Sprintf("%s_ingestion_cb", flowName),
-			MaxRequests: 1, //FIXME: magic number. This should be extracted into a const
-			Timeout:     cbConf.OpenIntervalAsDuration(),
-			ReadyToTrip: func(counts gobreaker.Counts) bool {
-				return true
-			},
-		})
+	if cbConf.Disable {
+		return circuitbreaker.NewDummyCircuitBreaker()
 	}
 
-	return circuitbreaker.NewDummyCircuitBreaker()
+	return gobreaker.NewCircuitBreaker(gobreaker.Settings{
+		Name:        fmt.Sprintf("%s_ingestion_cb", flowName),
+		MaxRequests: 1, //FIXME: magic number. This should be extracted into a const
+		Timeout:     cbConf.OpenIntervalAsDuration(),
+		ReadyToTrip: func(counts gobreaker.Counts) bool {
+			return true
+		},
+	})
+
 }

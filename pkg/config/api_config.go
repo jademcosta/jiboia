@@ -16,6 +16,19 @@ type ApiConfig struct {
 	PayloadSizeLimit string `yaml:"payload_size_limit"`
 }
 
+func (apiConf ApiConfig) fillDefaults() ApiConfig {
+	return apiConf
+}
+
+func (apiConf ApiConfig) validate() error {
+
+	err := apiConf.validateSizeLimit()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (apiconf ApiConfig) PayloadSizeLimitInBytes() (int, error) {
 	if apiconf.PayloadSizeLimit == "" {
 		return 0, nil
