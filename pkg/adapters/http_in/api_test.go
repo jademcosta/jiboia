@@ -17,6 +17,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/domain/flow"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/sony/gobreaker"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -77,12 +78,14 @@ func TestPassesDataFlows(t *testing.T) {
 
 	flws := []flow.Flow{
 		{
-			Name:       "flow-1",
-			Entrypoint: mockDF,
+			Name:           "flow-1",
+			Entrypoint:     mockDF,
+			CircuitBreaker: createCircuitBreaker("flow-1", 10*time.Millisecond),
 		},
 		{
-			Name:       "flow2",
-			Entrypoint: mockDF2,
+			Name:           "flow2",
+			Entrypoint:     mockDF2,
+			CircuitBreaker: createCircuitBreaker("flow2", 10*time.Millisecond),
 		},
 	}
 
@@ -127,8 +130,9 @@ func TestAnswersAnErrorIfNoBodyIsSent(t *testing.T) {
 
 	flws := []flow.Flow{
 		{
-			Name:       "flow-1",
-			Entrypoint: mockDF,
+			Name:           "flow-1",
+			Entrypoint:     mockDF,
+			CircuitBreaker: createCircuitBreaker("flow-1", 10*time.Millisecond),
 		},
 	}
 
@@ -152,8 +156,9 @@ func TestAnswersErrorIfEnqueueingFails(t *testing.T) {
 
 	flws := []flow.Flow{
 		{
-			Name:       "flow-1",
-			Entrypoint: mockDF,
+			Name:           "flow-1",
+			Entrypoint:     mockDF,
+			CircuitBreaker: createCircuitBreaker("flow-1", 10*time.Millisecond),
 		},
 	}
 
@@ -176,8 +181,9 @@ func TestPanicResultInStatus500(t *testing.T) {
 
 	flws := []flow.Flow{
 		{
-			Name:       "flow-1",
-			Entrypoint: brokenDF,
+			Name:           "flow-1",
+			Entrypoint:     brokenDF,
+			CircuitBreaker: createCircuitBreaker("flow-1", 10*time.Millisecond),
 		},
 	}
 	api := New(l, c, prometheus.NewRegistry(), version, flws)
@@ -200,8 +206,9 @@ func TestPayloadSizeLimit(t *testing.T) {
 
 	flws := []flow.Flow{
 		{
-			Name:       "flow-1",
-			Entrypoint: df,
+			Name:           "flow-1",
+			Entrypoint:     df,
+			CircuitBreaker: createCircuitBreaker("flow-1", 10*time.Millisecond),
 		},
 	}
 
@@ -259,18 +266,21 @@ func TestApiToken(t *testing.T) {
 
 	flws := []flow.Flow{
 		{
-			Name:       "flow-1",
-			Entrypoint: mockDF,
-			Token:      token,
+			Name:           "flow-1",
+			Entrypoint:     mockDF,
+			Token:          token,
+			CircuitBreaker: createCircuitBreaker("flow-1", 10*time.Millisecond),
 		},
 		{
-			Name:       "flow-2",
-			Entrypoint: mockDF2,
+			Name:           "flow-2",
+			Entrypoint:     mockDF2,
+			CircuitBreaker: createCircuitBreaker("flow-2", 10*time.Millisecond),
 		},
 		{
-			Name:       "flow-3",
-			Entrypoint: mockDF3,
-			Token:      token3,
+			Name:           "flow-3",
+			Entrypoint:     mockDF3,
+			Token:          token3,
+			CircuitBreaker: createCircuitBreaker("flow-3", 10*time.Millisecond),
 		},
 	}
 
@@ -491,8 +501,9 @@ func TestVersionEndpointInformsTheVersion(t *testing.T) {
 
 	flws := []flow.Flow{
 		{
-			Name:       "flow-1",
-			Entrypoint: mockDF,
+			Name:           "flow-1",
+			Entrypoint:     mockDF,
+			CircuitBreaker: createCircuitBreaker("flow-1", 10*time.Millisecond),
 		},
 	}
 
@@ -539,6 +550,7 @@ func TestDecompressionOnIngestion(t *testing.T) {
 					Name:                    "flow-1",
 					Entrypoint:              df,
 					DecompressionAlgorithms: tc.algorithms,
+					CircuitBreaker:          createCircuitBreaker("flow-1", 10*time.Millisecond),
 				},
 			}
 
@@ -554,7 +566,7 @@ func TestDecompressionOnIngestion(t *testing.T) {
 				expected = append(expected, []byte(decompressedData1))
 
 				buf1 := &bytes.Buffer{}
-				writer, err := compressor.NewWriter(&config.Compression{Type: algorithm}, buf1)
+				writer, err := compressor.NewWriter(&config.CompressionConfig{Type: algorithm}, buf1)
 				assert.NoError(t, err, "error on compressor writer creation", err)
 				_, err = writer.Write([]byte(decompressedData1))
 				assert.NoError(t, err, "error on compressing data", err)
@@ -577,7 +589,7 @@ func TestDecompressionOnIngestion(t *testing.T) {
 				decompressedData2 := randString(300)
 				expected = append(expected, []byte(decompressedData2))
 				buf2 := &bytes.Buffer{}
-				writer, err = compressor.NewWriter(&config.Compression{Type: algorithm}, buf2)
+				writer, err = compressor.NewWriter(&config.CompressionConfig{Type: algorithm}, buf2)
 				assert.NoError(t, err, "error on compressor writer creation", err)
 				_, err = writer.Write([]byte(decompressedData2))
 				assert.NoError(t, err, "error on compressing data", err)
@@ -614,6 +626,7 @@ func TestDecompressionOnIngestion(t *testing.T) {
 				Name:                    "flow-1",
 				Entrypoint:              df,
 				DecompressionAlgorithms: []string{"gzip"},
+				CircuitBreaker:          createCircuitBreaker("flow-1", 10*time.Millisecond),
 			},
 		}
 
@@ -624,7 +637,7 @@ func TestDecompressionOnIngestion(t *testing.T) {
 		expectedNotCompressed := randString(100)
 
 		bufExpected := &bytes.Buffer{}
-		writer, err := compressor.NewWriter(&config.Compression{Type: "gzip"}, bufExpected)
+		writer, err := compressor.NewWriter(&config.CompressionConfig{Type: "gzip"}, bufExpected)
 		assert.NoError(t, err, "error on compressor writer creation", err)
 		_, err = writer.Write([]byte(expectedNotCompressed))
 		assert.NoError(t, err, "error on compressing data", err)
@@ -646,7 +659,7 @@ func TestDecompressionOnIngestion(t *testing.T) {
 
 		expectedCompressed := randString(100)
 		bufUnexpected := &bytes.Buffer{}
-		writer, err = compressor.NewWriter(&config.Compression{Type: "snappy"}, bufUnexpected)
+		writer, err = compressor.NewWriter(&config.CompressionConfig{Type: "snappy"}, bufUnexpected)
 		assert.NoError(t, err, "error on compressor writer creation", err)
 		_, err = writer.Write([]byte(expectedCompressed))
 		assert.NoError(t, err, "error on compressing data", err)
@@ -687,6 +700,7 @@ func TestDecompressionOnIngestionConcurrencyLimit(t *testing.T) {
 				Entrypoint:                  df,
 				DecompressionAlgorithms:     []string{algorithm},
 				DecompressionMaxConcurrency: 10,
+				CircuitBreaker:              createCircuitBreaker("flow-1", 10*time.Millisecond),
 			},
 		}
 
@@ -700,7 +714,7 @@ func TestDecompressionOnIngestionConcurrencyLimit(t *testing.T) {
 		expected = append(expected, []byte(decompressedData1))
 
 		buf1 := &bytes.Buffer{}
-		writer, err := compressor.NewWriter(&config.Compression{Type: algorithm}, buf1)
+		writer, err := compressor.NewWriter(&config.CompressionConfig{Type: algorithm}, buf1)
 		assert.NoError(t, err, "error on compressor writer creation", err)
 		_, err = writer.Write([]byte(decompressedData1))
 		assert.NoError(t, err, "error on compressing data", err)
@@ -721,7 +735,7 @@ func TestDecompressionOnIngestionConcurrencyLimit(t *testing.T) {
 		decompressedData2 := randString(300)
 		expected = append(expected, []byte(decompressedData2))
 		buf2 := &bytes.Buffer{}
-		writer, err = compressor.NewWriter(&config.Compression{Type: algorithm}, buf2)
+		writer, err = compressor.NewWriter(&config.CompressionConfig{Type: algorithm}, buf2)
 		assert.NoError(t, err, "error on compressor writer creation", err)
 		_, err = writer.Write([]byte(decompressedData2))
 		assert.NoError(t, err, "error on compressing data", err)
@@ -765,6 +779,7 @@ func TestDecompressionOnIngestionConcurrencyLimit(t *testing.T) {
 				Entrypoint:                  df,
 				DecompressionAlgorithms:     []string{algorithm},
 				DecompressionMaxConcurrency: maxConcurrency,
+				CircuitBreaker:              createCircuitBreaker("flow-1", 10*time.Millisecond),
 			},
 		}
 
@@ -782,7 +797,7 @@ func TestDecompressionOnIngestionConcurrencyLimit(t *testing.T) {
 
 			go func() {
 				buf1 := &bytes.Buffer{}
-				writer, err := compressor.NewWriter(&config.Compression{Type: algorithm}, buf1)
+				writer, err := compressor.NewWriter(&config.CompressionConfig{Type: algorithm}, buf1)
 				assert.NoError(t, err, "error on compressor writer creation", err)
 				_, err = writer.Write([]byte(decompressedData1))
 				assert.NoError(t, err, "error on compressing data", err)
@@ -809,7 +824,7 @@ func TestDecompressionOnIngestionConcurrencyLimit(t *testing.T) {
 
 		go func() {
 			buf2 := &bytes.Buffer{}
-			writer, err := compressor.NewWriter(&config.Compression{Type: algorithm}, buf2)
+			writer, err := compressor.NewWriter(&config.CompressionConfig{Type: algorithm}, buf2)
 			assert.NoError(t, err, "error on compressor writer creation", err)
 			_, err = writer.Write([]byte(decompressedData2))
 			assert.NoError(t, err, "error on compressing data", err)
@@ -851,5 +866,15 @@ func byteslcToStringslc(in [][]byte) []string {
 	return result
 }
 
+func createCircuitBreaker(name string, timeout time.Duration) *gobreaker.TwoStepCircuitBreaker {
+	return gobreaker.NewTwoStepCircuitBreaker(gobreaker.Settings{
+		Name:        fmt.Sprintf("%s_ingestion_cb_TEST", name),
+		MaxRequests: 1,
+		Timeout:     timeout,
+		ReadyToTrip: func(counts gobreaker.Counts) bool {
+			return true
+		},
+	})
+}
+
 //TODO: test the graceful shutdown
-//TODO: add tests for metrics serving

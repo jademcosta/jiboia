@@ -3,6 +3,7 @@ package flow
 import (
 	"context"
 
+	"github.com/jademcosta/jiboia/pkg/circuitbreaker"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/worker"
 )
@@ -27,4 +28,5 @@ type Flow struct {
 	Token                       string
 	DecompressionAlgorithms     []string
 	DecompressionMaxConcurrency int
+	CircuitBreaker              circuitbreaker.TwoStepCircuitBreaker
 }

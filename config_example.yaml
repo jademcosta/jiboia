@@ -24,9 +24,23 @@ flows:
         # starvation if it receives too many requests at the same time.
         # This is the number of concurrent decompression that can happen.
         # In case more than this number of decompressions are happening,
-        # it will block and enqueue the incoming ingestion requests.
-        # Default is unrestricted concurrency.
+        # it will block and enqueue the incoming decompression requests.
+        # Default is 0 (unrestricted concurrency).
         max_concurrency: 6
+        # [Optional] Configuration for the circuit breaker that the ingestion flow uses to send itens
+        # either to the accumulator (in case it is used) or to the upload queue.
+        # It will avoid the overload of the service, trying to answer requests
+        # (as the circuit breaker it is located at the beginning of the request)
+        circuit_breaker:
+          # [Optinal] The default is `false`. It is NOT recommended to disable it, as the
+          # service can be overloaded with requests and waste of CPU, as the data being
+          # ingested will not be enqueued (which will result in am error status code).
+          # Setting it to `true` will disable the circuit breaker
+          disable: false
+          # [Optinal] Once the circuit breaker is opened (meaning it is not
+          # accepting data), how long it will take to try to start allowing to accept calls again.
+          # If you set it as zero it will be automatically set to the default, which is 100.
+          open_interval_in_ms: 100
     # The amount of items in memory, waiting to be sent to storage. If this queue is full,
     # data starts to be dropped (lost)
     in_memory_queue_max_size: 1000
@@ -42,27 +56,31 @@ flows:
       type: "gzip"
       # Higher numbers mean more speed and less compression
       level: "3"
-    # Optional. This component merges data into memory until a user defined limit, and then sends
-    # it forward to be uploaded into S3
+    # [Optional] This component merges data into memory until a user defined limit, and then sends
+    # it forward to be uploaded into object storage. You may use it to have bigger chunks of data.
     accumulator:
-      # The size it will accumulate in memory before sending the merge data to be uploaded
+      # The size it will accumulate in memory before sending the merged data to be uploaded
       size_in_bytes: 2097152 # 2MB
       # [Optional] The separator it will use to merge the chuncks of data
       separator: "__n__"
       # The internal queue of this component. This serves as a buffer for data yet to be merged.
       # The minimum allowed is 2 (which is a bad number, you should give it at least some room to work)
       queue_capacity: 11
-      # This doesn't need to be declared. If not declared, it will have a open_interval_in_ms of 100
+      # [Optinal] Configuration for the circuit breaker the accumulator uses to enqueue items for
+      # upload
       circuit_breaker:
-        # In case the below line is false, no circuit breaker will be used and other propoertis of
-        # this "circuit_breaker" will be ignored.
-        turn_on: true
-        # This is the time it takes for, once the circuit breaker is opened (meaning it is not
+        # [Optinal] The default is `false`. It is NOT recommended to disable it, as the
+        # service can be overloaded with requests and waste of CPU, as the data being
+        # ingested will not be enqueued (which will result in am error status code).
+        # Setting it to `true` will disable the circuit breaker
+        disable: true
+        # [Optinal] Once the circuit breaker is opened (meaning it is not
         # accepting calls), how long it will take to try to accept calls again. If you set it as
-        # zero it will be automatically set to 100.
+        # zero it will be automatically set to the default, which is 100.
         open_interval_in_ms: 100
     external_queue:
-      # Available values: noop, sqs. noop is for when you don't want to use any queue.
+      # Available values: noop, sqs. `noop` is for when you don't want to use any queue
+      # (maybe because you just want to upload data into object storage)
       type: sqs
       config:
         url: "queue-url"

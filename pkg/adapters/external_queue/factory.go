@@ -18,7 +18,7 @@ type ExtQueueWithMetadata interface {
 	Name() string
 }
 
-func New(l *zap.SugaredLogger, metricRegistry *prometheus.Registry, flowName string, conf *config.ExternalQueue) (ExtQueueWithMetadata, error) {
+func New(l *zap.SugaredLogger, metricRegistry *prometheus.Registry, flowName string, conf *config.ExternalQueueConfig) (ExtQueueWithMetadata, error) {
 
 	var externalQueue ExtQueueWithMetadata
 	specificConf, err := yaml.Marshal(conf.Config)

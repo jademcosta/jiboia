@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"strings"
 
 	"gopkg.in/yaml.v2"
 )
@@ -25,55 +24,6 @@ type Config struct {
 	Flows   []FlowConfig `yaml:"flows"`
 }
 
-type LogConfig struct {
-	Level  string `yaml:"level"`
-	Format string `yaml:"format"`
-}
-
-type FlowConfig struct {
-	Name                 string          `yaml:"name"`
-	QueueMaxSize         int             `yaml:"in_memory_queue_max_size"`
-	MaxConcurrentUploads int             `yaml:"max_concurrent_uploads"`
-	PathPrefixCount      int             `yaml:"path_prefix_count"`
-	Ingestion            IngestionConfig `yaml:"ingestion"`
-	Accumulator          Accumulator     `yaml:"accumulator"`
-	ExternalQueue        ExternalQueue   `yaml:"external_queue"`
-	ObjectStorage        ObjectStorage   `yaml:"object_storage"`
-	Compression          Compression     `yaml:"compression"`
-}
-
-type Compression struct {
-	Level string `yaml:"level"`
-	Type  string `yaml:"type"`
-}
-
-type Accumulator struct {
-	SizeInBytes    int               `yaml:"size_in_bytes"`
-	Separator      string            `yaml:"separator"`
-	QueueCapacity  int               `yaml:"queue_capacity"`
-	CircuitBreaker map[string]string `yaml:"circuit_breaker"`
-}
-
-type ExternalQueue struct {
-	Type   string      `yaml:"type"`
-	Config interface{} `yaml:"config"`
-}
-
-type ObjectStorage struct {
-	Type   string      `yaml:"type"`
-	Config interface{} `yaml:"config"`
-}
-
-type DescompressionConfig struct {
-	ActiveDecompressions []string `yaml:"active"`
-	MaxConcurrency       int      `yaml:"max_concurrency"`
-}
-
-type IngestionConfig struct {
-	Token         string               `yaml:"token"`
-	Decompression DescompressionConfig `yaml:"decompress"`
-}
-
 func New(confData []byte) (*Config, error) {
 	c := &Config{
 		Log: LogConfig{
@@ -91,20 +41,16 @@ func New(confData []byte) (*Config, error) {
 		return nil, err
 	}
 
-	err = validateConfig(c)
+	c.fillDefaultValues()
+
+	err = c.validate()
 	if err != nil {
 		return nil, err
 	}
-
-	fillFlowsDefaultValues(c)
 	return c, nil
 }
 
-func validateConfig(c *Config) error {
-
-	if !allowed(allowedValues("log.level"), c.Log.Level) {
-		return fmt.Errorf("log level should be one of %v", allowedValues("log.level"))
-	}
+func (c *Config) validate() error {
 
 	if len(c.Flows) <= 0 {
 		return fmt.Errorf("at least one flow should be declared")
@@ -112,50 +58,24 @@ func validateConfig(c *Config) error {
 
 	flowNamesSet := make(map[string]struct{})
 	for _, flow := range c.Flows {
-		if flow.Name == "" {
-			return fmt.Errorf("all flows must have a name")
-		}
-
-		flowNameContainsSpace := strings.Contains(flow.Name, " ")
-		if flowNameContainsSpace {
-			return fmt.Errorf("flow name must not have spaces")
-		}
 
 		if _, exists := flowNamesSet[flow.Name]; exists {
 			return fmt.Errorf("flow names must be unique")
 		}
-
 		flowNamesSet[flow.Name] = struct{}{}
 
-		if flow.Compression.Type != "" {
-			if !allowed(allowedValues("compression"), flow.Compression.Type) {
-				return fmt.Errorf("compression type should be one of %v", allowedValues("compression"))
-			}
-
-			if flow.Compression.Level != "" {
-				if !allowed(allowedValues("compression.level"), flow.Compression.Level) {
-					return fmt.Errorf("compression level should be one of %v", allowedValues("compression.level"))
-				}
-			}
-		}
-
-		if len(flow.Ingestion.Decompression.ActiveDecompressions) > 0 {
-			for _, decompressionType := range flow.Ingestion.Decompression.ActiveDecompressions {
-				if !allowed(allowedValues("compression"), decompressionType) {
-					return fmt.Errorf("ingestion.decompress.active option should be one of %v",
-						allowedValues("compression"))
-				}
-			}
-		} else {
-			if flow.Ingestion.Decompression.MaxConcurrency != 0 {
-				return fmt.Errorf(
-					"ingestion.decompress.max_concurrency should not be set without setting ingestion.decompress.active (flow %s)",
-					flow.Name)
-			}
+		err := flow.validate()
+		if err != nil {
+			return err
 		}
 	}
 
-	err := c.Api.validateSizeLimit()
+	err := c.Api.validate()
+	if err != nil {
+		return err
+	}
+
+	err = c.Log.validate()
 	if err != nil {
 		return err
 	}
@@ -176,15 +96,12 @@ func allowedValues(key string) []string {
 	return allowedVals[key]
 }
 
-func fillFlowsDefaultValues(c *Config) {
+func (c *Config) fillDefaultValues() {
+
+	c.Log = c.Log.fillDefaults()
+	c.Api = c.Api.fillDefaults()
 
 	for idx, flow := range c.Flows {
-		if flow.MaxConcurrentUploads <= 0 {
-			c.Flows[idx].MaxConcurrentUploads = 500
-		}
-
-		if flow.PathPrefixCount <= 0 {
-			c.Flows[idx].PathPrefixCount = 1
-		}
+		c.Flows[idx] = flow.fillDefaultValues()
 	}
 }

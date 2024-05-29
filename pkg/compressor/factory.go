@@ -32,7 +32,7 @@ type CompressorWriter interface {
 }
 
 func NewReader(
-	conf *config.Compression,
+	conf *config.CompressionConfig,
 	reader io.Reader,
 ) (CompressorReader, error) {
 
@@ -64,7 +64,7 @@ func NewReader(
 }
 
 func NewWriter(
-	conf *config.Compression,
+	conf *config.CompressionConfig,
 	writer io.Writer,
 ) (CompressorWriter, error) {
 

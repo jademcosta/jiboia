@@ -23,10 +23,18 @@ func TestDefaultValues(t *testing.T) {
 	assert.Equal(t, "json", conf.Log.Format, "default for log.format config doesn't match")
 	assert.Equal(t, "info", conf.Log.Level, "default for log.level config doesn't match")
 	assert.Equal(t, 9010, conf.Api.Port, "default for api.port config doesn't match")
-	assert.Equal(t, 500, conf.Flows[0].MaxConcurrentUploads, "default for flow.max_concurrent_uploads config doesn't match")
-	assert.Equal(t, 1, conf.Flows[0].PathPrefixCount, "default value for flow path_prefix_count should be 1")
-	assert.Empty(t, conf.Flows[0].Ingestion.Decompression.ActiveDecompressions, "default flows.ingestion.decompress.active is empty")
-	assert.Equal(t, 0, conf.Flows[0].Ingestion.Decompression.MaxConcurrency, "default flows.ingestion.decompress.max_concurrency is zero")
+	assert.Equal(t, 500, conf.Flows[0].MaxConcurrentUploads,
+		"default for flow.max_concurrent_uploads config doesn't match")
+	assert.Equal(t, 1, conf.Flows[0].PathPrefixCount,
+		"default value for flow path_prefix_count should be 1")
+	assert.Empty(t, conf.Flows[0].Ingestion.Decompression.ActiveDecompressions,
+		"default flows.ingestion.decompress.active is empty")
+	assert.Equal(t, 0, conf.Flows[0].Ingestion.Decompression.MaxConcurrency,
+		"default flows.ingestion.decompress.max_concurrency is zero")
+	assert.Equal(t, false, conf.Flows[0].Ingestion.CircuitBreaker.Disable,
+		"default flows.ingestion.circuit_breaker.disable is false")
+	assert.Equal(t, int64(100), conf.Flows[0].Ingestion.CircuitBreaker.OpenInterval,
+		"default flows.ingestion.circuit_breaker.open_iterval is 100")
 
 	sizeInBytes, err := conf.Api.PayloadSizeLimitInBytes()
 	assert.Equal(t, 0, sizeInBytes, "default for api.payload_size_limit config doesn't match")
@@ -37,7 +45,7 @@ func TestConfigParsing(t *testing.T) {
 	configYaml := `
 log:
   level: warn
-  format: yaml
+  format: json
 
 api:
   port: 9099
@@ -58,6 +66,7 @@ flows:
       separator: "_a_"
       queue_capacity: 123
       circuit_breaker:
+        disable: true
     external_queue:
       type: sqs
       config:
@@ -77,6 +86,9 @@ flows:
     in_memory_queue_max_size: 11
     max_concurrent_uploads: 1
     path_prefix_count: 1
+    ingestion:
+      circuit_breaker:
+        open_interval_in_ms: 1234
     compression:
       type: gzip
       level: 2
@@ -85,7 +97,6 @@ flows:
       separator: ""
       queue_capacity: 13
       circuit_breaker:
-        turn_on: true
         open_interval_in_ms: 12345
     external_queue:
       type: noop
@@ -101,7 +112,7 @@ flows:
 	}
 
 	assert.Equal(t, "warn", conf.Log.Level, "should have parsed the correct log.level")
-	assert.Equal(t, "yaml", conf.Log.Format, "should have parsed the correct log.format") // TODO: allow other formats
+	assert.Equal(t, "json", conf.Log.Format, "should have parsed the correct log.format")
 
 	assert.Equal(t, 9099, conf.Api.Port, "should have parsed the correct api.port")
 
@@ -121,11 +132,21 @@ flows:
 		"should have parsed the correct flow.ingestion.decompress.active")
 	assert.Equal(t, 90, conf.Flows[0].Ingestion.Decompression.MaxConcurrency,
 		"should have parsed the correct flow.ingestion.decompress.max_concurrency")
+	assert.Equal(t, int64(100), conf.Flows[0].Ingestion.CircuitBreaker.OpenInterval,
+		"should have set the default flow.ingestion.circuit_breaker.open_interval_in_ms")
+	assert.Equal(t, false, conf.Flows[0].Ingestion.CircuitBreaker.Disable,
+		"should have set the default flow.ingestion.circuit_breaker.disable")
 
-	assert.Equal(t, 2097152, conf.Flows[0].Accumulator.SizeInBytes, "should have parsed the correct flow.accumulator.size_in_bytes")
-	assert.Equal(t, "_a_", conf.Flows[0].Accumulator.Separator, "should have parsed the correct flow.accumulator.separator")
-	assert.Equal(t, 123, conf.Flows[0].Accumulator.QueueCapacity, "should have parsed the correct flow.accumulator.queue_capacity")
-	assert.Equal(t, map[string]string(nil), conf.Flows[0].Accumulator.CircuitBreaker, "should have parsed the correct flow.accumulator.circuit_breaker")
+	assert.Equal(t, 2097152, conf.Flows[0].Accumulator.SizeInBytes,
+		"should have parsed the correct flow.accumulator.size_in_bytes")
+	assert.Equal(t, "_a_", conf.Flows[0].Accumulator.Separator,
+		"should have parsed the correct flow.accumulator.separator")
+	assert.Equal(t, 123, conf.Flows[0].Accumulator.QueueCapacity,
+		"should have parsed the correct flow.accumulator.queue_capacity")
+	assert.Equal(t, true, conf.Flows[0].Accumulator.CircuitBreaker.Disable,
+		"should have parsed the correct flow.accumulator.circuit_breaker.disable")
+	assert.Equal(t, int64(100), conf.Flows[0].Accumulator.CircuitBreaker.OpenInterval,
+		"should have set the default flow.accumulator.circuit_breaker.open_interval_in_ms")
 
 	assert.Equal(t, "sqs", conf.Flows[0].ExternalQueue.Type, "should have parsed the correct flow.external_queue.type")
 	assert.NotNil(t, conf.Flows[0].ExternalQueue.Config, "should maintain the value of flow.external_queue.config")
@@ -145,11 +166,18 @@ flows:
 		"should have parsed the correct flow.ingestion.decompress.active (which is empty)")
 	assert.Equal(t, 0, conf.Flows[1].Ingestion.Decompression.MaxConcurrency,
 		"should have parsed the correct flow.ingestion.decompress.max_concurrency")
+	assert.Equal(t, false, conf.Flows[1].Ingestion.CircuitBreaker.Disable,
+		"should have parsed the correct flow.accumulator.circuit_breaker.disable")
+	assert.Equal(t, int64(1234), conf.Flows[1].Ingestion.CircuitBreaker.OpenInterval,
+		"should have set the default flow.accumulator.circuit_breaker.open_interval_in_ms")
 
 	assert.Equal(t, 20, conf.Flows[1].Accumulator.SizeInBytes, "should have parsed the correct flow.accumulator.size_in_bytes")
 	assert.Equal(t, "", conf.Flows[1].Accumulator.Separator, "should have parsed the correct flow.accumulator.separator")
 	assert.Equal(t, 13, conf.Flows[1].Accumulator.QueueCapacity, "should have parsed the correct flow.accumulator.queue_capacity")
-	assert.Equal(t, map[string]string{"turn_on": "true", "open_interval_in_ms": "12345"}, conf.Flows[1].Accumulator.CircuitBreaker, "should have parsed the correct flow.accumulator.circuit_breaker")
+	assert.Equal(t, int64(12345), conf.Flows[1].Accumulator.CircuitBreaker.OpenInterval,
+		"should have parsed the correct flow.accumulator.circuit_breaker.open_interval_in_ms")
+	assert.Equal(t, false, conf.Flows[1].Accumulator.CircuitBreaker.Disable,
+		"should have parsed the correct flow.accumulator.circuit_breaker.disable")
 
 	assert.Equal(t, "noop", conf.Flows[1].ExternalQueue.Type, "should have parsed the correct flow.external_queue.type")
 	assert.Nil(t, conf.Flows[1].ExternalQueue.Config, "should maintain the value of flow.external_queue.config")
@@ -549,12 +577,13 @@ flows:
 }
 
 func TestValidateFlowDecompressionTypes(t *testing.T) {
-	logTemplate := `
+	confTemplate := `
 flows:
   - name: flow_1
     ingestion:
       decompress:
-        active: [{{TYPES}}]`
+        active: [{{TYPES}}]
+        max_concurrency: 1`
 
 	testCases := []struct {
 		types       []string
@@ -613,11 +642,11 @@ flows:
 	for _, tc := range testCases {
 		var conf string
 		if len(tc.types) == 0 {
-			conf = strings.ReplaceAll(logTemplate, "{{TYPES}}", "")
+			conf = strings.ReplaceAll(confTemplate, "{{TYPES}}", "")
 		} else {
 			types := strings.Join(tc.types, "\",\"")
 			types = "\"" + types + "\""
-			conf = strings.ReplaceAll(logTemplate, "{{TYPES}}", types)
+			conf = strings.ReplaceAll(confTemplate, "{{TYPES}}", types)
 		}
 
 		_, err := config.New([]byte(conf))
@@ -628,19 +657,6 @@ flows:
 			assert.NoErrorf(t, err, "should NOT error when decompression types are %v", tc.types)
 		}
 	}
-}
-
-func TestErrorsIfMaxConcurrencyIsSetButActiveAlgorithmsIsNot(t *testing.T) {
-	conf := `
-flows:
-  - name: flow_1
-    ingestion:
-      decompress:
-        max_concurrency: 4`
-
-	_, err := config.New([]byte(conf))
-
-	assert.Errorf(t, err, "should error when max_concurrency is set but active is not (on ingestion option, inside flow)")
 }
 
 func TestErrorOnInvalidLogFormat(t *testing.T) {

@@ -16,7 +16,7 @@ import (
 
 const (
 	MINIMUM_QUEUE_CAPACITY  = 2
-	CB_RETRY_SLEEP_DURATION = 1 * time.Millisecond // TODO: fine tune this value
+	CB_RETRY_SLEEP_DURATION = 10 * time.Millisecond // TODO: fine tune this value
 	COMPONENT_NAME          = "accumulator"
 )
 
@@ -55,7 +55,7 @@ func New(
 	}
 
 	if queueCapacity < MINIMUM_QUEUE_CAPACITY {
-		l.Panicw(fmt.Sprintf("the accumulator capacity cannot be less than %d",
+		l.Panicw(fmt.Sprintf("the accumulator capacity cannot be less than %d", //TODO: move this validation to config
 			MINIMUM_QUEUE_CAPACITY), "flow", flowName)
 	}
 
@@ -191,17 +191,15 @@ func (b *BucketAccumulator) dataDropped(data []byte) {
 func (b *BucketAccumulator) enqueueOnNext(data []byte) {
 	dataSize := len(data)
 
-	err := b.circBreaker.Call(func() error {
-		return b.next.Enqueue(data)
+	_, err := b.circBreaker.Execute(func() (interface{}, error) {
+		return nil, b.next.Enqueue(data)
 	})
 
 	for err != nil {
 		time.Sleep(CB_RETRY_SLEEP_DURATION)
-		err = b.circBreaker.Call(
-			func() error {
-				return b.next.Enqueue(data)
-			},
-		)
+		_, err = b.circBreaker.Execute(func() (interface{}, error) {
+			return nil, b.next.Enqueue(data)
+		})
 	}
 
 	b.metrics.incDataOutBytesBy(dataSize)

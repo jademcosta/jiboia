@@ -20,20 +20,20 @@ func TestDecompressionAfterCompressionKeepsDataUnchanged(t *testing.T) {
 	dataSize := len(data)
 
 	testCases := []struct {
-		conf config.Compression
+		conf config.CompressionConfig
 	}{
-		{conf: config.Compression{Type: "gzip"}},
-		{conf: config.Compression{Type: "gzip", Level: "1"}},
-		{conf: config.Compression{Type: "gzip", Level: "9"}},
-		{conf: config.Compression{Type: "zlib"}},
-		{conf: config.Compression{Type: "zlib", Level: "9"}},
-		{conf: config.Compression{Type: "zlib", Level: "1"}},
-		{conf: config.Compression{Type: "deflate"}},
-		{conf: config.Compression{Type: "deflate", Level: "9"}},
-		{conf: config.Compression{Type: "deflate", Level: "1"}},
-		{conf: config.Compression{Type: "snappy"}},
-		{conf: config.Compression{Type: "snappy", Level: "9"}},
-		{conf: config.Compression{Type: "snappy", Level: "1"}},
+		{conf: config.CompressionConfig{Type: "gzip"}},
+		{conf: config.CompressionConfig{Type: "gzip", Level: "1"}},
+		{conf: config.CompressionConfig{Type: "gzip", Level: "9"}},
+		{conf: config.CompressionConfig{Type: "zlib"}},
+		{conf: config.CompressionConfig{Type: "zlib", Level: "9"}},
+		{conf: config.CompressionConfig{Type: "zlib", Level: "1"}},
+		{conf: config.CompressionConfig{Type: "deflate"}},
+		{conf: config.CompressionConfig{Type: "deflate", Level: "9"}},
+		{conf: config.CompressionConfig{Type: "deflate", Level: "1"}},
+		{conf: config.CompressionConfig{Type: "snappy"}},
+		{conf: config.CompressionConfig{Type: "snappy", Level: "9"}},
+		{conf: config.CompressionConfig{Type: "snappy", Level: "1"}},
 	}
 
 	for _, tc := range testCases {
@@ -67,7 +67,7 @@ func TestEmptyConfigDoesNotApplyCompression(t *testing.T) {
 	data := strings.Repeat("a", 20480) // 20KB
 	dataSize := len(data)
 
-	conf := config.Compression{}
+	conf := config.CompressionConfig{}
 	buf := &bytes.Buffer{}
 
 	compressorWriter, err := compressor.NewWriter(&conf, buf)

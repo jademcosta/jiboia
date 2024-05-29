@@ -14,6 +14,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/sony/gobreaker"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
@@ -537,13 +538,14 @@ func TestCallindEnqueueUsesACircuitBreakerAndRetriesOnFailure(t *testing.T) {
 		dataWritten: make([][]byte, 0),
 		fail:        true,
 	}
-	cb := circuitbreaker.NewSequentialCircuitBreaker(
-		circuitbreaker.SequentialCircuitBreakerConfig{
-			OpenInterval:       openInterval,
-			FailCountThreshold: circuitbreaker.FIXED_FAIL_COUNT_THRESHOLD,
+	cb := gobreaker.NewCircuitBreaker(gobreaker.Settings{
+		Name:        "accumulator-test",
+		MaxRequests: 1, //FIXME: magic number. This should be extracted into a const
+		Timeout:     openInterval,
+		ReadyToTrip: func(counts gobreaker.Counts) bool {
+			return true
 		},
-		circuitbreaker.NewObservability(registry, l, accumulator.COMPONENT_NAME, "someflow"),
-	)
+	})
 
 	limitOfBytes := 3
 	separator := []byte("")
@@ -599,13 +601,14 @@ func TestItStopsRetryingOnceItSendsTheData(t *testing.T) {
 		dataWritten: make([][]byte, 0),
 		fail:        true,
 	}
-	cb := circuitbreaker.NewSequentialCircuitBreaker(
-		circuitbreaker.SequentialCircuitBreakerConfig{
-			OpenInterval:       openInterval,
-			FailCountThreshold: circuitbreaker.FIXED_FAIL_COUNT_THRESHOLD,
+	cb := gobreaker.NewCircuitBreaker(gobreaker.Settings{
+		Name:        "accumulator-test",
+		MaxRequests: 1, //FIXME: magic number. This should be extracted into a const
+		Timeout:     openInterval,
+		ReadyToTrip: func(counts gobreaker.Counts) bool {
+			return true
 		},
-		circuitbreaker.NewObservability(registry, l, accumulator.COMPONENT_NAME, "someflow"),
-	)
+	})
 
 	limitOfBytes := 3
 	separator := []byte("")

@@ -21,7 +21,7 @@ import (
 )
 
 var l *zap.SugaredLogger
-var noCompressionConf config.Compression = config.Compression{}
+var noCompressionConf config.CompressionConfig = config.CompressionConfig{}
 
 func init() {
 	l = logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
@@ -354,12 +354,12 @@ func TestUsesCompressionConfig(t *testing.T) {
 	}
 
 	testCases := []struct {
-		compressConf config.Compression
+		compressConf config.CompressionConfig
 	}{
-		{compressConf: config.Compression{Type: "gzip"}},
-		{compressConf: config.Compression{Type: "zlib"}},
-		{compressConf: config.Compression{Type: "deflate"}},
-		{compressConf: config.Compression{Type: "snappy"}},
+		{compressConf: config.CompressionConfig{Type: "gzip"}},
+		{compressConf: config.CompressionConfig{Type: "zlib"}},
+		{compressConf: config.CompressionConfig{Type: "deflate"}},
+		{compressConf: config.CompressionConfig{Type: "snappy"}},
 	}
 
 	for _, tc := range testCases {

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jademcosta/jiboia/pkg/adapters/http_in/httpmiddleware"
+	"github.com/jademcosta/jiboia/pkg/circuitbreaker"
 	"github.com/jademcosta/jiboia/pkg/compressor"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/domain/flow"
@@ -22,6 +23,7 @@ type ingestionRoute struct {
 	flw                          *flow.Flow
 	decompressionSemaphor        chan struct{}
 	validDecompressionAlgorithms map[string]struct{}
+	circuitBreaker               circuitbreaker.TwoStepCircuitBreaker
 }
 
 func newIngestionRoute(l *zap.SugaredLogger, flw *flow.Flow) *ingestionRoute {
@@ -47,24 +49,31 @@ func newIngestionRoute(l *zap.SugaredLogger, flw *flow.Flow) *ingestionRoute {
 		flw:                          flw,
 		validDecompressionAlgorithms: validDecompressionAlgorithms,
 		decompressionSemaphor:        decompressionSemaphor,
+		circuitBreaker:               flw.CircuitBreaker,
 	}
 }
 
 func (handler *ingestionRoute) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	currentPath := r.URL.Path
+
+	enqueuedWithSuccess, err := handler.circuitBreaker.Allow()
+	circuitOpen := err != nil
+	if circuitOpen {
+		w.WriteHeader(http.StatusInternalServerError)
+		increaseErrorCount("circuit_breaker_open", currentPath)
+		return
+	}
+
 	buf := &bytes.Buffer{}
 	dataLen, err := buf.ReadFrom(r.Body)
-
 	observeSize(currentPath, float64(dataLen))
 
-	if err != nil {
-		handler.l.Warnw("async http request failed", "error", err)
-		//TODO: which should be the response in this case?
-		if errors.As(err, &payloadMaxSizeErr) {
-			w.WriteHeader(http.StatusRequestEntityTooLarge)
-			increaseErrorCount("request_entity_too_large", currentPath)
-			return
-		}
+	if err != nil && errors.As(err, &payloadMaxSizeErr) {
+		w.WriteHeader(http.StatusRequestEntityTooLarge)
+		increaseErrorCount("request_entity_too_large", currentPath)
+		return
+	} else if err != nil {
+		handler.l.Warnw("error reading body", "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		increaseErrorCount("error_reading_body", currentPath)
 		return
@@ -72,8 +81,6 @@ func (handler *ingestionRoute) ServeHTTP(w http.ResponseWriter, r *http.Request)
 
 	if dataLen <= 0 {
 		handler.l.Warn("request without body, ignoring")
-		w.Header().Set("Content-Type", "application/json")
-		//TODO: which should be the response in this case?
 		w.WriteHeader(http.StatusBadRequest)
 		increaseErrorCount("request_without_body", currentPath)
 		return
@@ -105,11 +112,11 @@ func (handler *ingestionRoute) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		handler.l.Warnw("failed while enqueueing data from http request", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		increaseErrorCount("enqueue_failed", currentPath)
+		enqueuedWithSuccess(false)
 		return
 	}
 
-	//TODO: Maybe send back a JSON with the length of the content read?
-	w.Header().Set("Content-Type", "application/json")
+	enqueuedWithSuccess(true)
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -164,7 +171,7 @@ func decompress(data []byte, algorithm string, pathForMetrics string) ([]byte, e
 	increaseDecompressionCount(algorithm)
 	timeStart := time.Now()
 
-	decompressor, err := compressor.NewReader(&config.Compression{Type: algorithm}, bytes.NewReader(data))
+	decompressor, err := compressor.NewReader(&config.CompressionConfig{Type: algorithm}, bytes.NewReader(data))
 	if err != nil {
 		return nil, err
 	}

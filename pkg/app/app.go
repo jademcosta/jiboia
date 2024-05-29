@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -25,6 +26,7 @@ import (
 	"github.com/oklog/run"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
+	"github.com/sony/gobreaker"
 	"go.uber.org/zap"
 )
 
@@ -184,7 +186,10 @@ func registerDefaultMetrics(registry *prometheus.Registry) {
 	)
 }
 
-func createObjStorage(l *zap.SugaredLogger, c config.ObjectStorage, metricRegistry *prometheus.Registry, flowName string) worker.ObjStorage {
+func createObjStorage(
+	l *zap.SugaredLogger, c config.ObjectStorageConfig, metricRegistry *prometheus.Registry,
+	flowName string,
+) worker.ObjStorage {
 	objStorage, err := objstorage.New(l, metricRegistry, flowName, &c)
 	if err != nil {
 		l.Panicw("error creating object storage", "error", err)
@@ -193,7 +198,10 @@ func createObjStorage(l *zap.SugaredLogger, c config.ObjectStorage, metricRegist
 	return objStorage
 }
 
-func createExternalQueue(l *zap.SugaredLogger, c config.ExternalQueue, metricRegistry *prometheus.Registry, flowName string) worker.ExternalQueue {
+func createExternalQueue(
+	l *zap.SugaredLogger, c config.ExternalQueueConfig, metricRegistry *prometheus.Registry,
+	flowName string,
+) worker.ExternalQueue {
 	externalQueue, err := external_queue.New(l, metricRegistry, flowName, &c)
 	if err != nil {
 		l.Panicw("error creating external queue", "error", err)
@@ -202,11 +210,11 @@ func createExternalQueue(l *zap.SugaredLogger, c config.ExternalQueue, metricReg
 	return externalQueue
 }
 
-func createAccumulator(flowName string, logger *zap.SugaredLogger, c config.Accumulator, registry *prometheus.Registry, uploader domain.DataFlow) *accumulator.BucketAccumulator {
-	cb, err := circuitbreaker.FromConfig(logger, registry, c.CircuitBreaker, accumulator.COMPONENT_NAME, flowName)
-	if err != nil {
-		logger.Panicw("error on accumulator creation", "error", err)
-	}
+func createAccumulator(
+	flowName string, logger *zap.SugaredLogger, c config.AccumulatorConfig,
+	registry *prometheus.Registry, uploader domain.DataFlow,
+) *accumulator.BucketAccumulator {
+	cb := createCircuitBreaker(registry, logger, flowName, c.CircuitBreaker)
 
 	return accumulator.New(
 		flowName,
@@ -220,8 +228,10 @@ func createAccumulator(flowName string, logger *zap.SugaredLogger, c config.Accu
 		registry)
 }
 
-func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
-	confs []config.FlowConfig) []flow.Flow {
+func createFlows(
+	llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
+	confs []config.FlowConfig,
+) []flow.Flow {
 
 	flows := make([]flow.Flow, 0, len(confs))
 
@@ -249,15 +259,20 @@ func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 			Token:                       flowConf.Ingestion.Token,
 			DecompressionAlgorithms:     flowConf.Ingestion.Decompression.ActiveDecompressions,
 			DecompressionMaxConcurrency: flowConf.Ingestion.Decompression.MaxConcurrency,
+			CircuitBreaker:              createTwoStepCircuitBreaker(metricRegistry, llog, flowConf.Name, flowConf.Ingestion.CircuitBreaker),
 		}
 
-		hasAccumulatorDeclared := flowConf.Accumulator.SizeInBytes > 0 //TODO: this is something that will need to be improved once config is localized inside packages
+		hasAccumulatorDeclared := flowConf.Accumulator.SizeInBytes > 0 //TODO: this is something that will need to be improved, as it is error prone
 		if hasAccumulatorDeclared {
-			f.Accumulator = createAccumulator(flowConf.Name, localLogger, flowConf.Accumulator, metricRegistry, uploader)
+			f.Accumulator = createAccumulator(flowConf.Name, localLogger, flowConf.Accumulator,
+				metricRegistry, uploader)
 		}
 
 		for i := 0; i < flowConf.MaxConcurrentUploads; i++ {
-			worker := worker.NewWorker(flowConf.Name, localLogger, objStorage, externalQueue, uploader.WorkersReady, metricRegistry, flowConf.Compression)
+			worker := worker.NewWorker(
+				flowConf.Name, localLogger, objStorage, externalQueue, uploader.WorkersReady,
+				metricRegistry, flowConf.Compression,
+			)
 			f.UploadWorkers = append(f.UploadWorkers, worker)
 		}
 
@@ -270,4 +285,63 @@ func createFlows(llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
 	}
 
 	return flows
+}
+
+func createTwoStepCircuitBreaker(
+	registry *prometheus.Registry, logg *zap.SugaredLogger, flowName string,
+	cbConf config.CircuitBreakerConfig,
+) circuitbreaker.TwoStepCircuitBreaker {
+
+	if cbConf.Disable {
+		return circuitbreaker.NewDummyTwoStepCircuitBreaker()
+	}
+
+	name := fmt.Sprintf("%s_ingestion_cb", flowName)
+	cbO11y := circuitbreaker.NewCBObservability(registry, logg, name, flowName)
+
+	return gobreaker.NewTwoStepCircuitBreaker(gobreaker.Settings{
+		Name:        name,
+		MaxRequests: 1, //FIXME: magic number. This should be extracted into a const
+		Timeout:     cbConf.OpenIntervalAsDuration(),
+		ReadyToTrip: func(counts gobreaker.Counts) bool {
+			return true
+		},
+		OnStateChange: func(name string, from, to gobreaker.State) {
+			if to == gobreaker.StateOpen {
+				cbO11y.SetCBOpen()
+			} else {
+				cbO11y.SetCBClosed()
+			}
+		},
+	})
+}
+
+func createCircuitBreaker(
+	registry *prometheus.Registry, llog *zap.SugaredLogger, flowName string,
+	cbConf config.CircuitBreakerConfig,
+) circuitbreaker.CircuitBreaker {
+
+	if cbConf.Disable {
+		return circuitbreaker.NewDummyCircuitBreaker()
+	}
+
+	name := fmt.Sprintf("%s_accumulator_cb", flowName)
+	cbO11y := circuitbreaker.NewCBObservability(registry, llog, name, flowName)
+
+	return gobreaker.NewCircuitBreaker(gobreaker.Settings{
+		Name:        name,
+		MaxRequests: 1, //FIXME: magic number. This should be extracted into a const
+		Timeout:     cbConf.OpenIntervalAsDuration(),
+		ReadyToTrip: func(counts gobreaker.Counts) bool {
+			return true
+		},
+		OnStateChange: func(name string, from, to gobreaker.State) {
+			if to == gobreaker.StateOpen {
+				cbO11y.SetCBOpen()
+			} else {
+				cbO11y.SetCBClosed()
+			}
+		},
+	})
+
 }
