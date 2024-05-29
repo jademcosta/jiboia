@@ -1,11 +1,11 @@
 package circuitbreaker
 
 import (
+	"log/slog"
 	"sync"
 
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
-	"go.uber.org/zap"
 )
 
 const (
@@ -24,12 +24,12 @@ var openCBTotal *prometheus.CounterVec
 type CBObservability struct {
 	name string
 	flow string
-	log  *zap.SugaredLogger
+	log  *slog.Logger
 }
 
 func NewCBObservability(
 	registry *prometheus.Registry,
-	log *zap.SugaredLogger,
+	log *slog.Logger,
 	name string,
 	flow string,
 ) *CBObservability {

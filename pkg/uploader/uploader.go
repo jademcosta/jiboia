@@ -3,19 +3,19 @@ package uploader
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"sync"
 
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
-	"go.uber.org/zap"
 )
 
 type NonBlockingUploader struct {
 	internalDataChan chan []byte
 	WorkersReady     chan chan *domain.WorkUnit
 	searchForWork    chan struct{}
-	log              *zap.SugaredLogger
+	log              *slog.Logger
 	dataDropper      domain.DataDropper
 	filePathProvider domain.FilePathProvider
 	metrics          *metricCollector
@@ -27,7 +27,7 @@ type NonBlockingUploader struct {
 
 func New(
 	flowName string,
-	l *zap.SugaredLogger,
+	l *slog.Logger,
 	workersCount int,
 	queueCapacity int,
 	dataDropper domain.DataDropper,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -27,18 +28,17 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/sony/gobreaker"
-	"go.uber.org/zap"
 )
 
 type App struct {
 	conf         *config.Config
-	logger       *zap.SugaredLogger
+	logger       *slog.Logger
 	ctx          context.Context
 	stopFunc     context.CancelFunc
 	shutdownDone chan struct{}
 }
 
-func New(c *config.Config, logger *zap.SugaredLogger) *App {
+func New(c *config.Config, logger *slog.Logger) *App {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &App{
@@ -72,7 +72,7 @@ func (a *App) Start() {
 			defer close(apiShutdownDone)
 			err := api.ListenAndServe()
 			if err != nil && !errors.Is(err, http.ErrServerClosed) {
-				a.logger.Errorw("api listening and serving failed", "error", err)
+				a.logger.Error("api listening and serving failed", "error", err)
 			}
 
 			return err
@@ -83,7 +83,7 @@ func (a *App) Start() {
 			//https://stackoverflow.com/questions/39320025/how-to-stop-http-listenandserve
 			// apiCancel() // FIXME: I believe we might not need this
 			if err := api.Shutdown(); err != nil {
-				a.logger.Errorw("api shutdown failed", "error", err)
+				a.logger.Error("api shutdown failed", "error", err)
 			}
 		},
 	)
@@ -95,7 +95,7 @@ func (a *App) Start() {
 
 	err := g.Run()
 	if err != nil {
-		a.logger.Errorw("something went wrong when running the components", "error", err)
+		a.logger.Error("something went wrong when running the components", "error", err)
 	}
 	a.logger.Info("jiboia stopped")
 }
@@ -107,7 +107,7 @@ func (a *App) addShutdownRelatedActors(g *run.Group) {
 	g.Add(func() error {
 		select {
 		case s := <-signalsCh:
-			a.logger.Infow("received signal, shutting down", "signal", s)
+			a.logger.Info("received signal, shutting down", "signal", s)
 		case <-a.ctx.Done():
 		}
 		return nil
@@ -187,31 +187,33 @@ func registerDefaultMetrics(registry *prometheus.Registry) {
 }
 
 func createObjStorage(
-	l *zap.SugaredLogger, c config.ObjectStorageConfig, metricRegistry *prometheus.Registry,
+	l *slog.Logger, c config.ObjectStorageConfig, metricRegistry *prometheus.Registry,
 	flowName string,
 ) worker.ObjStorage {
 	objStorage, err := objstorage.New(l, metricRegistry, flowName, &c)
 	if err != nil {
-		l.Panicw("error creating object storage", "error", err)
+		l.Error("error creating object storage", "error", err)
+		panic("error creating object storage")
 	}
 
 	return objStorage
 }
 
 func createExternalQueue(
-	l *zap.SugaredLogger, c config.ExternalQueueConfig, metricRegistry *prometheus.Registry,
+	l *slog.Logger, c config.ExternalQueueConfig, metricRegistry *prometheus.Registry,
 	flowName string,
 ) worker.ExternalQueue {
 	externalQueue, err := external_queue.New(l, metricRegistry, flowName, &c)
 	if err != nil {
-		l.Panicw("error creating external queue", "error", err)
+		l.Error("error creating external queue", "error", err)
+		panic("error creating external queue")
 	}
 
 	return externalQueue
 }
 
 func createAccumulator(
-	flowName string, logger *zap.SugaredLogger, c config.AccumulatorConfig,
+	flowName string, logger *slog.Logger, c config.AccumulatorConfig,
 	registry *prometheus.Registry, uploader domain.DataFlow,
 ) *accumulator.BucketAccumulator {
 	cb := createCircuitBreaker(registry, logger, flowName, c.CircuitBreaker)
@@ -229,7 +231,7 @@ func createAccumulator(
 }
 
 func createFlows(
-	llog *zap.SugaredLogger, metricRegistry *prometheus.Registry,
+	llog *slog.Logger, metricRegistry *prometheus.Registry,
 	confs []config.FlowConfig,
 ) []flow.Flow {
 
@@ -288,7 +290,7 @@ func createFlows(
 }
 
 func createTwoStepCircuitBreaker(
-	registry *prometheus.Registry, logg *zap.SugaredLogger, flowName string,
+	registry *prometheus.Registry, logg *slog.Logger, flowName string,
 	cbConf config.CircuitBreakerConfig,
 ) circuitbreaker.TwoStepCircuitBreaker {
 
@@ -317,7 +319,7 @@ func createTwoStepCircuitBreaker(
 }
 
 func createCircuitBreaker(
-	registry *prometheus.Registry, llog *zap.SugaredLogger, flowName string,
+	registry *prometheus.Registry, llog *slog.Logger, flowName string,
 	cbConf config.CircuitBreakerConfig,
 ) circuitbreaker.CircuitBreaker {
 

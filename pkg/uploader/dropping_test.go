@@ -8,7 +8,6 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/jademcosta/jiboia/pkg/uploader"
 	"github.com/prometheus/client_golang/prometheus"
@@ -57,7 +56,7 @@ func TestDropsDataIfAtFullCapacity(t *testing.T) {
 		{capacity: 1, objectsToEnqueueCount: 4, want: 3},
 	}
 
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
+	l := logger.NewDummy()
 	workersCount := 0
 
 	for _, tc := range testCases {
@@ -93,7 +92,7 @@ func TestDoesNotDropDataIfNotAtFullCapacity(t *testing.T) {
 		{capacity: 4, objectsToEnqueueCount: 1},
 	}
 
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
+	l := logger.NewDummy()
 	workersCount := 0
 
 	for _, tc := range testCases {

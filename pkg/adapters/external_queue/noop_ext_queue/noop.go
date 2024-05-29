@@ -1,25 +1,26 @@
 package noop_ext_queue
 
 import (
+	"log/slog"
+
 	"github.com/jademcosta/jiboia/pkg/domain"
-	"go.uber.org/zap"
 )
 
 const TYPE = "noop"
 const NAME = "noop"
 
 type NoopExternalQueue struct {
-	log *zap.SugaredLogger
+	log *slog.Logger
 }
 
-func New(l *zap.SugaredLogger) *NoopExternalQueue {
+func New(l *slog.Logger) *NoopExternalQueue {
 	return &NoopExternalQueue{
 		log: l,
 	}
 }
 
 func (noop *NoopExternalQueue) Enqueue(uploadResult *domain.MessageContext) error {
-	noop.log.Debugw("enqueue called on No-op ext queue", "url", uploadResult.URL)
+	noop.log.Debug("enqueue called on No-op ext queue", "url", uploadResult.URL)
 	return nil
 }
 

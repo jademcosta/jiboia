@@ -9,22 +9,16 @@ import (
 	"time"
 
 	"github.com/jademcosta/jiboia/pkg/adapters/objstorage/localstorage"
-	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
 
 const configYaml = `
 path: /tmp/
 `
 
-var l *zap.SugaredLogger
-
-func init() {
-	l = logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
-}
+var llog = logger.NewDummy()
 
 func TestParseConfig(t *testing.T) {
 	localStorageConfig, err := localstorage.ParseConfig([]byte(configYaml))
@@ -35,7 +29,7 @@ func TestParseConfig(t *testing.T) {
 
 func TestNewErrorsWhenPathDoesNotExist(t *testing.T) {
 	conf := &localstorage.Config{Path: "/non_existant_dir_1373a98298"}
-	_, err := localstorage.New(l, conf)
+	_, err := localstorage.New(llog, conf)
 	assert.Error(t, err, "returns error when dir doesn't exist")
 }
 
@@ -46,7 +40,7 @@ func TestNewErrorsWhenPathIsNotADirectory(t *testing.T) {
 	assert.NoError(t, err, "writing file should not err")
 
 	conf := &localstorage.Config{Path: filePath}
-	_, err = localstorage.New(l, conf)
+	_, err = localstorage.New(llog, conf)
 	assert.Error(t, err, "returns error when path is not a directory")
 }
 
@@ -54,7 +48,7 @@ func TestUploadFailsIfDirectoryPathHasAFileInIt(t *testing.T) {
 	randomNumber := strconv.Itoa(int(time.Now().Unix()))
 
 	conf := &localstorage.Config{Path: "/tmp"}
-	sut, err := localstorage.New(l, conf)
+	sut, err := localstorage.New(llog, conf)
 	assert.NoError(t, err, "should not return an error")
 
 	err = os.WriteFile(filepath.Join("/tmp", randomNumber), []byte("content!"), os.ModePerm)
@@ -73,7 +67,7 @@ func TestUploadFailsIfDirectoryPathHasAFileInIt(t *testing.T) {
 func TestUploadPutsTheContentOnFile(t *testing.T) {
 	fixedPath := "/tmp"
 	conf := &localstorage.Config{Path: fixedPath}
-	sut, err := localstorage.New(l, conf)
+	sut, err := localstorage.New(llog, conf)
 
 	assert.NoError(t, err, "shouldn't return an error")
 

@@ -10,11 +10,12 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/stretchr/testify/assert"
 )
+
+var llog = logger.NewDummy()
 
 type mockedAWSS3Uploader struct {
 	calledWith        []*s3manager.UploadInput
@@ -53,10 +54,10 @@ func (mock *mockedAWSS3Uploader) UploadWithContext(ctx aws.Context, input *s3man
 }
 
 func TestItParsesWorkUnitIntoUploadInput(t *testing.T) {
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
+
 	c := &Config{Bucket: "some_bucket_name"}
 
-	sut, err := New(l, c)
+	sut, err := New(llog, c)
 	assert.NoError(t, err, "should not error on New")
 	mockUploader := &mockedAWSS3Uploader{calledWith: make([]*s3manager.UploadInput, 0)}
 	sut.uploader = mockUploader
@@ -83,7 +84,6 @@ func TestItParsesWorkUnitIntoUploadInput(t *testing.T) {
 }
 
 func TestItWorksWithDifferentPrefixConfigs(t *testing.T) {
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
 
 	type testCase struct {
 		fixedPrefix   string
@@ -109,7 +109,7 @@ func TestItWorksWithDifferentPrefixConfigs(t *testing.T) {
 			Prefix: tc.fixedPrefix,
 		}
 
-		sut, err := New(l, c)
+		sut, err := New(llog, c)
 		assert.NoError(t, err, "should not error on New")
 		mockUploader := &mockedAWSS3Uploader{calledWith: make([]*s3manager.UploadInput, 0)}
 		sut.uploader = mockUploader
@@ -140,13 +140,13 @@ func TestItWorksWithDifferentPrefixConfigs(t *testing.T) {
 }
 
 func TestReturnsTheUploadError(t *testing.T) {
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
+
 	c := &Config{Bucket: "some_bucket_name"}
 
 	uploadErr := errors.New("some random error")
 	mockUploader := &mockedAWSS3Uploader{calledWith: make([]*s3manager.UploadInput, 0), err: uploadErr}
 
-	sut, err := New(l, c)
+	sut, err := New(llog, c)
 	assert.NoError(t, err, "should not error on New")
 
 	sut.uploader = mockUploader
@@ -166,7 +166,7 @@ func TestReturnsTheUploadError(t *testing.T) {
 }
 
 func TestReturnsDataBasedOnUploadReturn(t *testing.T) {
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
+
 	c := &Config{Bucket: "some_bucket_name", Region: "my_region", Prefix: "mypref"}
 
 	mockUploader := &mockedAWSS3Uploader{
@@ -174,7 +174,7 @@ func TestReturnsDataBasedOnUploadReturn(t *testing.T) {
 		answer:     &s3manager.UploadOutput{Location: "some_location"},
 	}
 
-	sut, err := New(l, c)
+	sut, err := New(llog, c)
 	assert.NoError(t, err, "should not error on New")
 
 	sut.uploader = mockUploader
@@ -198,7 +198,7 @@ func TestReturnsDataBasedOnUploadReturn(t *testing.T) {
 }
 
 func TestBuildsAContextWithTimeoutAndSendItForward(t *testing.T) {
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
+
 	c := &Config{Bucket: "some_bucket_name", Region: "my_region", Prefix: "mypref", TimeoutInMillis: 1000}
 
 	mockUploader := &mockedAWSS3Uploader{
@@ -207,7 +207,7 @@ func TestBuildsAContextWithTimeoutAndSendItForward(t *testing.T) {
 		answer:            &s3manager.UploadOutput{Location: "some_location"},
 	}
 
-	sut, err := New(l, c)
+	sut, err := New(llog, c)
 	assert.NoError(t, err, "should not error on New")
 
 	sut.uploader = mockUploader

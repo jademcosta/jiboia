@@ -6,7 +6,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/sqs"
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
-	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/stretchr/testify/assert"
@@ -48,7 +47,7 @@ func TestMessageContainsTheData(t *testing.T) {
 		Region: "us-east-1",
 	}
 	flowName := "this-flow-name"
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
+	l := logger.NewDummy()
 
 	sut, err := New(l, c, flowName)
 	mockSQS := &mockedSendMsgs{msgs: make([]*sqs.SendMessageInput, 0)}
@@ -84,7 +83,7 @@ func TestReturnsTheErrorOnEnqueueingError(t *testing.T) {
 		Region: "us-east-1",
 	}
 
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
+	l := logger.NewDummy()
 
 	sut, err := New(l, c, fakeFlowName)
 	mockErr := errors.New("mock error!")

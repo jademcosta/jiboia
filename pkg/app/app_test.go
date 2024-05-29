@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log/slog"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
@@ -19,13 +20,12 @@ import (
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
 
 var testingPathNoAcc string = "/tmp/int_test2"
 
 var characters = []rune("abcdefghijklmnopqrstuvwxyz")
-var l *zap.SugaredLogger
+var l *slog.Logger
 
 func TestAccumulatorCircuitBreaker(t *testing.T) {
 	if testing.Short() {
@@ -43,7 +43,7 @@ func TestAccumulatorCircuitBreaker(t *testing.T) {
 
 	conf, err := config.New([]byte(confFull))
 	assert.NoError(t, err, "should initialize config")
-	l = logger.New(conf)
+	l = logger.New(&conf.Log)
 
 	app := New(conf, l)
 	go app.Start()
@@ -101,7 +101,7 @@ func TestPayloadSizeLimit(t *testing.T) {
 
 	conf, err := config.New([]byte(confFull))
 	assert.NoError(t, err, "should initialize config")
-	l = logger.New(conf)
+	l = logger.New(&conf.Log)
 
 	app := New(conf, l)
 	go app.Start()
@@ -176,7 +176,7 @@ func TestApiToken(t *testing.T) {
 
 	conf, err := config.New([]byte(confFull))
 	assert.NoError(t, err, "should initialize config")
-	l = logger.New(conf)
+	l = logger.New(&conf.Log)
 
 	app := New(conf, l)
 	go app.Start()
@@ -250,7 +250,7 @@ func TestIngestionDecompression(t *testing.T) {
 
 	conf, err := config.New([]byte(confFull))
 	assert.NoError(t, err, "should initialize config")
-	l = logger.New(conf)
+	l = logger.New(&conf.Log)
 
 	app := New(conf, l)
 	go app.Start()
@@ -362,7 +362,7 @@ func TestCompression(t *testing.T) {
 
 	conf, err := config.New([]byte(confFull))
 	assert.NoError(t, err, "should initialize config")
-	l = logger.New(conf)
+	l = logger.New(&conf.Log)
 
 	app := New(conf, l)
 	go app.Start()
@@ -466,7 +466,7 @@ func testWithBatchSize(t *testing.T, confYaml string, stringExemplarSizes ...int
 
 	conf, err := config.New([]byte(confFull))
 	assert.NoError(t, err, "should initialize config")
-	l = logger.New(conf)
+	l = logger.New(&conf.Log)
 
 	deleteDir(t, testingPathNoAcc)
 	createDir(t, testingPathNoAcc)

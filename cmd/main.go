@@ -3,12 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 
 	"github.com/jademcosta/jiboia/pkg/app"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/logger"
-	"go.uber.org/zap"
 )
 
 const version = "0.0.1" //FIXME: automatize this
@@ -45,7 +45,7 @@ func initializeConfig(configPath string) *config.Config {
 	return c
 }
 
-func initializeLogger(c config.Config) *zap.SugaredLogger {
-	l := logger.New(&c)
+func initializeLogger(c config.Config) *slog.Logger {
+	l := logger.New(&c.Log)
 	return l
 }

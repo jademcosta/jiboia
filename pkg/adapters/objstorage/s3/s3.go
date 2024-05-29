@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -13,7 +14,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager/s3manageriface"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
-	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 )
 
@@ -36,10 +36,10 @@ type S3Bucket struct {
 	fixedPrefix     string
 	timeoutInMillis int64
 	uploader        s3manageriface.UploaderAPI
-	log             *zap.SugaredLogger
+	log             *slog.Logger
 }
 
-func New(l *zap.SugaredLogger, c *Config) (*S3Bucket, error) {
+func New(l *slog.Logger, c *Config) (*S3Bucket, error) {
 	//TODO: the session is safe to be read concurrently, can we use a single one?
 
 	// TODO: expore the configs:

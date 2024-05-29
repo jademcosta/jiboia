@@ -24,7 +24,7 @@ func TestDefaultConfig(t *testing.T) {
 	conf, err := config.New([]byte(confYaml))
 	assert.NoError(t, err, "should not return error when creating config")
 
-	l := logger.New(conf)
+	l := logger.New(&conf.Log)
 	myApp := app.New(conf, l)
 	go myApp.Start()
 	time.Sleep(2 * time.Second)

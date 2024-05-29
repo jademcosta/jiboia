@@ -2,13 +2,13 @@ package external_queue
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/jademcosta/jiboia/pkg/adapters/external_queue/noop_ext_queue"
 	"github.com/jademcosta/jiboia/pkg/adapters/external_queue/sqs"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/worker"
 	"github.com/prometheus/client_golang/prometheus"
-	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 )
 
@@ -18,7 +18,7 @@ type ExtQueueWithMetadata interface {
 	Name() string
 }
 
-func New(l *zap.SugaredLogger, metricRegistry *prometheus.Registry, flowName string, conf *config.ExternalQueueConfig) (ExtQueueWithMetadata, error) {
+func New(l *slog.Logger, metricRegistry *prometheus.Registry, flowName string, conf *config.ExternalQueueConfig) (ExtQueueWithMetadata, error) {
 
 	var externalQueue ExtQueueWithMetadata
 	specificConf, err := yaml.Marshal(conf.Config)

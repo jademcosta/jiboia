@@ -3,6 +3,7 @@ package http_in
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -13,7 +14,6 @@ import (
 	"github.com/jademcosta/jiboia/pkg/domain/flow"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
-	"go.uber.org/zap"
 )
 
 const API_COMPONENT_TYPE = "api"
@@ -21,12 +21,12 @@ const apiVersion = "v1"
 
 type Api struct {
 	mux  *chi.Mux
-	log  *zap.SugaredLogger
+	log  *slog.Logger
 	srv  *http.Server
 	port int
 }
 
-func New(l *zap.SugaredLogger, conf config.ApiConfig, metricRegistry *prometheus.Registry,
+func New(l *slog.Logger, conf config.ApiConfig, metricRegistry *prometheus.Registry,
 	appVersion string, flws []flow.Flow) *Api {
 
 	router := chi.NewRouter()
@@ -71,7 +71,7 @@ func (api *Api) Shutdown() error {
 func registerDefaultMiddlewares(
 	api *Api,
 	sizeLimit int,
-	l *zap.SugaredLogger,
+	l *slog.Logger,
 	metricRegistry *prometheus.Registry,
 ) {
 

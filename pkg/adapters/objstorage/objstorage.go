@@ -2,6 +2,7 @@ package objstorage
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/jademcosta/jiboia/pkg/adapters/objstorage/httpstorage"
 	"github.com/jademcosta/jiboia/pkg/adapters/objstorage/localstorage"
@@ -9,7 +10,6 @@ import (
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/worker"
 	"github.com/prometheus/client_golang/prometheus"
-	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 )
 
@@ -19,7 +19,7 @@ type ObjStorageWithMetadata interface {
 	Name() string
 }
 
-func New(l *zap.SugaredLogger, metricRegistry *prometheus.Registry, flowName string, conf *config.ObjectStorageConfig) (ObjStorageWithMetadata, error) {
+func New(l *slog.Logger, metricRegistry *prometheus.Registry, flowName string, conf *config.ObjectStorageConfig) (ObjStorageWithMetadata, error) {
 
 	var objStorage ObjStorageWithMetadata
 	specificConf, err := yaml.Marshal(conf.Config)
