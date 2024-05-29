@@ -1,17 +1,16 @@
 package httpmiddleware
 
 import (
+	"log/slog"
 	"net/http"
-
-	"go.uber.org/zap"
 )
 
 type recovererMiddleware struct {
-	l    *zap.SugaredLogger
+	l    *slog.Logger
 	next http.Handler
 }
 
-func NewRecoverer(l *zap.SugaredLogger) func(next http.Handler) http.Handler {
+func NewRecoverer(l *slog.Logger) func(next http.Handler) http.Handler {
 	recoverer := &recovererMiddleware{
 		l: l,
 	}
@@ -26,7 +25,7 @@ func (midd *recovererMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Reques
 	defer func() {
 		if rvr := recover(); rvr != nil && rvr != http.ErrAbortHandler {
 
-			midd.l.Errorw("captured panic on HTTP request", "error", rvr)
+			midd.l.Error("captured panic on HTTP request", "error", rvr)
 			w.WriteHeader(http.StatusInternalServerError)
 		}
 	}()

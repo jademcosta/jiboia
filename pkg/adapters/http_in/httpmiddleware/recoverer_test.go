@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/jademcosta/jiboia/pkg/adapters/http_in/httpmiddleware"
-	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/stretchr/testify/assert"
 )
@@ -17,7 +16,7 @@ func alwaysPanicHandler(w http.ResponseWriter, r *http.Request) {
 
 func TestItCapturesPanicAndReturn500(t *testing.T) {
 
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "panic", Format: "json"}})
+	l := logger.NewDummy()
 
 	recoverer := httpmiddleware.NewRecoverer(l)
 	recHandler := recoverer(http.HandlerFunc(alwaysPanicHandler))

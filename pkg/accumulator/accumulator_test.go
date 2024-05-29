@@ -3,6 +3,7 @@ package accumulator_test
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
 	"testing"
 	"time"
@@ -11,17 +12,15 @@ import (
 
 	"github.com/jademcosta/jiboia/pkg/accumulator"
 	"github.com/jademcosta/jiboia/pkg/circuitbreaker"
-	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sony/gobreaker"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
 
 const queueCapacity int = 30
 
-var l *zap.SugaredLogger = logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
+var l *slog.Logger = logger.NewDummy()
 var dummyCB circuitbreaker.CircuitBreaker = circuitbreaker.NewDummyCircuitBreaker()
 
 type dataEnqueuerMock struct {

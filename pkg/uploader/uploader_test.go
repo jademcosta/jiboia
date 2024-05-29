@@ -3,6 +3,7 @@ package uploader
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math"
 	"sort"
 	"sync"
@@ -16,10 +17,10 @@ import (
 	"github.com/jademcosta/jiboia/pkg/worker"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
 
 var noCompressionConf config.CompressionConfig = config.CompressionConfig{}
+var llog = logger.NewDummy()
 
 type mockFilePather struct {
 	prefix   string
@@ -80,10 +81,9 @@ func TestWorkSentDownstreamHasTheCorrectDataInIt(t *testing.T) {
 	workersCount := 2
 	capacity := 3
 
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
 	ctx, cancel := context.WithCancel(context.Background())
 
-	uploader := New("someflow", l, workersCount, capacity, &dummyDataDropper{},
+	uploader := New("someflow", llog, workersCount, capacity, &dummyDataDropper{},
 		&mockFilePather{prefix: "some-prefix", filename: "some-random-filename"}, prometheus.NewRegistry())
 
 	receiver := make(chan *domain.WorkUnit, 1)
@@ -108,10 +108,10 @@ func TestWorkSentDownstreamHasTheCorrectDataInIt(t *testing.T) {
 func TestItDeniesWorkAfterContextIsCanceled(t *testing.T) {
 	workersCount := 10
 	capacity := 3
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
+
 	ctx, cancel := context.WithCancel(context.Background())
 
-	uploader := New("someflow", l, workersCount, capacity, &dummyDataDropper{},
+	uploader := New("someflow", llog, workersCount, capacity, &dummyDataDropper{},
 		&mockFilePather{prefix: "some-prefix", filename: "some-random-filename"}, prometheus.NewRegistry())
 	receiver := make(chan *domain.WorkUnit, 1)
 
@@ -137,10 +137,10 @@ func TestItDeniesWorkAfterContextIsCanceled(t *testing.T) {
 func TestItFlushesAllPendingDataWhenContextIsCancelled(t *testing.T) {
 	workersCount := 2
 	capacity := 3
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
+
 	ctx, cancel := context.WithCancel(context.Background())
 
-	uploader := New("someflow", l, workersCount, capacity, &dummyDataDropper{},
+	uploader := New("someflow", llog, workersCount, capacity, &dummyDataDropper{},
 		&mockFilePather{prefix: "some-prefix", filename: "some-random-filename"}, prometheus.NewRegistry())
 	receiver := make(chan *domain.WorkUnit, 1)
 
@@ -232,16 +232,15 @@ func testUploader(
 	workersCount int,
 	objectsToEnqueueCount int,
 	capacity int,
-	uploaderFactory func(string, *zap.SugaredLogger, int, int, domain.DataDropper, domain.FilePathProvider, *prometheus.Registry) *NonBlockingUploader,
+	uploaderFactory func(string, *slog.Logger, int, int, domain.DataDropper, domain.FilePathProvider, *prometheus.Registry) *NonBlockingUploader,
 	sleepTimeBeforeProducing time.Duration) {
 
 	resultCounter := int64(0)
 	var waitG sync.WaitGroup
 
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
 	ctx, cancel := context.WithCancel(context.Background())
 
-	uploader := uploaderFactory("someflow", l, workersCount, capacity, &dummyDataDropper{}, &mockFilePather{}, prometheus.NewRegistry())
+	uploader := uploaderFactory("someflow", llog, workersCount, capacity, &dummyDataDropper{}, &mockFilePather{}, prometheus.NewRegistry())
 
 	waitG.Add(objectsToEnqueueCount)
 	for i := 0; i < workersCount; i++ {
@@ -251,7 +250,7 @@ func testUploader(
 			wg:             &waitG,
 		}
 
-		w := worker.NewWorker("someflow", l, objStorage, &dummyExternalQueue{}, uploader.WorkersReady, prometheus.NewRegistry(), noCompressionConf)
+		w := worker.NewWorker("someflow", llog, objStorage, &dummyExternalQueue{}, uploader.WorkersReady, prometheus.NewRegistry(), noCompressionConf)
 		go w.Run(ctx)
 	}
 
@@ -282,17 +281,16 @@ func testUploaderEnsuringEnqueuedItems(
 	workersCount int,
 	objectsToEnqueueCount int,
 	capacity int,
-	uploaderFactory func(string, *zap.SugaredLogger, int, int, domain.DataDropper, domain.FilePathProvider, *prometheus.Registry) *NonBlockingUploader) {
+	uploaderFactory func(string, *slog.Logger, int, int, domain.DataDropper, domain.FilePathProvider, *prometheus.Registry) *NonBlockingUploader) {
 
 	var waitG sync.WaitGroup
 	var mu sync.Mutex
 	var expected []string = make([]string, objectsToEnqueueCount)
 	var result []string = make([]string, 0, objectsToEnqueueCount)
 
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "warn", Format: "json"}})
 	ctx, cancel := context.WithCancel(context.Background())
 
-	uploader := uploaderFactory("someflow", l, workersCount, capacity, &dummyDataDropper{}, &mockFilePather{}, prometheus.NewRegistry())
+	uploader := uploaderFactory("someflow", llog, workersCount, capacity, &dummyDataDropper{}, &mockFilePather{}, prometheus.NewRegistry())
 
 	waitG.Add(objectsToEnqueueCount)
 	for i := 0; i < workersCount; i++ {
@@ -305,7 +303,7 @@ func testUploaderEnsuringEnqueuedItems(
 			},
 		}
 
-		w := worker.NewWorker("someflow", l, objStorage, &dummyExternalQueue{}, uploader.WorkersReady, prometheus.NewRegistry(), noCompressionConf)
+		w := worker.NewWorker("someflow", llog, objStorage, &dummyExternalQueue{}, uploader.WorkersReady, prometheus.NewRegistry(), noCompressionConf)
 		go w.Run(ctx)
 	}
 

@@ -4,7 +4,7 @@ import "fmt"
 
 type LogConfig struct {
 	Level  string `yaml:"level"`
-	Format string `yaml:"format"`
+	Format string `yaml:"format"` //TODO: validate format
 }
 
 func (logConf LogConfig) fillDefaults() LogConfig {

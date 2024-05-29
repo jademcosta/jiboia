@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -13,20 +14,19 @@ import (
 	"github.com/jademcosta/jiboia/pkg/compressor"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/domain/flow"
-	"go.uber.org/zap"
 )
 
 var payloadMaxSizeErr *http.MaxBytesError
 
 type ingestionRoute struct {
-	l                            *zap.SugaredLogger
+	l                            *slog.Logger
 	flw                          *flow.Flow
 	decompressionSemaphor        chan struct{}
 	validDecompressionAlgorithms map[string]struct{}
 	circuitBreaker               circuitbreaker.TwoStepCircuitBreaker
 }
 
-func newIngestionRoute(l *zap.SugaredLogger, flw *flow.Flow) *ingestionRoute {
+func newIngestionRoute(l *slog.Logger, flw *flow.Flow) *ingestionRoute {
 
 	validDecompressionAlgorithms := make(map[string]struct{})
 	for _, alg := range flw.DecompressionAlgorithms {
@@ -73,7 +73,7 @@ func (handler *ingestionRoute) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		increaseErrorCount("request_entity_too_large", currentPath)
 		return
 	} else if err != nil {
-		handler.l.Warnw("error reading body", "error", err)
+		handler.l.Warn("error reading body", "error", err)
 		w.WriteHeader(http.StatusBadRequest)
 		increaseErrorCount("error_reading_body", currentPath)
 		return
@@ -87,7 +87,7 @@ func (handler *ingestionRoute) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	}
 
 	data := buf.Bytes()
-	handler.l.Debugw("data received on async handler", "length", dataLen)
+	handler.l.Debug("data received on async handler", "length", dataLen)
 
 	decompressAlgorithm :=
 		selectDecompressionAlgorithm(handler.validDecompressionAlgorithms, r.Header["Content-Encoding"])
@@ -100,7 +100,7 @@ func (handler *ingestionRoute) ServeHTTP(w http.ResponseWriter, r *http.Request)
 			handler.decompressionSemaphor <- token
 		}
 		if err != nil {
-			handler.l.Warnw("failed to decompress data", "algorithm", decompressAlgorithm, "error", err)
+			handler.l.Warn("failed to decompress data", "algorithm", decompressAlgorithm, "error", err)
 			w.WriteHeader(http.StatusBadRequest)
 			increaseErrorCount("enqueue_failed", currentPath)
 			return
@@ -109,7 +109,7 @@ func (handler *ingestionRoute) ServeHTTP(w http.ResponseWriter, r *http.Request)
 
 	err = handler.flw.Entrypoint.Enqueue(data)
 	if err != nil {
-		handler.l.Warnw("failed while enqueueing data from http request", "error", err)
+		handler.l.Warn("failed while enqueueing data from http request", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		increaseErrorCount("enqueue_failed", currentPath)
 		enqueuedWithSuccess(false)
@@ -144,7 +144,7 @@ func RegisterIngestingRoutes(
 	api.mux.Middlewares()
 }
 
-func asyncIngestion(l *zap.SugaredLogger, flw *flow.Flow) http.HandlerFunc {
+func asyncIngestion(l *slog.Logger, flw *flow.Flow) http.HandlerFunc {
 
 	h := newIngestionRoute(l, flw)
 

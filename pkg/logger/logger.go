@@ -1,9 +1,12 @@
 package logger
 
 import (
+	"context"
+	"log/slog"
+	"os"
+	"strings"
+
 	"github.com/jademcosta/jiboia/pkg/config"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -13,45 +16,55 @@ const (
 	OBJ_STORAGE_TYPE_KEY = "obj_storage_type"
 )
 
-// type Logger *zap.SugaredLogger
-//FIXME: use this instead of zap namespace
+func New(conf *config.LogConfig) *slog.Logger {
+	level := generateLevel(conf.Level)
 
-func New(config *config.Config) *zap.SugaredLogger {
-
-	logLevel, _ := zapcore.ParseLevel(config.Log.Level)
-	zapconfig := zap.Config{
-		Level:            zap.NewAtomicLevelAt(logLevel),
-		Development:      false,
-		Encoding:         config.Log.Format,
-		EncoderConfig:    encoderConfig(),
-		OutputPaths:      []string{"stderr"},
-		ErrorOutputPaths: []string{"stderr"},
+	var handler slog.Handler
+	if conf.Format == "json" { //TODO: magic string
+		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+			Level: level,
+		})
+	} else {
+		handler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+			Level: level,
+		})
 	}
 
-	logger, err := zapconfig.Build()
-	if err != nil {
-		panic("Error initializing logger: " + err.Error())
-	}
-
-	sugar := logger.Sugar()
-
-	// TODO: Remember to add some signaling so logger can call sync() to flush all logs before exit
-	return sugar
+	return slog.New(handler)
 }
 
-func encoderConfig() zapcore.EncoderConfig {
-	return zapcore.EncoderConfig{
-		TimeKey:        "ts",
-		LevelKey:       "level",
-		NameKey:        "logger",
-		CallerKey:      "caller",
-		FunctionKey:    zapcore.OmitKey,
-		MessageKey:     "msg",
-		StacktraceKey:  "stacktrace",
-		LineEnding:     zapcore.DefaultLineEnding,
-		EncodeLevel:    zapcore.LowercaseLevelEncoder,
-		EncodeTime:     zapcore.ISO8601TimeEncoder,
-		EncodeDuration: zapcore.SecondsDurationEncoder,
-		EncodeCaller:   zapcore.ShortCallerEncoder,
+// Should be used only on tests
+func NewDummy() *slog.Logger {
+	return slog.New(&dummyHandler{})
+}
+
+func generateLevel(level string) slog.Level {
+	switch strings.ToLower(level) {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
 	}
+}
+
+type dummyHandler struct {
+}
+
+func (h *dummyHandler) Enabled(context.Context, slog.Level) bool {
+	return false
+}
+func (h *dummyHandler) Handle(context.Context, slog.Record) error {
+	return nil
+}
+func (h *dummyHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return h
+}
+func (h *dummyHandler) WithGroup(name string) slog.Handler {
+	return h
 }

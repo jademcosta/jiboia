@@ -23,6 +23,8 @@ import (
 
 const version string = "0.0.0"
 
+var llog = logger.NewDummy()
+
 var characters = []rune("abcdefghijklmnopqrstuvwxyz")
 
 func randString(n int) string {
@@ -65,7 +67,7 @@ func (brokenDF *brokenDataFlow) Enqueue(data []byte) error {
 }
 
 func TestPassesDataFlows(t *testing.T) {
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
+	l := llog
 	c := config.ApiConfig{Port: 9111}
 
 	mockDF := &mockDataFlow{
@@ -121,7 +123,7 @@ func TestPassesDataFlows(t *testing.T) {
 }
 
 func TestAnswersAnErrorIfNoBodyIsSent(t *testing.T) {
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
+	l := llog
 	c := config.ApiConfig{Port: 9111}
 
 	mockDF := &mockDataFlow{
@@ -149,7 +151,7 @@ func TestAnswersAnErrorIfNoBodyIsSent(t *testing.T) {
 }
 
 func TestAnswersErrorIfEnqueueingFails(t *testing.T) {
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
+	l := llog
 	c := config.ApiConfig{Port: 9111}
 
 	mockDF := &dummyAlwaysFailDataFlow{}
@@ -174,7 +176,7 @@ func TestAnswersErrorIfEnqueueingFails(t *testing.T) {
 }
 
 func TestPanicResultInStatus500(t *testing.T) {
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
+	l := llog
 	c := config.ApiConfig{Port: 9111}
 
 	brokenDF := &brokenDataFlow{}
@@ -199,7 +201,7 @@ func TestPanicResultInStatus500(t *testing.T) {
 }
 
 func TestPayloadSizeLimit(t *testing.T) {
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
+	l := llog
 	c := config.ApiConfig{Port: 9111, PayloadSizeLimit: "10"} //10 bytes limit
 
 	df := &mockDataFlow{calledWith: make([][]byte, 0)}
@@ -249,7 +251,7 @@ func TestPayloadSizeLimit(t *testing.T) {
 }
 
 func TestApiToken(t *testing.T) {
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
+	l := llog
 	c := config.ApiConfig{Port: 9111}
 	token := "whatever token here random maybe bla bla bla"
 	token3 := "a different token"
@@ -494,7 +496,7 @@ func TestApiToken(t *testing.T) {
 }
 
 func TestVersionEndpointInformsTheVersion(t *testing.T) {
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
+	l := llog
 	c := config.ApiConfig{Port: 9111}
 
 	mockDF := &dummyAlwaysFailDataFlow{}
@@ -525,7 +527,7 @@ func TestVersionEndpointInformsTheVersion(t *testing.T) {
 }
 
 func TestDecompressionOnIngestion(t *testing.T) {
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
+	l := llog
 	c := config.ApiConfig{Port: 9111}
 
 	t.Run("Happy path", func(t *testing.T) {
@@ -686,7 +688,7 @@ func TestDecompressionOnIngestion(t *testing.T) {
 }
 
 func TestDecompressionOnIngestionConcurrencyLimit(t *testing.T) {
-	l := logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
+	l := llog
 	c := config.ApiConfig{Port: 9111}
 
 	t.Run("when the load is smaller than the limit", func(t *testing.T) {

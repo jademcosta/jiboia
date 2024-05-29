@@ -3,12 +3,12 @@ package httpstorage
 import (
 	"bytes"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/jademcosta/jiboia/pkg/domain"
-	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 )
 
@@ -20,11 +20,11 @@ type Config struct {
 
 type HttpStorage struct {
 	url    string
-	log    *zap.SugaredLogger
+	log    *slog.Logger
 	client *http.Client
 }
 
-func New(l *zap.SugaredLogger, c *Config) (*HttpStorage, error) {
+func New(l *slog.Logger, c *Config) (*HttpStorage, error) {
 	url, err := validateAndFormatUrl(c.Url)
 	if err != nil {
 		return nil, fmt.Errorf("error creating httpstorage: %w", err)

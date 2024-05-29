@@ -1,10 +1,10 @@
 package domain
 
 import (
+	"log/slog"
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"go.uber.org/zap"
 )
 
 const COMPONENT_LABEL string = "component"
@@ -16,12 +16,12 @@ type DataDropper interface {
 }
 
 type ObservableDataDropper struct {
-	l              *zap.SugaredLogger
+	l              *slog.Logger
 	componentOwner string
 	counter        *prometheus.CounterVec
 }
 
-func NewObservableDataDropper(l *zap.SugaredLogger, metricRegistry *prometheus.Registry, owner string) DataDropper {
+func NewObservableDataDropper(l *slog.Logger, metricRegistry *prometheus.Registry, owner string) DataDropper {
 	dropCounter := prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name:      "dropped_packages_total",
@@ -44,5 +44,5 @@ func NewObservableDataDropper(l *zap.SugaredLogger, metricRegistry *prometheus.R
 
 func (dropper *ObservableDataDropper) Drop(data []byte) {
 	dropper.counter.WithLabelValues(dropper.componentOwner).Inc()
-	dropper.l.Warnw("data has just been dropped", "size_in_bytes", len(data), "subject", dropper.componentOwner)
+	dropper.l.Warn("data has just been dropped", "size_in_bytes", len(data), "subject", dropper.componentOwner)
 }

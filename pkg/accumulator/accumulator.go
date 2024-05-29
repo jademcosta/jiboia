@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -11,7 +12,6 @@ import (
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
-	"go.uber.org/zap"
 )
 
 const (
@@ -21,7 +21,7 @@ const (
 )
 
 type BucketAccumulator struct {
-	l                *zap.SugaredLogger
+	l                *slog.Logger
 	limitOfBytes     int
 	separator        []byte
 	separatorLen     int
@@ -37,7 +37,7 @@ type BucketAccumulator struct {
 
 func New(
 	flowName string,
-	l *zap.SugaredLogger,
+	l *slog.Logger,
 	limitOfBytes int,
 	separator []byte,
 	queueCapacity int,
@@ -47,16 +47,19 @@ func New(
 	metricRegistry *prometheus.Registry) *BucketAccumulator {
 
 	if limitOfBytes <= 1 {
-		l.Panicw("limit of bytes in accumulator should be >= 2", "flow", flowName)
+		l.Error("limit of bytes in accumulator should be >= 2", "flow", flowName)
+		panic("limit of bytes in accumulator should be >= 2")
 	}
 
 	if len(separator) >= limitOfBytes {
-		l.Panicw("separator length in bytes should be smaller than limit", "flow", flowName)
+		l.Error("separator length in bytes should be smaller than limit", "flow", flowName)
+		panic("separator length in bytes should be smaller than limit")
 	}
 
 	if queueCapacity < MINIMUM_QUEUE_CAPACITY {
-		l.Panicw(fmt.Sprintf("the accumulator capacity cannot be less than %d", //TODO: move this validation to config
+		l.Error(fmt.Sprintf("the accumulator capacity cannot be less than %d", //TODO: move this validation to config
 			MINIMUM_QUEUE_CAPACITY), "flow", flowName)
+		panic(fmt.Sprintf("the accumulator capacity cannot be less than %d", MINIMUM_QUEUE_CAPACITY))
 	}
 
 	metrics := NewMetricCollector(flowName, metricRegistry)

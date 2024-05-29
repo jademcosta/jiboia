@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"sync"
 
 	"github.com/jademcosta/jiboia/pkg/compressor"
@@ -11,7 +12,6 @@ import (
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
-	"go.uber.org/zap"
 )
 
 var ensureSingleMetricRegistration sync.Once
@@ -27,7 +27,7 @@ type ExternalQueue interface {
 }
 
 type Worker struct {
-	l                    *zap.SugaredLogger
+	l                    *slog.Logger
 	workChan             chan *domain.WorkUnit
 	storage              ObjStorage
 	queue                ExternalQueue
@@ -38,7 +38,7 @@ type Worker struct {
 
 func NewWorker(
 	flowName string,
-	l *zap.SugaredLogger,
+	l *slog.Logger,
 	storage ObjStorage,
 	extQueue ExternalQueue,
 	workVolunteeringChan chan chan *domain.WorkUnit,
@@ -98,7 +98,7 @@ func (w *Worker) work(workU *domain.WorkUnit) {
 
 	compressedData, err := compress(w.compressionConf, workU.Data)
 	if err != nil {
-		w.l.Errorw("error compressing data", "prefix", workU.Prefix, "filename", workU.Filename, "error", err)
+		w.l.Error("error compressing data", "prefix", workU.Prefix, "filename", workU.Filename, "error", err)
 		return
 	}
 	compressionRatioHist.WithLabelValues(w.compressionConf.Type).Observe(
@@ -108,10 +108,10 @@ func (w *Worker) work(workU *domain.WorkUnit) {
 	uploadResult, err := w.storage.Upload(workU)
 
 	if err != nil {
-		w.l.Errorw("failed to upload object", "prefix", workU.Prefix, "filename", workU.Filename, "error", err)
+		w.l.Error("failed to upload object", "prefix", workU.Prefix, "filename", workU.Filename, "error", err)
 		return
 	} else {
-		w.l.Debugw("finished uploading object", "prefix", workU.Prefix, "filename", workU.Filename)
+		w.l.Debug("finished uploading object", "prefix", workU.Prefix, "filename", workU.Filename)
 	}
 
 	msgContext := &domain.MessageContext{
@@ -125,9 +125,9 @@ func (w *Worker) work(workU *domain.WorkUnit) {
 	err = w.queue.Enqueue(msgContext)
 
 	if err != nil {
-		w.l.Errorw("failed to enqueue data", "object_path", uploadResult.Path, "error", err)
+		w.l.Error("failed to enqueue data", "object_path", uploadResult.Path, "error", err)
 	} else {
-		w.l.Debugw("finished enqueueing data", "object_path", uploadResult.Path)
+		w.l.Debug("finished enqueueing data", "object_path", uploadResult.Path)
 	}
 }
 

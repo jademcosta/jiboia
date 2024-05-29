@@ -2,12 +2,12 @@ package localstorage
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/jademcosta/jiboia/pkg/domain"
-	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 )
 
@@ -19,10 +19,10 @@ type Config struct {
 
 type LocalStorage struct {
 	path string
-	log  *zap.SugaredLogger
+	log  *slog.Logger
 }
 
-func New(l *zap.SugaredLogger, c *Config) (*LocalStorage, error) {
+func New(l *slog.Logger, c *Config) (*LocalStorage, error) {
 	path, err := validateAndFormatPath(c.Path)
 	if err != nil {
 		return nil, fmt.Errorf("error creating localstorage: %w", err)

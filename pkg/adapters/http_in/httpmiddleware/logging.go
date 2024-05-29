@@ -1,18 +1,17 @@
 package httpmiddleware
 
 import (
+	"log/slog"
 	"net/http"
 	"time"
-
-	"go.uber.org/zap"
 )
 
 type loggingMiddleware struct {
-	l    *zap.SugaredLogger
+	l    *slog.Logger
 	next http.Handler
 }
 
-func NewLoggingMiddleware(l *zap.SugaredLogger) func(next http.Handler) http.Handler {
+func NewLoggingMiddleware(l *slog.Logger) func(next http.Handler) http.Handler {
 	logging := &loggingMiddleware{
 		l: l,
 	}
@@ -30,7 +29,7 @@ func (midd *loggingMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	midd.next.ServeHTTP(wrapper, r)
 
 	defer func() {
-		midd.l.Infow("HTTP response",
+		midd.l.Info("HTTP response",
 			"method", r.Method,
 			"path", r.URL.Path,
 			"status", wrapper.statusCode,

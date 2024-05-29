@@ -3,6 +3,7 @@ package sqs
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -10,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
-	"go.uber.org/zap"
 	"gopkg.in/yaml.v2"
 )
 
@@ -44,20 +44,20 @@ type Config struct {
 }
 
 type sqsRep struct {
-	log      *zap.SugaredLogger
+	log      *slog.Logger
 	client   sqsiface.SQSAPI
 	queueUrl string
 	flowName string
 }
 
-func New(l *zap.SugaredLogger, c *Config, flowName string) (*sqsRep, error) {
+func New(l *slog.Logger, c *Config, flowName string) (*sqsRep, error) {
 	//TODO: session claims to be safe to read concurrently. Can I use a single one?
 	sess, err := session.NewSession(&aws.Config{
 		Region:   aws.String(c.Region),
 		Endpoint: aws.String(c.Endpoint),
 		LogLevel: aws.LogLevel(aws.LogDebug),
 		Logger: aws.LoggerFunc(func(args ...interface{}) {
-			l.Debugw("AWS sdk log", "aws-msg", fmt.Sprint(args))
+			l.Debug("AWS sdk log", "aws-msg", fmt.Sprint(args))
 		}),
 	})
 
@@ -124,10 +124,10 @@ func (internalSqs *sqsRep) Enqueue(msg *domain.MessageContext) error {
 		return fmt.Errorf("error on SQS message validation: %w", err)
 	}
 
-	internalSqs.log.Debugw("sending SQS message", "queue_url", internalSqs.queueUrl)
+	internalSqs.log.Debug("sending SQS message", "queue_url", internalSqs.queueUrl)
 	enqueueOutput, err := internalSqs.client.SendMessage(messageInput)
 	if err == nil {
-		internalSqs.log.Debugw("enqueued message on SQS", "message_id", enqueueOutput.MessageId)
+		internalSqs.log.Debug("enqueued message on SQS", "message_id", enqueueOutput.MessageId)
 	}
 
 	return err

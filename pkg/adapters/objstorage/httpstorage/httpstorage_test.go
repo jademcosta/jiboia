@@ -8,15 +8,12 @@ import (
 	"testing"
 
 	"github.com/jademcosta/jiboia/pkg/adapters/objstorage/httpstorage"
-	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
 
-var l *zap.SugaredLogger = logger.New(
-	&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
+var llog = logger.NewDummy()
 
 func TestURLFormat(t *testing.T) {
 	type testCase struct {
@@ -43,7 +40,7 @@ func TestURLFormat(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		_, err := httpstorage.New(l, &httpstorage.Config{Url: tc.url})
+		_, err := httpstorage.New(llog, &httpstorage.Config{Url: tc.url})
 		if tc.shouldError {
 			assert.Errorf(t, err,
 				"should return error when URL %s is used", tc.url)
@@ -74,7 +71,7 @@ func TestURLFormatWhenUploading(t *testing.T) {
 	defer externalServer.Close()
 
 	//server url is like http://127.0.0.1:57439
-	sut, err := httpstorage.New(l, &httpstorage.Config{
+	sut, err := httpstorage.New(llog, &httpstorage.Config{
 		Url: fmt.Sprintf("%s/something-to-upload", externalServer.URL)})
 	assert.NoError(t, err, "should not error on storage creation")
 
@@ -92,7 +89,7 @@ func TestURLFormatWhenUploading(t *testing.T) {
 	assert.NoError(t, err, "the upload should return no error")
 
 	//server url is like http://127.0.0.1:57439
-	sut, err = httpstorage.New(l, &httpstorage.Config{
+	sut, err = httpstorage.New(llog, &httpstorage.Config{
 		Url: fmt.Sprintf("%s/something-to-upload/%s", externalServer.URL, "%s")})
 	assert.NoError(t, err, "should not error on storage creation")
 
@@ -118,7 +115,7 @@ func TestUploadSuccess(t *testing.T) {
 	defer externalServer.Close()
 
 	//server url is like http://127.0.0.1:57439
-	sut, err := httpstorage.New(l, &httpstorage.Config{
+	sut, err := httpstorage.New(llog, &httpstorage.Config{
 		Url: fmt.Sprintf("%s/something-to-upload/%%s", externalServer.URL)})
 	assert.NoError(t, err, "should not error on storage creation")
 
@@ -168,7 +165,7 @@ func TestUploadErrors(t *testing.T) {
 			w.WriteHeader(tc.statusCode)
 		}))
 
-		sut, err := httpstorage.New(l, &httpstorage.Config{
+		sut, err := httpstorage.New(llog, &httpstorage.Config{
 			Url: fmt.Sprintf("%s/something-to-upload/%%s", externalServer.URL)})
 		assert.NoError(t, err, "should not error on storage creation")
 

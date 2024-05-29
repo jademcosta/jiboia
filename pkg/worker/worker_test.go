@@ -17,15 +17,11 @@ import (
 	"github.com/jademcosta/jiboia/pkg/worker"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 )
 
-var l *zap.SugaredLogger
 var noCompressionConf config.CompressionConfig = config.CompressionConfig{}
 
-func init() {
-	l = logger.New(&config.Config{Log: config.LogConfig{Level: "error", Format: "json"}})
-}
+var llog = logger.NewDummy()
 
 type mockObjStorage struct {
 	mu         sync.Mutex
@@ -88,7 +84,7 @@ func TestRegistersItsChannelOnStartup(t *testing.T) {
 
 	workerQueueChan := make(chan chan *domain.WorkUnit, 1)
 
-	sut := worker.NewWorker("someflow", l, objStorage, queue, workerQueueChan, prometheus.NewRegistry(), noCompressionConf)
+	sut := worker.NewWorker("someflow", llog, objStorage, queue, workerQueueChan, prometheus.NewRegistry(), noCompressionConf)
 	go sut.Run(ctx)
 
 	select {
@@ -112,7 +108,7 @@ func TestCallsObjUploaderWithDataPassed(t *testing.T) {
 
 	workerQueueChan := make(chan chan *domain.WorkUnit, 1)
 
-	sut := worker.NewWorker("someflow", l, objStorage, queue, workerQueueChan, prometheus.NewRegistry(), noCompressionConf)
+	sut := worker.NewWorker("someflow", llog, objStorage, queue, workerQueueChan, prometheus.NewRegistry(), noCompressionConf)
 	go sut.Run(ctx)
 
 	var workerChan chan *domain.WorkUnit
@@ -163,7 +159,7 @@ func TestCallsEnqueuerWithUploaderResult(t *testing.T) {
 	queue := &mockExternalQueue{calledWith: make([]*domain.MessageContext, 0), wg: &wg}
 	workerQueueChan := make(chan chan *domain.WorkUnit, 1)
 
-	sut := worker.NewWorker("someflow", l, objStorage, queue, workerQueueChan, prometheus.NewRegistry(), noCompressionConf)
+	sut := worker.NewWorker("someflow", llog, objStorage, queue, workerQueueChan, prometheus.NewRegistry(), noCompressionConf)
 	go sut.Run(ctx)
 
 	var workerChan chan *domain.WorkUnit
@@ -213,7 +209,7 @@ func TestRegistersItselfForWorkAgainAfterWorking(t *testing.T) {
 	queue := &dummyExternalQueue{}
 	workerQueueChan := make(chan chan *domain.WorkUnit, 1)
 
-	sut := worker.NewWorker("someflow", l, objStorage, queue, workerQueueChan, prometheus.NewRegistry(), noCompressionConf)
+	sut := worker.NewWorker("someflow", llog, objStorage, queue, workerQueueChan, prometheus.NewRegistry(), noCompressionConf)
 	go sut.Run(ctx)
 
 	wg.Add(11)
@@ -254,7 +250,7 @@ func TestStopsAcceptingWorkAfterContextIsCancelled(t *testing.T) {
 	queue := &dummyExternalQueue{}
 	workerQueueChan := make(chan chan *domain.WorkUnit, 1)
 
-	sut := worker.NewWorker("someflow", l, objStorage, queue, workerQueueChan, prometheus.NewRegistry(), noCompressionConf)
+	sut := worker.NewWorker("someflow", llog, objStorage, queue, workerQueueChan, prometheus.NewRegistry(), noCompressionConf)
 	go sut.Run(ctx)
 
 	var workerChan chan *domain.WorkUnit
@@ -315,7 +311,7 @@ func TestDoesNotCallEnqueueWhenObjUploadFails(t *testing.T) {
 	queue := &mockExternalQueue{calledWith: make([]*domain.MessageContext, 0), wg: &wg}
 	workerQueueChan := make(chan chan *domain.WorkUnit, 1)
 
-	sut := worker.NewWorker("someflow", l, objStorage, queue, workerQueueChan, prometheus.NewRegistry(), noCompressionConf)
+	sut := worker.NewWorker("someflow", llog, objStorage, queue, workerQueueChan, prometheus.NewRegistry(), noCompressionConf)
 	go sut.Run(ctx)
 
 	var workerChan chan *domain.WorkUnit
@@ -382,7 +378,7 @@ func TestUsesCompressionConfig(t *testing.T) {
 		queue := &mockExternalQueue{calledWith: make([]*domain.MessageContext, 0), wg: &wg}
 		workerQueueChan := make(chan chan *domain.WorkUnit, 1)
 
-		sut := worker.NewWorker("someflow", l, objStorage, queue, workerQueueChan, prometheus.NewRegistry(), tc.compressConf)
+		sut := worker.NewWorker("someflow", llog, objStorage, queue, workerQueueChan, prometheus.NewRegistry(), tc.compressConf)
 		go sut.Run(ctx)
 
 		workerChan := <-workerQueueChan
