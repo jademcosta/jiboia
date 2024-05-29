@@ -55,7 +55,7 @@ func New(
 	}
 
 	if queueCapacity < MINIMUM_QUEUE_CAPACITY {
-		l.Panicw(fmt.Sprintf("the accumulator capacity cannot be less than %d",
+		l.Panicw(fmt.Sprintf("the accumulator capacity cannot be less than %d", //TODO: move this validation to config
 			MINIMUM_QUEUE_CAPACITY), "flow", flowName)
 	}
 

@@ -1,14 +1,25 @@
 package config
 
+import "fmt"
+
 type CompressionConfig struct {
 	Level string `yaml:"level"`
 	Type  string `yaml:"type"`
 }
 
-func (compssConf CompressionConfig) fillDefaultValues() CompressionConfig {
-	return compssConf
+func (compConf CompressionConfig) fillDefaultValues() CompressionConfig {
+	return compConf
 }
 
-func (compssConf CompressionConfig) validate() error {
+func (compConf CompressionConfig) validate() error {
+	if compConf.Type == "" {
+		return nil
+	}
+
+	if !allowed(allowedValues("compression"), compConf.Type) {
+		return fmt.Errorf("compression.type option must be one of %v",
+			allowedValues("compression"))
+	}
+
 	return nil
 }

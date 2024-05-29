@@ -262,7 +262,7 @@ func createFlows(
 			CircuitBreaker:              createTwoStepCircuitBreaker(metricRegistry, llog, flowConf.Name, flowConf.Ingestion.CircuitBreaker),
 		}
 
-		hasAccumulatorDeclared := flowConf.Accumulator.SizeInBytes > 0 //TODO: this is something that will need to be improved once config is localized inside packages
+		hasAccumulatorDeclared := flowConf.Accumulator.SizeInBytes > 0 //TODO: this is something that will need to be improved, as it is error prone
 		if hasAccumulatorDeclared {
 			f.Accumulator = createAccumulator(flowConf.Name, localLogger, flowConf.Accumulator,
 				metricRegistry, uploader)

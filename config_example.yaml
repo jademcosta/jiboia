@@ -59,7 +59,7 @@ flows:
     # [Optional] This component merges data into memory until a user defined limit, and then sends
     # it forward to be uploaded into object storage. You may use it to have bigger chunks of data.
     accumulator:
-      # The size it will accumulate in memory before sending the merge data to be uploaded
+      # The size it will accumulate in memory before sending the merged data to be uploaded
       size_in_bytes: 2097152 # 2MB
       # [Optional] The separator it will use to merge the chuncks of data
       separator: "__n__"

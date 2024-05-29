@@ -26,6 +26,10 @@ func (apiConf ApiConfig) validate() error {
 	if err != nil {
 		return err
 	}
+
+	if apiConf.Port == 0 {
+		return errors.New("api.port cannot be 0")
+	}
 	return nil
 }
 

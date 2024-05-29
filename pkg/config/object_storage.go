@@ -9,6 +9,6 @@ func (objStgConf ObjectStorageConfig) fillDefaultValues() ObjectStorageConfig {
 	return objStgConf
 }
 
-func (objStgConf ObjectStorageConfig) validate() error {
+func (objStgConf ObjectStorageConfig) validate() error { //Validated further in the factory
 	return nil
 }
