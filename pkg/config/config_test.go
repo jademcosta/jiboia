@@ -104,6 +104,19 @@ flows:
       type: localstorage
       config:
         path: "/tmp/path/storage"
+  - name: "myflow3"
+    in_memory_queue_max_size: 1
+    max_concurrent_uploads: 1
+    path_prefix_count: 1
+    ingestion:
+      circuit_breaker:
+        open_interval_in_ms: 12
+    external_queue:
+      type: noop
+    object_storage:
+      type: localstorage
+      config:
+        path: "/tmp/path/storage2"
 `
 
 	conf, err := config.New([]byte(configYaml))
@@ -184,6 +197,9 @@ flows:
 
 	assert.Equal(t, "localstorage", conf.Flows[1].ObjectStorage.Type, "should have parsed the correct flow.object_storage.type")
 	assert.NotNil(t, conf.Flows[1].ObjectStorage.Config, "should maintain the value of flow.object_storage.config")
+
+	assert.NotNil(t, conf.Flows[2].Accumulator.QueueCapacity,
+		"should have zero value on flow.accumulator.queue_capacity when an accumulator is not declared in a flow")
 }
 
 func TestValidateLogLevelValues(t *testing.T) {
