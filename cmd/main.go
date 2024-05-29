@@ -13,24 +13,24 @@ import (
 
 const version = "0.0.1" //FIXME: automatize this
 
-var configPath *string
-
 func main() {
 
-	flag.StringVar(configPath, "config", "", "<command> --config <FILE_PATH>")
+	configPath := flag.String("config", "", "<command> --config <FILE_PATH>")
 	flag.Parse()
+
 	if *configPath == "" {
 		panic("no config file path provided. Usage is: <command> --config <FILE_PATH>")
 	}
+	fmt.Printf("====>config val: %s\n", *configPath)
 
-	config := initializeConfig()
+	config := initializeConfig(*configPath)
 	l := initializeLogger(*config)
 
 	app.New(config, l).Start()
 }
 
-func initializeConfig() *config.Config {
-	confData, err := os.ReadFile(*configPath)
+func initializeConfig(configPath string) *config.Config {
+	confData, err := os.ReadFile(configPath)
 	if err != nil {
 		panic(fmt.Errorf("error reading config file: %w", err))
 	}
