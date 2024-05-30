@@ -89,14 +89,14 @@ func TestPanicsIfLimitIsOneOrLess(t *testing.T) {
 	separator := []byte("")
 
 	assert.Panics(t, func() {
-		accumulator.New("someflow", l, 0, separator, 30, &dummyDataDropper{}, next, dummyCB, prometheus.NewRegistry())
+		accumulator.New("someflow", l, 0, separator, 30, next, dummyCB, prometheus.NewRegistry())
 	}, "limit of bytes 0 is not allowed")
 	assert.Panics(t, func() {
-		accumulator.New("someflow", l, 1, separator, 30, &dummyDataDropper{}, next, dummyCB, prometheus.NewRegistry())
+		accumulator.New("someflow", l, 1, separator, 30, next, dummyCB, prometheus.NewRegistry())
 	}, "limit of bytes 1 is not allowed")
 
 	assert.NotPanics(t, func() {
-		accumulator.New("someflow", l, 2, separator, 30, &dummyDataDropper{}, next, dummyCB, prometheus.NewRegistry())
+		accumulator.New("someflow", l, 2, separator, 30, next, dummyCB, prometheus.NewRegistry())
 	}, "limit of bytes 2 is allowed")
 }
 
@@ -108,14 +108,14 @@ func TestPanicsIfSeparatorLenEqualOrBiggerThanLimit(t *testing.T) {
 	separator := []byte("abcdefghij")
 
 	assert.Panics(t, func() {
-		accumulator.New("someflow", l, limitOfBytes, separator, 30, &dummyDataDropper{}, next, dummyCB, prometheus.NewRegistry())
+		accumulator.New("someflow", l, limitOfBytes, separator, 30, next, dummyCB, prometheus.NewRegistry())
 	}, "separator size == limit is not allowed")
 
 	limitOfBytes = 10
 	separator = []byte("abcdefghijk")
 
 	assert.Panics(t, func() {
-		accumulator.New("someflow", l, limitOfBytes, separator, 30, &dummyDataDropper{}, next, dummyCB, prometheus.NewRegistry())
+		accumulator.New("someflow", l, limitOfBytes, separator, 30, next, dummyCB, prometheus.NewRegistry())
 	}, "separator size > limit is not allowed")
 }
 
@@ -126,14 +126,14 @@ func TestPanicsIfQueueSizeIsTwoOrLess(t *testing.T) {
 	bytesSizeLimit := 11
 
 	assert.Panics(t, func() {
-		accumulator.New("someflow", l, bytesSizeLimit, separator, 0, &dummyDataDropper{}, next, dummyCB, prometheus.NewRegistry())
+		accumulator.New("someflow", l, bytesSizeLimit, separator, 0, next, dummyCB, prometheus.NewRegistry())
 	}, "queue size of 0 is not allowed")
 	assert.Panics(t, func() {
-		accumulator.New("someflow", l, bytesSizeLimit, separator, 1, &dummyDataDropper{}, next, dummyCB, prometheus.NewRegistry())
+		accumulator.New("someflow", l, bytesSizeLimit, separator, 1, next, dummyCB, prometheus.NewRegistry())
 	}, "queue size of 1 is not allowed")
 
 	assert.NotPanics(t, func() {
-		accumulator.New("someflow", l, bytesSizeLimit, separator, 2, &dummyDataDropper{}, next, dummyCB, prometheus.NewRegistry())
+		accumulator.New("someflow", l, bytesSizeLimit, separator, 2, next, dummyCB, prometheus.NewRegistry())
 	}, "queue size of 2 should be allowed")
 }
 
@@ -158,7 +158,7 @@ func TestItDoesNotPassDataIfLimitNotReached(t *testing.T) {
 		next := &dataEnqueuerMock{dataWritten: make([][]byte, 0)}
 		ctx, cancel := context.WithCancel(context.Background())
 
-		sut := accumulator.New("someflow", l, tc.limitBytes, tc.separator, queueCapacity, &dummyDataDropper{}, next, dummyCB, prometheus.NewRegistry())
+		sut := accumulator.New("someflow", l, tc.limitBytes, tc.separator, queueCapacity, next, dummyCB, prometheus.NewRegistry())
 
 		go sut.Run(ctx)
 		err := sut.Enqueue(tc.data)
@@ -222,7 +222,7 @@ func TestWritesTheDataIfSizeEqualOrBiggerThanCapacity(t *testing.T) {
 		next := &dataEnqueuerMock{dataWritten: make([][]byte, 0)}
 		ctx, cancel := context.WithCancel(context.Background())
 
-		sut := accumulator.New("someflow", l, tc.limitBytes, tc.separator, queueCapacity, &dummyDataDropper{}, next, dummyCB, prometheus.NewRegistry())
+		sut := accumulator.New("someflow", l, tc.limitBytes, tc.separator, queueCapacity, next, dummyCB, prometheus.NewRegistry())
 
 		go sut.Run(ctx)
 		err := sut.Enqueue(tc.data)
@@ -320,7 +320,7 @@ func TestWritesTheDataWhenLimitIsHitAfterMultipleCalls(t *testing.T) {
 		next := &dataEnqueuerMock{dataWritten: make([][]byte, 0)}
 		ctx, cancel := context.WithCancel(context.Background())
 
-		sut := accumulator.New("someflow", l, tc.limitBytes, tc.separator, queueCapacity, &dummyDataDropper{}, next, dummyCB, prometheus.NewRegistry())
+		sut := accumulator.New("someflow", l, tc.limitBytes, tc.separator, queueCapacity, next, dummyCB, prometheus.NewRegistry())
 
 		go sut.Run(ctx)
 		for _, data := range tc.data {
@@ -343,8 +343,7 @@ func TestWritesTheDataWhenLimitIsHitAfterMultipleCalls(t *testing.T) {
 	}
 }
 
-func TestDropsDataIfAtFullCapacity(t *testing.T) {
-
+func TestRejectsDataIfAtFullCapacity(t *testing.T) {
 	type testCase struct {
 		separator        []byte
 		dataEnqueueCount int
@@ -362,26 +361,24 @@ func TestDropsDataIfAtFullCapacity(t *testing.T) {
 
 	for _, tc := range testCases {
 		next := &dataEnqueuerMock{dataWritten: make([][]byte, 0)}
-		ddropper := &mockDataDropper{dataDropped: make([][]byte, 0)}
 
-		sut := accumulator.New("someflow", l, limitBytes, tc.separator, tc.queueCapacity, ddropper, next, dummyCB, prometheus.NewRegistry())
+		sut := accumulator.New("someflow", l, limitBytes, tc.separator, tc.queueCapacity, next, dummyCB, prometheus.NewRegistry())
 
 		for i := 0; i < tc.dataEnqueueCount; i++ {
 			_ = sut.Enqueue([]byte(fmt.Sprint(i)))
-
 		}
 
+		err := sut.Enqueue([]byte("1"))
+		assert.Error(t, err, "should return error")
+
 		next.mu.Lock()
-		assert.Equalf(t, next.callCount, 0,
+		assert.Equalf(
+			t, next.callCount, 0,
 			"should not produce any message. Queue cap: %d dataCount: %d.",
-			tc.queueCapacity, tc.dataEnqueueCount)
+			tc.queueCapacity, tc.dataEnqueueCount,
+		)
 		next.mu.Unlock()
 
-		ddropper.mu.Lock()
-		assert.Lenf(t, ddropper.dataDropped, (tc.dataEnqueueCount - tc.queueCapacity),
-			"should drop messages if queue capacity is reached. Queue cap: %d dataCount: %d.",
-			tc.queueCapacity, tc.dataEnqueueCount)
-		ddropper.mu.Unlock()
 	}
 }
 
@@ -390,12 +387,12 @@ func TestTheCapacityIsFixed(t *testing.T) {
 	limitBytes := 6000
 
 	next := &dataEnqueuerMock{dataWritten: make([][]byte, 0)}
-	ddropper := &mockDataDropper{dataDropped: make([][]byte, 0)}
+
 	separator := []byte("")
 	queueCapacity := 2
 	dataEnqueueCount := accumulator.MINIMUM_QUEUE_CAPACITY
 
-	sut := accumulator.New("someflow", l, limitBytes, separator, queueCapacity, ddropper, next, dummyCB, prometheus.NewRegistry())
+	sut := accumulator.New("someflow", l, limitBytes, separator, queueCapacity, next, dummyCB, prometheus.NewRegistry())
 
 	for i := 0; i < dataEnqueueCount; i++ {
 		err := sut.Enqueue([]byte(fmt.Sprint(i)))
@@ -408,20 +405,10 @@ func TestTheCapacityIsFixed(t *testing.T) {
 		queueCapacity, dataEnqueueCount)
 	next.mu.Unlock()
 
-	ddropper.mu.Lock()
-	assert.Lenf(t, ddropper.dataDropped, 0,
-		"should not drop messages until queue capacity is exceeded.")
-	ddropper.mu.Unlock()
-
 	err := sut.Enqueue([]byte("a"))
 	assert.Error(t, err, "should err on enqueue")
 	err = sut.Enqueue([]byte("b"))
 	assert.Error(t, err, "should err on enqueue")
-
-	ddropper.mu.Lock()
-	assert.Lenf(t, ddropper.dataDropped, 2,
-		"should drop messages once the queue capacity is exceeded.")
-	ddropper.mu.Unlock()
 }
 
 func TestSendsPendingDataWhenContextIsCancelled(t *testing.T) {
@@ -455,10 +442,10 @@ func TestSendsPendingDataWhenContextIsCancelled(t *testing.T) {
 
 	for _, tc := range testCases {
 		next := &dataEnqueuerMock{dataWritten: make([][]byte, 0)}
-		ddropper := &mockDataDropper{dataDropped: make([][]byte, 0)}
+
 		ctx, cancel := context.WithCancel(context.Background())
 
-		sut := accumulator.New("someflow", l, limitBytes, separator, queueCapacity, ddropper, next, dummyCB, prometheus.NewRegistry())
+		sut := accumulator.New("someflow", l, limitBytes, separator, queueCapacity, next, dummyCB, prometheus.NewRegistry())
 
 		go sut.Run(ctx)
 
@@ -473,20 +460,8 @@ func TestSendsPendingDataWhenContextIsCancelled(t *testing.T) {
 			tc.data)
 		next.mu.Unlock()
 
-		ddropper.mu.Lock()
-		assert.Lenf(t, ddropper.dataDropped, 0,
-			"(before shutdown) should have not dropped any data. Data: %v.",
-			tc.data)
-		ddropper.mu.Unlock()
-
 		cancel()
 		time.Sleep(10 * time.Millisecond)
-
-		ddropper.mu.Lock()
-		assert.Lenf(t, ddropper.dataDropped, 0,
-			"(after shutdown) should have not dropped any data. Data: %v.",
-			tc.data)
-		ddropper.mu.Unlock()
 
 		next.mu.Lock()
 		assert.Equalf(t, next.callCount, len(tc.want),
@@ -503,10 +478,10 @@ func TestEnqueuesErrorsAfterContextCancelled(t *testing.T) {
 	queueCapacity := 30
 
 	next := &dataEnqueuerMock{dataWritten: make([][]byte, 0)}
-	ddropper := &mockDataDropper{dataDropped: make([][]byte, 0)}
+
 	ctx, cancel := context.WithCancel(context.Background())
 
-	sut := accumulator.New("someflow", l, limitBytes, separator, queueCapacity, ddropper, next, dummyCB, prometheus.NewRegistry())
+	sut := accumulator.New("someflow", l, limitBytes, separator, queueCapacity, next, dummyCB, prometheus.NewRegistry())
 
 	go sut.Run(ctx)
 	time.Sleep(1 * time.Millisecond)
@@ -519,11 +494,6 @@ func TestEnqueuesErrorsAfterContextCancelled(t *testing.T) {
 		"should not produce any message.")
 	next.mu.Unlock()
 
-	ddropper.mu.Lock()
-	assert.Lenf(t, ddropper.dataDropped, 0,
-		"should have not dropped any data.")
-	ddropper.mu.Unlock()
-
 	err := sut.Enqueue([]byte("hi"))
 	assert.Error(t, err, "should return error if enqueue is called after a shutdown has started")
 }
@@ -532,7 +502,6 @@ func TestCallindEnqueueUsesACircuitBreakerAndRetriesOnFailure(t *testing.T) {
 	openInterval := 100 * time.Millisecond
 	registry := prometheus.NewRegistry()
 
-	dataDropper := &mockDataDropper{dataDropped: make([][]byte, 0)}
 	next := &failingDataEnqueuerMock{
 		dataWritten: make([][]byte, 0),
 		fail:        true,
@@ -549,7 +518,7 @@ func TestCallindEnqueueUsesACircuitBreakerAndRetriesOnFailure(t *testing.T) {
 	limitOfBytes := 3
 	separator := []byte("")
 
-	sut := accumulator.New("someflow", l, limitOfBytes, separator, queueCapacity, dataDropper, next, cb, registry)
+	sut := accumulator.New("someflow", l, limitOfBytes, separator, queueCapacity, next, cb, registry)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go sut.Run(ctx)
@@ -583,11 +552,6 @@ func TestCallindEnqueueUsesACircuitBreakerAndRetriesOnFailure(t *testing.T) {
 	assert.Equal(t, wanted, next.dataWritten, "should call 'Write' with exactly the same data passed into it")
 	next.mu.Unlock()
 
-	dataDropper.mu.Lock()
-	assert.Lenf(t, dataDropper.dataDropped, 0,
-		"should have not dropped any data.")
-	dataDropper.mu.Unlock()
-
 	cancel()
 }
 
@@ -595,7 +559,6 @@ func TestItStopsRetryingOnceItSendsTheData(t *testing.T) {
 	openInterval := 100 * time.Millisecond
 	registry := prometheus.NewRegistry()
 
-	dataDropper := &mockDataDropper{dataDropped: make([][]byte, 0)}
 	next := &failingDataEnqueuerMock{
 		dataWritten: make([][]byte, 0),
 		fail:        true,
@@ -612,7 +575,7 @@ func TestItStopsRetryingOnceItSendsTheData(t *testing.T) {
 	limitOfBytes := 3
 	separator := []byte("")
 
-	sut := accumulator.New("someflow", l, limitOfBytes, separator, queueCapacity, dataDropper, next, cb, registry)
+	sut := accumulator.New("someflow", l, limitOfBytes, separator, queueCapacity, next, cb, registry)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go sut.Run(ctx)
@@ -654,11 +617,6 @@ func TestItStopsRetryingOnceItSendsTheData(t *testing.T) {
 	assert.Equal(t, 4, next.callCount, "should produce only 2 data message, as the CB has closed, open, and closed again")
 	assert.Equal(t, wanted, next.dataWritten, "should call 'Write' with exactly the same data passed into it")
 	next.mu.Unlock()
-
-	dataDropper.mu.Lock()
-	assert.Lenf(t, dataDropper.dataDropped, 0,
-		"should have not dropped any data.")
-	dataDropper.mu.Unlock()
 
 	cancel()
 }

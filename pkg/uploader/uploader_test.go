@@ -83,7 +83,7 @@ func TestWorkSentDownstreamHasTheCorrectDataInIt(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	uploader := New("someflow", llog, workersCount, capacity, &dummyDataDropper{},
+	uploader := New("someflow", llog, workersCount, capacity,
 		&mockFilePather{prefix: "some-prefix", filename: "some-random-filename"}, prometheus.NewRegistry())
 
 	receiver := make(chan *domain.WorkUnit, 1)
@@ -111,7 +111,7 @@ func TestItDeniesWorkAfterContextIsCanceled(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	uploader := New("someflow", llog, workersCount, capacity, &dummyDataDropper{},
+	uploader := New("someflow", llog, workersCount, capacity,
 		&mockFilePather{prefix: "some-prefix", filename: "some-random-filename"}, prometheus.NewRegistry())
 	receiver := make(chan *domain.WorkUnit, 1)
 
@@ -140,7 +140,7 @@ func TestItFlushesAllPendingDataWhenContextIsCancelled(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	uploader := New("someflow", llog, workersCount, capacity, &dummyDataDropper{},
+	uploader := New("someflow", llog, workersCount, capacity,
 		&mockFilePather{prefix: "some-prefix", filename: "some-random-filename"}, prometheus.NewRegistry())
 	receiver := make(chan *domain.WorkUnit, 1)
 
@@ -232,7 +232,7 @@ func testUploader(
 	workersCount int,
 	objectsToEnqueueCount int,
 	capacity int,
-	uploaderFactory func(string, *slog.Logger, int, int, domain.DataDropper, domain.FilePathProvider, *prometheus.Registry) *NonBlockingUploader,
+	uploaderFactory func(string, *slog.Logger, int, int, domain.FilePathProvider, *prometheus.Registry) *NonBlockingUploader,
 	sleepTimeBeforeProducing time.Duration) {
 
 	resultCounter := int64(0)
@@ -240,7 +240,7 @@ func testUploader(
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	uploader := uploaderFactory("someflow", llog, workersCount, capacity, &dummyDataDropper{}, &mockFilePather{}, prometheus.NewRegistry())
+	uploader := uploaderFactory("someflow", llog, workersCount, capacity, &mockFilePather{}, prometheus.NewRegistry())
 
 	waitG.Add(objectsToEnqueueCount)
 	for i := 0; i < workersCount; i++ {
@@ -281,7 +281,7 @@ func testUploaderEnsuringEnqueuedItems(
 	workersCount int,
 	objectsToEnqueueCount int,
 	capacity int,
-	uploaderFactory func(string, *slog.Logger, int, int, domain.DataDropper, domain.FilePathProvider, *prometheus.Registry) *NonBlockingUploader) {
+	uploaderFactory func(string, *slog.Logger, int, int, domain.FilePathProvider, *prometheus.Registry) *NonBlockingUploader) {
 
 	var waitG sync.WaitGroup
 	var mu sync.Mutex
@@ -290,7 +290,7 @@ func testUploaderEnsuringEnqueuedItems(
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	uploader := uploaderFactory("someflow", llog, workersCount, capacity, &dummyDataDropper{}, &mockFilePather{}, prometheus.NewRegistry())
+	uploader := uploaderFactory("someflow", llog, workersCount, capacity, &mockFilePather{}, prometheus.NewRegistry())
 
 	waitG.Add(objectsToEnqueueCount)
 	for i := 0; i < workersCount; i++ {

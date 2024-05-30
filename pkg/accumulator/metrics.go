@@ -17,6 +17,7 @@ var dataSizeInBytesCounter *prometheus.CounterVec
 var dataSizeOutBytesCounter *prometheus.CounterVec
 var dataSizeInKBsCounter *prometheus.CounterVec
 var dataSizeOutKBsCounter *prometheus.CounterVec
+var enqueueFailed *prometheus.CounterVec
 
 type metricCollector struct {
 	flowName string
@@ -98,6 +99,15 @@ func NewMetricCollector(flowName string, metricRegistry *prometheus.Registry) *m
 			},
 			[]string{FLOW_METRIC_KEY})
 
+		enqueueFailed = prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Namespace: "jiboia",
+				Subsystem: COMPONENT_NAME,
+				Name:      "enqueue_failed_total",
+				Help:      "Counter for failures when trying to enqueue data on it",
+			},
+			[]string{FLOW_METRIC_KEY})
+
 		metricRegistry.MustRegister(
 			enqueueCounter,
 			nextCounter,
@@ -106,7 +116,8 @@ func NewMetricCollector(flowName string, metricRegistry *prometheus.Registry) *m
 			dataSizeInBytesCounter,
 			dataSizeOutBytesCounter,
 			dataSizeInKBsCounter,
-			dataSizeOutKBsCounter)
+			dataSizeOutKBsCounter,
+			enqueueFailed)
 	})
 
 	return &metricCollector{
@@ -142,4 +153,8 @@ func (m *metricCollector) incDataOutBytesBy(size int) {
 		dataSizeOutBytesCounter.WithLabelValues(m.flowName).Add(float64(size))
 		dataSizeOutKBsCounter.WithLabelValues(m.flowName).Add(float64(size) / 1024)
 	}
+}
+
+func (m *metricCollector) incEnqueueFailed() {
+	enqueueFailed.WithLabelValues(m.flowName).Inc()
 }

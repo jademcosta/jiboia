@@ -14,6 +14,7 @@ var queueCapacityGauge *prometheus.GaugeVec
 var workersCountGauge *prometheus.GaugeVec
 var enqueueCounter *prometheus.CounterVec
 var enqueuedItemsGauge *prometheus.GaugeVec
+var enqueueFailed *prometheus.CounterVec
 
 type metricCollector struct {
 	flowName string
@@ -61,7 +62,19 @@ func NewMetricCollector(flowName string, metricRegistry *prometheus.Registry) *m
 			[]string{FLOW_METRIC_KEY},
 		)
 
-		metricRegistry.MustRegister(queueCapacityGauge, workersCountGauge, enqueueCounter, enqueuedItemsGauge)
+		enqueueFailed = prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Namespace: "jiboia",
+				Subsystem: "uploader",
+				Name:      "enqueue_failed_total",
+				Help:      "Counter for failures when trying to enqueue data on it",
+			},
+			[]string{FLOW_METRIC_KEY})
+
+		metricRegistry.MustRegister(
+			queueCapacityGauge, workersCountGauge, enqueueCounter, enqueuedItemsGauge,
+			enqueueFailed,
+		)
 	})
 
 	return &metricCollector{
@@ -83,4 +96,8 @@ func (m *metricCollector) increaseEnqueueCounter() {
 
 func (m *metricCollector) enqueuedItems(itemsCount int) {
 	enqueuedItemsGauge.WithLabelValues(m.flowName).Set(float64(itemsCount))
+}
+
+func (m *metricCollector) incEnqueueFailed() {
+	enqueueFailed.WithLabelValues(m.flowName).Inc()
 }

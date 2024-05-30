@@ -229,7 +229,6 @@ func createAccumulator(
 		int(sizeAsBytes),
 		[]byte(c.Separator),
 		c.QueueCapacity,
-		domain.NewObservableDataDropper(logger, registry, accumulator.COMPONENT_NAME),
 		uploader,
 		cb,
 		registry)
@@ -253,7 +252,6 @@ func createFlows(
 			localLogger,
 			flowConf.MaxConcurrentUploads,
 			flowConf.QueueMaxSize,
-			domain.NewObservableDataDropper(localLogger, metricRegistry, "uploader"),
 			filepather.New(datetimeprovider.New(), flowConf.PathPrefixCount, flowConf.Compression.Type),
 			metricRegistry)
 

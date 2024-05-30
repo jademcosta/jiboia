@@ -16,7 +16,6 @@ type NonBlockingUploader struct {
 	WorkersReady     chan chan *domain.WorkUnit
 	searchForWork    chan struct{}
 	log              *slog.Logger
-	dataDropper      domain.DataDropper
 	filePathProvider domain.FilePathProvider
 	metrics          *metricCollector
 	shutdownMutex    sync.RWMutex
@@ -30,7 +29,6 @@ func New(
 	l *slog.Logger,
 	workersCount int,
 	queueCapacity int,
-	dataDropper domain.DataDropper,
 	filePathProvider domain.FilePathProvider,
 	metricRegistry *prometheus.Registry,
 ) *NonBlockingUploader {
@@ -45,7 +43,6 @@ func New(
 		WorkersReady:     make(chan chan *domain.WorkUnit, workersCount),
 		searchForWork:    make(chan struct{}, 1),
 		log:              l.With(logger.COMPONENT_KEY, "uploader"),
-		dataDropper:      dataDropper,
 		filePathProvider: filePathProvider,
 		metrics:          metrics,
 		workersCount:     workersCount,
@@ -67,7 +64,7 @@ func (s *NonBlockingUploader) Enqueue(data []byte) error {
 	case s.internalDataChan <- data:
 		s.updateEnqueuedItemsMetric()
 	default:
-		s.dataDropped(data)
+		s.metrics.incEnqueueFailed()
 		return errors.New("enqueueing data to accumulate on uploader failed, queue is full")
 	}
 
@@ -106,10 +103,6 @@ func (s *NonBlockingUploader) sendWork(worker chan *domain.WorkUnit) {
 		worker <- workU
 		s.updateEnqueuedItemsMetric()
 	}
-}
-
-func (s *NonBlockingUploader) dataDropped(data []byte) {
-	s.dataDropper.Drop(data)
 }
 
 func (s *NonBlockingUploader) updateEnqueuedItemsMetric() {
