@@ -508,7 +508,7 @@ func TestCallindEnqueueUsesACircuitBreakerAndRetriesOnFailure(t *testing.T) {
 	payload := []byte("333")
 	err := sut.Enqueue(payload)
 	assert.NoError(t, err, "should not err on enqueue")
-	time.Sleep(1 * time.Millisecond)
+	time.Sleep(5 * time.Millisecond)
 
 	next.mu.Lock()
 	assert.Equal(t, 1, next.callCount, "should produce only 1 data message, as the CB was open")
@@ -516,7 +516,7 @@ func TestCallindEnqueueUsesACircuitBreakerAndRetriesOnFailure(t *testing.T) {
 
 	time.Sleep(openInterval)
 	time.Sleep(accumulator.CB_RETRY_SLEEP_DURATION)
-	time.Sleep(1 * time.Microsecond)
+	time.Sleep(5 * time.Microsecond)
 
 	wanted := [][]byte{payload, payload}
 	next.mu.Lock()
@@ -526,7 +526,7 @@ func TestCallindEnqueueUsesACircuitBreakerAndRetriesOnFailure(t *testing.T) {
 
 	time.Sleep(openInterval)
 	time.Sleep(accumulator.CB_RETRY_SLEEP_DURATION)
-	time.Sleep(1 * time.Microsecond)
+	time.Sleep(5 * time.Microsecond)
 
 	wanted = [][]byte{payload, payload, payload}
 	next.mu.Lock()
