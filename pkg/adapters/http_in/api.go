@@ -70,7 +70,7 @@ func (api *Api) Shutdown() error {
 
 func registerDefaultMiddlewares(
 	api *Api,
-	sizeLimit int,
+	sizeLimit int64,
 	l *slog.Logger,
 	metricRegistry *prometheus.Registry,
 ) {
@@ -81,6 +81,6 @@ func registerDefaultMiddlewares(
 	api.mux.Use(httpmiddleware.NewRecoverer(l))
 
 	if sizeLimit > 0 {
-		api.mux.Use(middleware.RequestSize(int64(sizeLimit)))
+		api.mux.Use(middleware.RequestSize(sizeLimit))
 	}
 }
