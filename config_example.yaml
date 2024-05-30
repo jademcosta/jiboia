@@ -60,7 +60,9 @@ flows:
     # it forward to be uploaded into object storage. You may use it to have bigger chunks of data.
     accumulator:
       # The size it will accumulate in memory before sending the merged data to be uploaded
-      size_in_bytes: 2097152 # 2MB
+      # If the value doesn't have a unit, it is considered to be bytes.
+      # Allowed unities are: kb, mb, gb, tb, pb, eb
+      size: 2MB
       # [Optional] The separator it will use to merge the chuncks of data
       separator: "__n__"
       # The internal queue of this component. This serves as a buffer for data yet to be merged.
