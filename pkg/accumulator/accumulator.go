@@ -20,7 +20,7 @@ const (
 	COMPONENT_NAME          = "accumulator"
 )
 
-type BucketAccumulator struct {
+type Accumulator struct {
 	l                *slog.Logger
 	limitOfBytes     int
 	separator        []byte
@@ -44,7 +44,7 @@ func New(
 	dataDropper domain.DataDropper,
 	next domain.DataFlow,
 	cb circuitbreaker.CircuitBreaker,
-	metricRegistry *prometheus.Registry) *BucketAccumulator {
+	metricRegistry *prometheus.Registry) *Accumulator {
 
 	if limitOfBytes <= 1 {
 		l.Error("limit of bytes in accumulator should be >= 2", "flow", flowName)
@@ -65,7 +65,7 @@ func New(
 	metrics := NewMetricCollector(flowName, metricRegistry)
 	metrics.queueCapacity(queueCapacity)
 
-	return &BucketAccumulator{
+	return &Accumulator{
 		l:                l.With(logger.COMPONENT_KEY, COMPONENT_NAME),
 		limitOfBytes:     limitOfBytes,
 		separator:        separator,
@@ -79,7 +79,7 @@ func New(
 	}
 }
 
-func (b *BucketAccumulator) Enqueue(data []byte) error {
+func (b *Accumulator) Enqueue(data []byte) error {
 	b.shutdownMutex.RLock()
 	defer b.shutdownMutex.RUnlock()
 	if b.shuttingDown {
@@ -100,7 +100,7 @@ func (b *BucketAccumulator) Enqueue(data []byte) error {
 }
 
 // Run should be called in a new goroutine
-func (b *BucketAccumulator) Run(ctx context.Context) {
+func (b *Accumulator) Run(ctx context.Context) {
 	// TODO: add flush based on time
 	b.l.Info("Starting non-blocking accumulator")
 	for {
@@ -117,7 +117,7 @@ func (b *BucketAccumulator) Run(ctx context.Context) {
 	}
 }
 
-func (b *BucketAccumulator) append(data []byte) {
+func (b *Accumulator) append(data []byte) {
 
 	dataLen := len(data)
 
@@ -149,7 +149,7 @@ func (b *BucketAccumulator) append(data []byte) {
 	}
 }
 
-func (b *BucketAccumulator) flush() {
+func (b *Accumulator) flush() {
 	chunksCount := len(b.current)
 	if chunksCount == 0 {
 		return
@@ -174,7 +174,7 @@ func (b *BucketAccumulator) flush() {
 
 }
 
-func (b *BucketAccumulator) currentBufferLen() int {
+func (b *Accumulator) currentBufferLen() int {
 	// TODO: save this result in a variable so we don't call it multiple times?
 	separatorLen := b.separatorLen
 	var total int
@@ -187,11 +187,11 @@ func (b *BucketAccumulator) currentBufferLen() int {
 	return total
 }
 
-func (b *BucketAccumulator) dataDropped(data []byte) {
+func (b *Accumulator) dataDropped(data []byte) {
 	b.dataDropper.Drop(data)
 }
 
-func (b *BucketAccumulator) enqueueOnNext(data []byte) {
+func (b *Accumulator) enqueueOnNext(data []byte) {
 	dataSize := len(data)
 
 	_, err := b.circBreaker.Execute(func() (interface{}, error) {
@@ -209,12 +209,12 @@ func (b *BucketAccumulator) enqueueOnNext(data []byte) {
 	b.metrics.increaseNextCounter()
 }
 
-func (b *BucketAccumulator) updateEnqueuedItemsMetric() {
+func (b *Accumulator) updateEnqueuedItemsMetric() {
 	itemsCount := len(b.internalDataChan)
 	b.metrics.enqueuedItems(itemsCount)
 }
 
-func (b *BucketAccumulator) shutdown() {
+func (b *Accumulator) shutdown() {
 	b.setShutdown()
 	close(b.internalDataChan)
 
@@ -231,7 +231,7 @@ func (b *BucketAccumulator) shutdown() {
 	b.flush()
 }
 
-func (b *BucketAccumulator) setShutdown() {
+func (b *Accumulator) setShutdown() {
 	b.shutdownMutex.Lock()
 	defer b.shutdownMutex.Unlock()
 	b.shuttingDown = true
