@@ -15,7 +15,7 @@ flows:
     max_concurrent_uploads: 2
     timeout: 120
     accumulator:
-      size_in_bytes: 20
+      size: 20
       separator: "_n_"
       queue_capacity: 10
     external_queue:
@@ -57,7 +57,7 @@ flows:
       decompress:
         active: ['gzip', 'snappy']
     accumulator:
-      size_in_bytes: 20
+      size: 20
       separator: ""
       queue_capacity: 10
     external_queue:
@@ -121,7 +121,7 @@ flows:
     max_concurrent_uploads: 3
     timeout: 120
     accumulator:
-      size_in_bytes: 5
+      size: 5
       separator: "_n_"
       queue_capacity: 2
     external_queue:
