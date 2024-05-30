@@ -35,12 +35,6 @@ func (mock *mockFilePather) Prefix() *string {
 	return &mock.prefix
 }
 
-type dummyDataDropper struct{}
-
-func (d *dummyDataDropper) Drop(data []byte) {
-	//Do nothing
-}
-
 type dummyExternalQueue struct{}
 
 func (queue *dummyExternalQueue) Enqueue(data *domain.MessageContext) error {

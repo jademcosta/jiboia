@@ -65,24 +65,6 @@ func (denq *failingDataEnqueuerMock) SetFail(v bool) {
 	denq.fail = v
 }
 
-type dummyDataDropper struct{}
-
-func (dd *dummyDataDropper) Drop([]byte) {
-	// Do nothing
-}
-
-type mockDataDropper struct {
-	dataDropped [][]byte
-	mu          sync.Mutex
-}
-
-func (d *mockDataDropper) Drop(data []byte) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-
-	d.dataDropped = append(d.dataDropped, data)
-}
-
 func TestPanicsIfLimitIsOneOrLess(t *testing.T) {
 
 	next := &dataEnqueuerMock{dataWritten: make([][]byte, 0)}
