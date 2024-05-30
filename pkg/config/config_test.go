@@ -62,7 +62,7 @@ flows:
         active: ["gzip", "zstd"]
         max_concurrency: 90
     accumulator:
-      size_in_bytes: 2097152
+      size: 573MB
       separator: "_a_"
       queue_capacity: 123
       circuit_breaker:
@@ -93,7 +93,7 @@ flows:
       type: gzip
       level: 2
     accumulator:
-      size_in_bytes: 20
+      size: 20
       separator: ""
       queue_capacity: 13
       circuit_breaker:
@@ -150,8 +150,11 @@ flows:
 	assert.Equal(t, false, conf.Flows[0].Ingestion.CircuitBreaker.Disable,
 		"should have set the default flow.ingestion.circuit_breaker.disable")
 
-	assert.Equal(t, 2097152, conf.Flows[0].Accumulator.SizeInBytes,
-		"should have parsed the correct flow.accumulator.size_in_bytes")
+	assert.Equal(t, "573MB", conf.Flows[0].Accumulator.Size,
+		"should have parsed the correct flow.accumulator.size")
+	sizeAsBytes, err := conf.Flows[0].Accumulator.SizeAsBytes()
+	assert.NoError(t, err, "should return no error")
+	assert.Equal(t, int64(600834048), sizeAsBytes, "should know how to conver the size of accumulator")
 	assert.Equal(t, "_a_", conf.Flows[0].Accumulator.Separator,
 		"should have parsed the correct flow.accumulator.separator")
 	assert.Equal(t, 123, conf.Flows[0].Accumulator.QueueCapacity,
@@ -184,7 +187,10 @@ flows:
 	assert.Equal(t, int64(1234), conf.Flows[1].Ingestion.CircuitBreaker.OpenInterval,
 		"should have set the default flow.accumulator.circuit_breaker.open_interval_in_ms")
 
-	assert.Equal(t, 20, conf.Flows[1].Accumulator.SizeInBytes, "should have parsed the correct flow.accumulator.size_in_bytes")
+	assert.Equal(t, "20", conf.Flows[1].Accumulator.Size, "should have parsed the correct flow.accumulator.size")
+	sizeAsBytes, err = conf.Flows[1].Accumulator.SizeAsBytes()
+	assert.NoError(t, err, "should not error")
+	assert.Equal(t, int64(20), sizeAsBytes, "should know how to conver the size of accumulator")
 	assert.Equal(t, "", conf.Flows[1].Accumulator.Separator, "should have parsed the correct flow.accumulator.separator")
 	assert.Equal(t, 13, conf.Flows[1].Accumulator.QueueCapacity, "should have parsed the correct flow.accumulator.queue_capacity")
 	assert.Equal(t, int64(12345), conf.Flows[1].Accumulator.CircuitBreaker.OpenInterval,

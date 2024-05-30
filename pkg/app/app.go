@@ -218,10 +218,15 @@ func createAccumulator(
 ) *accumulator.BucketAccumulator {
 	cb := createCircuitBreaker(registry, logger, flowName, c.CircuitBreaker)
 
+	sizeAsBytes, err := c.SizeAsBytes()
+	if err != nil {
+		panic(fmt.Errorf("error parsing accumulator size: %w", err))
+	}
+
 	return accumulator.New(
 		flowName,
 		logger,
-		c.SizeInBytes,
+		int(sizeAsBytes),
 		[]byte(c.Separator),
 		c.QueueCapacity,
 		domain.NewObservableDataDropper(logger, registry, accumulator.COMPONENT_NAME),
@@ -264,7 +269,11 @@ func createFlows(
 			CircuitBreaker:              createTwoStepCircuitBreaker(metricRegistry, llog, flowConf.Name, flowConf.Ingestion.CircuitBreaker),
 		}
 
-		hasAccumulatorDeclared := flowConf.Accumulator.SizeInBytes > 0 //TODO: this is something that will need to be improved, as it is error prone
+		accSizeAsBytes, err := flowConf.Accumulator.SizeAsBytes()
+		if err != nil {
+			panic(fmt.Errorf("error parsing accumulator size: %w", err))
+		}
+		hasAccumulatorDeclared := accSizeAsBytes > 0 //TODO: this is something that will need to be improved, as it is error prone
 		if hasAccumulatorDeclared {
 			f.Accumulator = createAccumulator(flowConf.Name, localLogger, flowConf.Accumulator,
 				metricRegistry, uploader)

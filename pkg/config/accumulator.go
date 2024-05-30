@@ -1,10 +1,14 @@
 package config
 
 type AccumulatorConfig struct {
-	SizeInBytes    int                  `yaml:"size_in_bytes"`
+	Size           string               `yaml:"size"`
 	Separator      string               `yaml:"separator"`
 	QueueCapacity  int                  `yaml:"queue_capacity"`
 	CircuitBreaker CircuitBreakerConfig `yaml:"circuit_breaker"`
+}
+
+func (accConf AccumulatorConfig) SizeAsBytes() (int64, error) {
+	return ToBytes(accConf.Size)
 }
 
 func (accConf AccumulatorConfig) fillDefaultValues() AccumulatorConfig {
