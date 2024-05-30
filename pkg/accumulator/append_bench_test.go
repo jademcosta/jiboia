@@ -26,12 +26,6 @@ var inputTable = []struct {
 	{payloadSize: 382399},
 }
 
-type dummyDataDropper struct{}
-
-func (dd *dummyDataDropper) Drop([]byte) {
-	// Do nothing
-}
-
 type dummyDataEnqueuerMock struct{}
 
 func (w *dummyDataEnqueuerMock) Enqueue(data []byte) error {
@@ -52,7 +46,7 @@ func BenchmarkAccumulatorAppend(b *testing.B) {
 	for _, tc := range inputTable {
 		l := logger.NewDummy()
 		acc := New(
-			"someflow", l, (10 * tc.payloadSize), []byte("_n_"), 50, &dummyDataDropper{},
+			"someflow", l, (10 * tc.payloadSize), []byte("_n_"), 50,
 			&dummyDataEnqueuerMock{}, circuitbreaker.NewDummyCircuitBreaker(), prometheus.NewRegistry(),
 		)
 

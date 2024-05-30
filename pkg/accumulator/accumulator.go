@@ -26,7 +26,6 @@ type Accumulator struct {
 	separator        []byte
 	separatorLen     int
 	internalDataChan chan []byte //TODO: should we expose this for a distributor to be able to run a select on multiple channels?
-	dataDropper      domain.DataDropper
 	current          [][]byte
 	next             domain.DataFlow
 	metrics          *metricCollector
@@ -41,7 +40,6 @@ func New(
 	limitOfBytes int,
 	separator []byte,
 	queueCapacity int,
-	dataDropper domain.DataDropper,
 	next domain.DataFlow,
 	cb circuitbreaker.CircuitBreaker,
 	metricRegistry *prometheus.Registry) *Accumulator {
@@ -71,7 +69,6 @@ func New(
 		separator:        separator,
 		separatorLen:     len(separator),
 		internalDataChan: make(chan []byte, queueCapacity),
-		dataDropper:      dataDropper,
 		current:          make([][]byte, 0, 1024), //TODO: create the initial size based on the capacity
 		next:             next,
 		metrics:          metrics,
@@ -92,7 +89,7 @@ func (b *Accumulator) Enqueue(data []byte) error {
 	case b.internalDataChan <- data:
 		b.updateEnqueuedItemsMetric()
 	default:
-		b.dataDropped(data)
+		b.metrics.incEnqueueFailed()
 		return errors.New("enqueueing data on the accumulator failed, queue is full")
 	}
 
@@ -185,10 +182,6 @@ func (b *Accumulator) currentBufferLen() int {
 	}
 	total -= separatorLen
 	return total
-}
-
-func (b *Accumulator) dataDropped(data []byte) {
-	b.dataDropper.Drop(data)
 }
 
 func (b *Accumulator) enqueueOnNext(data []byte) {
