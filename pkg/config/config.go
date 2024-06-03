@@ -18,10 +18,11 @@ func init() {
 }
 
 type Config struct {
-	Log     LogConfig    `yaml:"log"`
-	Version string       `yaml:"version"` //FIXME: fill the version
-	Api     ApiConfig    `yaml:"api"`
-	Flows   []FlowConfig `yaml:"flows"`
+	Log             LogConfig    `yaml:"log"`
+	Version         string       `yaml:"version"` //FIXME: fill the version
+	Api             ApiConfig    `yaml:"api"`
+	Flows           []FlowConfig `yaml:"flows"`
+	DisableMaxProcs bool         `yaml:"disable_max_procs"`
 }
 
 func New(confData []byte) (*Config, error) {

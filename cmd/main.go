@@ -9,6 +9,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/app"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/logger"
+	"go.uber.org/automaxprocs/maxprocs"
 )
 
 const version = "0.0.1" //FIXME: automatize this
@@ -24,6 +25,10 @@ func main() {
 
 	config := initializeConfig(*configPath)
 	l := initializeLogger(*config)
+
+	if !config.DisableMaxProcs {
+		maxprocs.Set(maxprocs.Logger(l.Info))
+	}
 
 	app.New(config, l).Start()
 }
