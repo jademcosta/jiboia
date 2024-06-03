@@ -27,7 +27,10 @@ func main() {
 	l := initializeLogger(*config)
 
 	if !config.DisableMaxProcs {
-		maxprocs.Set(maxprocs.Logger(l.Info))
+		_, err := maxprocs.Set(maxprocs.Logger(l.Info))
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	app.New(config, l).Start()
