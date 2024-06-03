@@ -3,7 +3,7 @@ module github.com/jademcosta/jiboia
 go 1.22
 
 require (
-	github.com/aws/aws-sdk-go v1.53.11
+	github.com/aws/aws-sdk-go v1.53.14
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/klauspost/compress v1.17.8
 	github.com/oklog/run v1.1.0
