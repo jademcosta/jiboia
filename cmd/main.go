@@ -21,7 +21,6 @@ func main() {
 	if *configPath == "" {
 		panic("no config file path provided. Usage is: <command> --config <FILE_PATH>")
 	}
-	fmt.Printf("====>config val: %s\n", *configPath)
 
 	config := initializeConfig(*configPath)
 	l := initializeLogger(*config)
