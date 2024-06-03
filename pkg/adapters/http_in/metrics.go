@@ -41,11 +41,11 @@ func initializeMetrics(metricRegistry *prometheus.Registry) {
 
 		decompressionLatencyHist = prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
-				Name:      "decompression_duration_seconds",
+				Name:      "decompression_duration_millis",
 				Subsystem: "http",
 				Namespace: "jiboia",
-				Help:      "The time it took to decompress the incoming payload, in seconds",
-				Buckets:   []float64{0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 15.0, 30.0, 60.0, 120.0},
+				Help:      "The time it took to decompress the incoming payload, in milliseconds",
+				Buckets:   []float64{1.0, 5.0, 10.0, 25.0, 50.0, 100.0, 500.0, 1000.0, 5000.0, 30000.0},
 			},
 			[]string{"path"},
 		)
