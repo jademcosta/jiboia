@@ -14,6 +14,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+const SmallestAllowedCompressorWriter = 512
+
 var ensureSingleMetricRegistration sync.Once
 var workInFlightGauge *prometheus.GaugeVec
 var compressionRatioHist *prometheus.HistogramVec
@@ -159,8 +161,11 @@ func compress(conf config.CompressionConfig, data []byte) ([]byte, error) {
 func newCompressionResultBuffer(conf config.CompressionConfig, originalDataSize int) *bytes.Buffer {
 	buf := &bytes.Buffer{}
 	if conf.Type != "" {
-		percentageSize := (originalDataSize * conf.PreallocSlicePercentage) / 100
-		buf.Grow(percentageSize)
+		relativeSize := (originalDataSize * conf.PreallocSlicePercentage) / 100
+		if relativeSize < SmallestAllowedCompressorWriter {
+			relativeSize = SmallestAllowedCompressorWriter
+		}
+		buf.Grow(relativeSize)
 	}
 
 	return buf
