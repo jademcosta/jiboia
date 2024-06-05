@@ -55,12 +55,24 @@ flows:
     # This is used on the object storage. It tells how many different dynamic prefixes it will use.
     # Increase it in case you are receiving too many rate-limit errors.
     path_prefix_count: 1
-    # Optional. This component compresses data before sending it to object storage
+    # [Optional] This component compresses data before sending it to object storage
     compression:
       # The compression algorithm. Available types are gzip, zlib, deflate, lzw, zstd, snappy
       type: "gzip"
       # Higher numbers mean more speed and less compression
       level: "3"
+      # [Optional] Set this only if you know beforehand the % of compression your payload usually
+      # has. By setting this, it will prevent some "slice growing" when compression data,
+      # which will result in less CPU usage. The number must be > 0 and <= 100.
+      # If you set it 5, for example, it means that the size of the buffer used to write
+      # the compressed data will be an array with 5% of the size of data. The resulting
+      # compressed data CAN BE bigger than 5%, though. In which case it will have avoided
+      # some extra slice grow allocations.
+      # Avoid setting this if you are unsure, as it can ruin the performance and result in
+      # "out of memory" errors.
+      # Default is 2 (which means 2%)
+      prealloc_slice_percentage: 2
+
     # [Optional] This component merges data into memory until a user defined limit, and then sends
     # it forward to be uploaded into object storage. You may use it to have bigger chunks of data.
     accumulator:

@@ -132,7 +132,7 @@ func (w *Worker) work(workU *domain.WorkUnit) {
 }
 
 func compress(conf config.CompressionConfig, data []byte) ([]byte, error) {
-	buf := &bytes.Buffer{}
+	buf := newCompressionResultBuffer(conf, len(data))
 	compressWorker, err := compressor.NewWriter(&conf, buf)
 	if err != nil {
 		return nil, fmt.Errorf("error creating compressor: %w", err)
@@ -143,10 +143,25 @@ func compress(conf config.CompressionConfig, data []byte) ([]byte, error) {
 		return nil, fmt.Errorf("error writing compressed data into memory buffer: %w", err)
 	}
 
+	err = compressWorker.Flush()
+	if err != nil {
+		return nil, fmt.Errorf("error writing (at the flush command) compressed data into memory buffer: %w", err)
+	}
+
 	err = compressWorker.Close()
 	if err != nil {
 		return nil, fmt.Errorf("error writing (at the closing finish) compressed data into memory buffer: %w", err)
 	}
 
 	return buf.Bytes(), nil
+}
+
+func newCompressionResultBuffer(conf config.CompressionConfig, originalDataSize int) *bytes.Buffer {
+	buf := &bytes.Buffer{}
+	if conf.Type != "" {
+		percentageSize := (originalDataSize * conf.PreallocSlicePercentage) / 100
+		buf.Grow(percentageSize)
+	}
+
+	return buf
 }

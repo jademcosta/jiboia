@@ -29,6 +29,7 @@ type CompressorReader interface {
 
 type CompressorWriter interface {
 	io.WriteCloser
+	Flush() error
 }
 
 func NewReader(

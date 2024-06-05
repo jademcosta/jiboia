@@ -93,7 +93,6 @@ func (handler *ingestionRoute) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		selectDecompressionAlgorithm(handler.validDecompressionAlgorithms, r.Header["Content-Encoding"])
 
 	if decompressAlgorithm != "" {
-
 		token, needToReturnToken := <-handler.decompressionSemaphor
 		data, err = decompress(data, decompressAlgorithm, r.URL.Path)
 		if needToReturnToken {

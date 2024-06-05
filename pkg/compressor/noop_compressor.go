@@ -18,6 +18,10 @@ func (c *NoopCompressorWriter) Close() error {
 	return nil
 }
 
+func (c *NoopCompressorWriter) Flush() error {
+	return nil
+}
+
 type NoopCompressorReader struct {
 	reader io.Reader
 }
