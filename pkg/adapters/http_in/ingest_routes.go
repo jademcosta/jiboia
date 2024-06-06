@@ -19,11 +19,12 @@ import (
 var payloadMaxSizeErr *http.MaxBytesError
 
 type ingestionRoute struct {
-	l                            *slog.Logger
-	flw                          *flow.Flow
-	decompressionSemaphor        chan struct{}
-	validDecompressionAlgorithms map[string]struct{}
-	circuitBreaker               circuitbreaker.TwoStepCircuitBreaker
+	l                              *slog.Logger
+	flw                            *flow.Flow
+	decompressionSemaphor          chan struct{}
+	decompressionInitialBufferSize int
+	validDecompressionAlgorithms   map[string]struct{}
+	circuitBreaker                 circuitbreaker.TwoStepCircuitBreaker
 }
 
 func newIngestionRoute(l *slog.Logger, flw *flow.Flow) *ingestionRoute {
@@ -45,11 +46,12 @@ func newIngestionRoute(l *slog.Logger, flw *flow.Flow) *ingestionRoute {
 	}
 
 	return &ingestionRoute{
-		l:                            l,
-		flw:                          flw,
-		validDecompressionAlgorithms: validDecompressionAlgorithms,
-		decompressionSemaphor:        decompressionSemaphor,
-		circuitBreaker:               flw.CircuitBreaker,
+		l:                              l,
+		flw:                            flw,
+		validDecompressionAlgorithms:   validDecompressionAlgorithms,
+		decompressionSemaphor:          decompressionSemaphor,
+		decompressionInitialBufferSize: flw.DecompressionInitialBufferSizeBytes,
+		circuitBreaker:                 flw.CircuitBreaker,
 	}
 }
 
@@ -93,9 +95,8 @@ func (handler *ingestionRoute) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		selectDecompressionAlgorithm(handler.validDecompressionAlgorithms, r.Header["Content-Encoding"])
 
 	if decompressAlgorithm != "" {
-
 		token, needToReturnToken := <-handler.decompressionSemaphor
-		data, err = decompress(data, decompressAlgorithm, r.URL.Path)
+		data, err = decompress(data, decompressAlgorithm, r.URL.Path, handler.decompressionInitialBufferSize)
 		if needToReturnToken {
 			handler.decompressionSemaphor <- token
 		}
@@ -167,7 +168,7 @@ func selectDecompressionAlgorithm(acceptedAlgorithms map[string]struct{}, conten
 	return ""
 }
 
-func decompress(data []byte, algorithm string, pathForMetrics string) ([]byte, error) {
+func decompress(data []byte, algorithm string, pathForMetrics string, bufferSize int) ([]byte, error) {
 	increaseDecompressionCount(algorithm)
 	timeStart := time.Now()
 
@@ -176,13 +177,38 @@ func decompress(data []byte, algorithm string, pathForMetrics string) ([]byte, e
 		return nil, err
 	}
 
-	decompressedData, err := io.ReadAll(decompressor)
+	decompressedData, err := localReadAll(decompressor, bufferSize)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error decompressing data: %w", err)
+	}
+
+	err = decompressor.Close()
+	if err != nil {
+		return nil, fmt.Errorf("error closing decompressor data: %w", err)
 	}
 
 	elapsedTime := time.Since(timeStart).Seconds()
 	observeDecompressionTime(pathForMetrics, elapsedTime)
 
 	return decompressedData, nil
+}
+
+func localReadAll(r compressor.CompressorReader, initialSliceSize int) ([]byte, error) {
+	//Code copied from io.ReadAll
+	b := make([]byte, 0, initialSliceSize)
+	for {
+		n, err := r.Read(b[len(b):cap(b)])
+		b = b[:len(b)+n]
+		if err != nil {
+			if err == io.EOF {
+				err = nil
+			}
+			return b, err
+		}
+
+		if len(b) == cap(b) {
+			// Add more capacity (let append pick how much).
+			b = append(b, 0)[:len(b)]
+		}
+	}
 }

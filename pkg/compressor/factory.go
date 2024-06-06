@@ -23,12 +23,26 @@ const (
 	ZSTD_TYPE    = "zstd"
 )
 
+type closerAdapter struct {
+	wrapped io.Reader
+}
+
+func (adapt *closerAdapter) Close() error {
+	return nil
+}
+
+func (adapt *closerAdapter) Read(p []byte) (n int, err error) {
+	return adapt.wrapped.Read(p)
+}
+
 type CompressorReader interface {
 	io.Reader
+	io.Closer
 }
 
 type CompressorWriter interface {
 	io.WriteCloser
+	Flush() error
 }
 
 func NewReader(
@@ -36,23 +50,28 @@ func NewReader(
 	reader io.Reader,
 ) (CompressorReader, error) {
 
-	var compressor CompressorReader
+	var decompressor CompressorReader
 	var err error
 	switch strings.ToLower(conf.Type) {
 	case GZIP_TYPE:
-		compressor, err = gzip.NewReader(reader)
+		decompressor, err = gzip.NewReader(reader)
 	case ZLIB_TYPE:
-		compressor, err = zlib.NewReader(reader)
+		decompressor, err = zlib.NewReader(reader)
 	case DEFLATE_TYPE:
-		compressor = flate.NewReader(reader)
+		decompressor = flate.NewReader(reader)
 	case SNAPPY_TYPE:
-		compressor = snappy.NewReader(reader)
+		decompressor = &closerAdapter{wrapped: snappy.NewReader(reader)}
+
 	case ZSTD_TYPE:
-		compressor, err = zstd.NewReader(reader)
+		d, localErr := zstd.NewReader(reader)
+		err = localErr
+		if localErr == nil {
+			decompressor = &closerAdapter{wrapped: d}
+		}
 	case "":
-		compressor = NewNoopCompressorReader(reader)
+		decompressor = NewNoopCompressorReader(reader)
 	default:
-		compressor = nil
+		decompressor = nil
 		err = fmt.Errorf("invalid compression type %s", conf.Type)
 	}
 
@@ -60,7 +79,7 @@ func NewReader(
 		return nil, fmt.Errorf("error creating %s reader: %w", conf.Type, err)
 	}
 
-	return compressor, nil
+	return decompressor, nil
 }
 
 func NewWriter(
