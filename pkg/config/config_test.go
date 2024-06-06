@@ -35,6 +35,10 @@ func TestDefaultValues(t *testing.T) {
 		"default flows.ingestion.circuit_breaker.disable is false")
 	assert.Equal(t, int64(100), conf.Flows[0].Ingestion.CircuitBreaker.OpenInterval,
 		"default flows.ingestion.circuit_breaker.open_iterval is 100")
+	assert.Equal(t, "512", conf.Flows[0].Ingestion.Decompression.InitialBufferSize,
+		"default flows.ingestion.decompression.initial_buffer_size is 512")
+	assert.Equal(t, 2, conf.Flows[0].Compression.PreallocSlicePercentage,
+		"default flows.compression.prealloc_slice_percentage is 2")
 
 	sizeInBytes, err := conf.Api.PayloadSizeLimitInBytes()
 	assert.Equal(t, int64(0), sizeInBytes, "default for api.payload_size_limit config doesn't match")
