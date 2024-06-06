@@ -255,16 +255,22 @@ func createFlows(
 			filepather.New(datetimeprovider.New(), flowConf.PathPrefixCount, flowConf.Compression.Type),
 			metricRegistry)
 
+		initialDecompressionBufferSize, err := flowConf.Ingestion.Decompression.InitialBufferSizeAsBytes()
+		if err != nil {
+			panic(fmt.Errorf("error parsing initial buffer size: %w", err))
+		}
+
 		f := flow.Flow{
-			Name:                        flowConf.Name,
-			ObjStorage:                  objStorage,
-			ExternalQueue:               externalQueue,
-			Uploader:                    uploader,
-			UploadWorkers:               make([]flow.Runnable, 0, flowConf.MaxConcurrentUploads),
-			Token:                       flowConf.Ingestion.Token,
-			DecompressionAlgorithms:     flowConf.Ingestion.Decompression.ActiveDecompressions,
-			DecompressionMaxConcurrency: flowConf.Ingestion.Decompression.MaxConcurrency,
-			CircuitBreaker:              createTwoStepCircuitBreaker(metricRegistry, llog, flowConf.Name, flowConf.Ingestion.CircuitBreaker),
+			Name:                                flowConf.Name,
+			ObjStorage:                          objStorage,
+			ExternalQueue:                       externalQueue,
+			Uploader:                            uploader,
+			UploadWorkers:                       make([]flow.Runnable, 0, flowConf.MaxConcurrentUploads),
+			Token:                               flowConf.Ingestion.Token,
+			DecompressionAlgorithms:             flowConf.Ingestion.Decompression.ActiveDecompressions,
+			DecompressionMaxConcurrency:         flowConf.Ingestion.Decompression.MaxConcurrency,
+			DecompressionInitialBufferSizeBytes: int(initialDecompressionBufferSize),
+			CircuitBreaker:                      createTwoStepCircuitBreaker(metricRegistry, llog, flowConf.Name, flowConf.Ingestion.CircuitBreaker),
 		}
 
 		accSizeAsBytes, err := flowConf.Accumulator.SizeAsBytes()

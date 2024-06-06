@@ -9,7 +9,8 @@ disable_max_procs: false
 
 api:
   port: 9099
-  # Payloadsd larger than this are denied. Use this as a protection
+  # [Optional] Payloadsd larger than this are denied. Use this as a protection.
+  # Default is unlimited
   payload_size_limit: "1111KB"
 
 flows:
@@ -17,7 +18,7 @@ flows:
     # data on this flow
   - name: "my-flow"
     ingestion:
-      # When a token is defined, requests that arrive without it are denied
+      # [Optional] When a token is defined, requests that arrive without it are denied
       token: "some-token-here"
       decompress:
         # Optional. Adding values here means the data will be decompressed before being ingested.
@@ -32,20 +33,25 @@ flows:
         # it will block and enqueue the incoming decompression requests.
         # Default is 0 (unrestricted concurrency).
         max_concurrency: 6
+        # [Optional] When decompressing, this is the size of the slice used to hold the decompressed
+        # data. Only change this if you really know what you are doing.
+        # By setting this, you will avoid slice growing allocations.
+        # Default is 512 bytes
+        initial_buffer_size: 100kb
         # [Optional] Configuration for the circuit breaker that the ingestion flow uses to send itens
         # either to the accumulator (in case it is used) or to the upload queue.
         # It will avoid the overload of the service, trying to answer requests
         # (as the circuit breaker it is located at the beginning of the request)
-        circuit_breaker:
-          # [Optinal] The default is `false`. It is NOT recommended to disable it, as the
-          # service can be overloaded with requests and waste of CPU, as the data being
-          # ingested will not be enqueued (which will result in am error status code).
-          # Setting it to `true` will disable the circuit breaker
-          disable: false
-          # [Optinal] Once the circuit breaker is opened (meaning it is not
-          # accepting data), how long it will take to try to start allowing to accept calls again.
-          # If you set it as zero it will be automatically set to the default, which is 100.
-          open_interval_in_ms: 100
+      circuit_breaker:
+        # [Optinal] The default is `false`. It is NOT recommended to disable it, as the
+        # service can be overloaded with requests and waste of CPU, as the data being
+        # ingested will not be enqueued (which will result in am error status code).
+        # Setting it to `true` will disable the circuit breaker
+        disable: false
+        # [Optinal] Once the circuit breaker is opened (meaning it is not
+        # accepting data), how long it will take to try to start allowing to accept calls again.
+        # If you set it as zero it will be automatically set to the default, which is 100.
+        open_interval_in_ms: 100
     # The amount of items in memory, waiting to be sent to storage. If this queue is full,
     # data starts to be dropped (lost)
     in_memory_queue_max_size: 1000
