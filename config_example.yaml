@@ -8,6 +8,7 @@ log:
 disable_max_procs: false
 
 api:
+  # [Optional] The port where it will serve the HTTP. Default is 9199
   port: 9099
   # [Optional] Payloadsd larger than this are denied. Use this as a protection.
   # Default is unlimited
