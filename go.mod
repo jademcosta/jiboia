@@ -3,13 +3,14 @@ module github.com/jademcosta/jiboia
 go 1.22
 
 require (
-	github.com/aws/aws-sdk-go v1.53.11
+	github.com/aws/aws-sdk-go v1.53.19
 	github.com/go-chi/chi/v5 v5.0.12
 	github.com/klauspost/compress v1.17.8
 	github.com/oklog/run v1.1.0
 	github.com/prometheus/client_golang v1.19.1
 	github.com/sony/gobreaker v1.0.0
 	github.com/stretchr/testify v1.9.0
+	go.uber.org/automaxprocs v1.5.3
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -23,7 +24,6 @@ require (
 	github.com/prometheus/client_model v0.5.0 // indirect
 	github.com/prometheus/common v0.48.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
-	go.uber.org/automaxprocs v1.5.3 // indirect
 	golang.org/x/sys v0.17.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 )
