@@ -187,8 +187,7 @@ func decompress(data []byte, algorithm string, pathForMetrics string, bufferSize
 		return nil, fmt.Errorf("error closing decompressor data: %w", err)
 	}
 
-	elapsedTime := time.Since(timeStart).Seconds()
-	observeDecompressionTime(pathForMetrics, elapsedTime)
+	observeDecompressionTime(pathForMetrics, time.Since(timeStart))
 
 	return decompressedData, nil
 }
