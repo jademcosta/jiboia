@@ -3,7 +3,10 @@ package config
 import (
 	"errors"
 	"fmt"
+	"slices"
 )
+
+var allowedCompressions = []string{"gzip", "zlib", "deflate", "lzw", "zstd", "snappy"}
 
 const DefaultPreallocSlicePercentage = 2
 
@@ -25,9 +28,8 @@ func (compConf CompressionConfig) validate() error {
 		return nil
 	}
 
-	if !allowed(allowedValues("compression"), compConf.Type) {
-		return fmt.Errorf("compression.type option must be one of %v",
-			allowedValues("compression"))
+	if !slices.Contains(allowedCompressions, compConf.Type) {
+		return fmt.Errorf("compression.type option must be one of %v", allowedCompressions)
 	}
 
 	if compConf.PreallocSlicePercentage <= 0 || compConf.PreallocSlicePercentage > 100 {
