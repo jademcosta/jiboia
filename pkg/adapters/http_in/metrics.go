@@ -2,6 +2,7 @@ package http_in
 
 import (
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -72,8 +73,8 @@ func observeSize(path string, size float64) {
 	sizeHist.WithLabelValues(path).Observe(size)
 }
 
-func observeDecompressionTime(path string, elapsedTime float64) {
-	decompressionLatencyHist.WithLabelValues(path).Observe(elapsedTime)
+func observeDecompressionTime(path string, elapsedTime time.Duration) {
+	decompressionLatencyHist.WithLabelValues(path).Observe(float64(elapsedTime.Milliseconds()))
 }
 
 func increaseDecompressionCount(algorithm string) {
