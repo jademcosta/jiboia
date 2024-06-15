@@ -6,7 +6,7 @@ import (
 	"slices"
 )
 
-var allowedCompressions = []string{"gzip", "zlib", "deflate", "lzw", "zstd", "snappy"}
+var allowedCompressions = []string{"gzip", "zlib", "deflate", "zstd", "snappy"}
 
 const DefaultPreallocSlicePercentage = 2
 

@@ -23,7 +23,7 @@ func TestCompressionValidate(t *testing.T) {
 	assert.Error(t, sut.validate(),
 		"compression type should be one of allowed values")
 
-	for _, compType := range []string{"gzip", "zlib", "deflate", "lzw", "zstd", "snappy"} {
+	for _, compType := range []string{"gzip", "zlib", "deflate", "zstd", "snappy"} {
 		sut.Type = compType
 		assert.NoError(t, sut.validate(),
 			"%s should be a valid compression type", compType)

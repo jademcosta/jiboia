@@ -11,7 +11,7 @@ var allowedVals map[string][]string
 func init() {
 	allowedVals = map[string][]string{
 		"log.level": {"debug", "info", "warn", "error"},
-		//TODO: merge strings duplicated here and on compressor package
+		//TODO: delete these
 		"compression":       {"gzip", "zlib", "deflate", "snappy", "zstd"},
 		"compression.level": {"1", "2", "3", "4", "5", "6", "7", "8", "9"},
 	}
