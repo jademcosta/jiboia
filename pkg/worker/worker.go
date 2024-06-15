@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"sync"
+	"time"
 
 	"github.com/jademcosta/jiboia/pkg/compressor"
 	"github.com/jademcosta/jiboia/pkg/config"
@@ -15,10 +15,6 @@ import (
 )
 
 const SmallestAllowedCompressorWriter = 512
-
-var ensureSingleMetricRegistration sync.Once
-var workInFlightGauge *prometheus.GaugeVec
-var compressionRatioHist *prometheus.HistogramVec
 
 type ObjStorage interface {
 	Upload(workU *domain.WorkUnit) (*domain.UploadResult, error)
@@ -47,27 +43,7 @@ func NewWorker(
 	metricRegistry *prometheus.Registry,
 	compressionConf config.CompressionConfig) *Worker {
 
-	ensureSingleMetricRegistration.Do(func() {
-		workInFlightGauge = prometheus.NewGaugeVec(
-			prometheus.GaugeOpts{
-				Namespace: "jiboia",
-				Subsystem: "worker",
-				Name:      "work_in_flight",
-				Help:      "How many workers are performing work (vs being idle) right now.",
-			},
-			[]string{"flow"})
-
-		compressionRatioHist = prometheus.NewHistogramVec(
-			prometheus.HistogramOpts{
-				Namespace: "jiboia",
-				Subsystem: "compression",
-				Name:      "ratio",
-				Help:      "the ratio of compressed size vs original size (the lower the better compression)",
-				Buckets:   []float64{0.01, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1},
-			}, []string{"type"})
-
-		metricRegistry.MustRegister(workInFlightGauge, compressionRatioHist)
-	})
+	initializeMetrics(metricRegistry)
 
 	workChan := make(chan *domain.WorkUnit, 1)
 	return &Worker{
@@ -95,16 +71,14 @@ func (w *Worker) Run(ctx context.Context) {
 }
 
 func (w *Worker) work(workU *domain.WorkUnit) {
-	workInFlightGauge.WithLabelValues(w.flowName).Inc()
-	defer workInFlightGauge.WithLabelValues(w.flowName).Dec()
+	incWorkInFlight(w.flowName)
+	defer decWorkInFlight(w.flowName)
 
 	compressedData, err := compress(w.compressionConf, workU.Data)
 	if err != nil {
 		w.l.Error("error compressing data", "prefix", workU.Prefix, "filename", workU.Filename, "error", err)
 		return
 	}
-	compressionRatioHist.WithLabelValues(w.compressionConf.Type).Observe(
-		float64(len(compressedData)) / float64(len(workU.Data)))
 
 	workU.Data = compressedData
 	uploadResult, err := w.storage.Upload(workU)
@@ -134,6 +108,7 @@ func (w *Worker) work(workU *domain.WorkUnit) {
 }
 
 func compress(conf config.CompressionConfig, data []byte) ([]byte, error) {
+	startTime := time.Now()
 	buf := newCompressionResultBuffer(conf, len(data))
 	compressWorker, err := compressor.NewWriter(&conf, buf)
 	if err != nil {
@@ -155,7 +130,11 @@ func compress(conf config.CompressionConfig, data []byte) ([]byte, error) {
 		return nil, fmt.Errorf("error writing (at the closing finish) compressed data into memory buffer: %w", err)
 	}
 
-	return buf.Bytes(), nil
+	compressedData := buf.Bytes()
+	reportCompressionRatio(conf.Type, float64(len(compressedData))/float64(len(data)))
+	reportCompressionDuration(conf.Type, time.Since(startTime))
+
+	return compressedData, nil
 }
 
 func newCompressionResultBuffer(conf config.CompressionConfig, originalDataSize int) *bytes.Buffer {
