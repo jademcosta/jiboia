@@ -3,7 +3,7 @@ package config
 type AccumulatorConfig struct {
 	Size           string               `yaml:"size"`
 	Separator      string               `yaml:"separator"`
-	QueueCapacity  int                  `yaml:"queue_capacity"`
+	QueueCapacity  int                  `yaml:"queue_capacity"` //TODO: validate and test
 	CircuitBreaker CircuitBreakerConfig `yaml:"circuit_breaker"`
 }
 

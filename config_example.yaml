@@ -107,6 +107,7 @@ flows:
     external_queue:
       # Available values: noop, sqs. `noop` is for when you don't want to use any queue
       # (maybe because you just want to upload data into object storage)
+      # Default value is `noop`.
       type: sqs
       config:
         url: "queue-url"
