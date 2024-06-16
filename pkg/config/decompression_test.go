@@ -38,3 +38,23 @@ func TestDescompressionConfigValidate(t *testing.T) {
 			"%s should be a valid decompression type", decompType)
 	}
 }
+
+func TestDescompressionConfigInitialBufferSizeAsBytes(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected int64
+	}{
+		{input: "4", expected: 4},
+		{input: "345kb", expected: 345 * 1024},
+		{input: "1gb", expected: 1 * 1024 * 1024 * 1024},
+	}
+
+	for _, tc := range testCases {
+
+		sut := DescompressionConfig{InitialBufferSize: tc.input}
+		result, err := sut.InitialBufferSizeAsBytes()
+		assert.NoError(t, err, "should return no error")
+		assert.Equal(t, tc.expected, result,
+			"should have returned %d for input %s", tc.expected, tc.input)
+	}
+}
