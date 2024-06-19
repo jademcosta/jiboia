@@ -46,7 +46,7 @@ func initializeMetrics(metricRegistry *prometheus.Registry) {
 				Subsystem: "http",
 				Namespace: "jiboia",
 				Help:      "The time it took to decompress the incoming payload, in milliseconds",
-				Buckets:   []float64{1.0, 5.0, 10.0, 25.0, 50.0, 100.0, 500.0, 1000.0, 5000.0, 30000.0},
+				Buckets:   []float64{5.0, 10.0, 25.0, 50.0, 125.0, 250.0, 500.0, 1000.0, 5000.0, 30000.0},
 			},
 			[]string{"path"},
 		)
