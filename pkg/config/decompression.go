@@ -3,9 +3,12 @@ package config
 import (
 	"errors"
 	"fmt"
+	"slices"
 )
 
 const defaultInitialBufferSize = "512"
+
+var allowedDecompressions = []string{"gzip", "zlib", "deflate", "zstd", "snappy"}
 
 type DescompressionConfig struct {
 	ActiveDecompressions []string `yaml:"active"`
@@ -34,12 +37,14 @@ func (decompConf DescompressionConfig) validate() error {
 		return errors.New("initial_buffer_size cannot be zero")
 	}
 
-	for _, decompressionType := range decompConf.ActiveDecompressions {
-		if !allowed(allowedValues("compression"), decompressionType) {
-			return fmt.Errorf("ingestion.decompress.active option must be one of %v",
-				allowedValues("compression"))
-		}
+	if decompConf.MaxConcurrency < 0 {
+		return errors.New("max concurrency cannot be < 0")
 	}
 
+	for _, decompressionType := range decompConf.ActiveDecompressions {
+		if !slices.Contains(allowedDecompressions, decompressionType) {
+			return fmt.Errorf("decompression type option must be one of %v", allowedDecompressions)
+		}
+	}
 	return nil
 }
