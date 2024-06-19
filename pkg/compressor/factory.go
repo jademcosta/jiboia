@@ -61,7 +61,6 @@ func NewReader(
 		decompressor = flate.NewReader(reader)
 	case SNAPPY_TYPE:
 		decompressor = &closerAdapter{wrapped: snappy.NewReader(reader)}
-
 	case ZSTD_TYPE:
 		d, localErr := zstd.NewReader(reader)
 		err = localErr
