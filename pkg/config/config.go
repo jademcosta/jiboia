@@ -6,17 +6,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-var allowedVals map[string][]string
-
-func init() {
-	allowedVals = map[string][]string{
-		"log.level": {"debug", "info", "warn", "error"},
-		//TODO: delete these
-		"compression":       {"gzip", "zlib", "deflate", "snappy", "zstd"},
-		"compression.level": {"1", "2", "3", "4", "5", "6", "7", "8", "9"},
-	}
-}
-
 type Config struct {
 	Log             LogConfig    `yaml:"log"`
 	Version         string       `yaml:"version"` //FIXME: fill the version
@@ -82,19 +71,6 @@ func (c *Config) validate() error {
 	}
 
 	return nil
-}
-
-func allowed(group []string, elem string) bool {
-	for _, a := range group {
-		if a == elem {
-			return true
-		}
-	}
-	return false
-}
-
-func allowedValues(key string) []string {
-	return allowedVals[key]
 }
 
 func (c *Config) fillDefaultValues() {
