@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -19,7 +20,7 @@ type FlowConfig struct {
 
 func (flwConf FlowConfig) fillDefaultValues() FlowConfig {
 	if flwConf.MaxConcurrentUploads <= 0 {
-		flwConf.MaxConcurrentUploads = 500
+		flwConf.MaxConcurrentUploads = 50
 	}
 
 	if flwConf.PathPrefixCount <= 0 {
@@ -45,16 +46,8 @@ func (flwConf FlowConfig) validate() error {
 		return fmt.Errorf("flow name must not have spaces")
 	}
 
-	if flwConf.Compression.Type != "" {
-		if !allowed(allowedValues("compression"), flwConf.Compression.Type) {
-			return fmt.Errorf("compression type should be one of %v", allowedValues("compression"))
-		}
-
-		if flwConf.Compression.Level != "" {
-			if !allowed(allowedValues("compression.level"), flwConf.Compression.Level) {
-				return fmt.Errorf("compression level should be one of %v", allowedValues("compression.level"))
-			}
-		}
+	if flwConf.PathPrefixCount == 0 {
+		return errors.New("path prefix count cannot be zero")
 	}
 
 	err := flwConf.Ingestion.validate()

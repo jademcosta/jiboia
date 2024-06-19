@@ -23,7 +23,7 @@ func TestDefaultValues(t *testing.T) {
 	assert.Equal(t, "json", conf.Log.Format, "default for log.format config doesn't match")
 	assert.Equal(t, "info", conf.Log.Level, "default for log.level config doesn't match")
 	assert.Equal(t, 9010, conf.Api.Port, "default for api.port config doesn't match")
-	assert.Equal(t, 500, conf.Flows[0].MaxConcurrentUploads,
+	assert.Equal(t, 50, conf.Flows[0].MaxConcurrentUploads,
 		"default for flow.max_concurrent_uploads config doesn't match")
 	assert.Equal(t, 1, conf.Flows[0].PathPrefixCount,
 		"default value for flow path_prefix_count should be 1")
