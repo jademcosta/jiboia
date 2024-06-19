@@ -1,6 +1,11 @@
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"slices"
+)
+
+var allowedLogConfigLevels = []string{"debug", "info", "warn", "error"}
 
 type LogConfig struct {
 	Level  string `yaml:"level"`
@@ -8,12 +13,16 @@ type LogConfig struct {
 }
 
 func (logConf LogConfig) fillDefaults() LogConfig {
+	if logConf.Level == "" {
+		logConf.Level = "info"
+	}
+
 	return logConf
 }
 
 func (logConf LogConfig) validate() error {
-	if !allowed(allowedValues("log.level"), logConf.Level) {
-		return fmt.Errorf("log level should be one of %v", allowedValues("log.level"))
+	if !slices.Contains(allowedLogConfigLevels, logConf.Level) {
+		return fmt.Errorf("log level should be one of %v", allowedLogConfigLevels)
 	}
 
 	return nil
