@@ -244,7 +244,8 @@ func testUploader(
 			wg:             &waitG,
 		}
 
-		w := worker.NewWorker("someflow", llog, objStorage, &dummyExternalQueue{}, uploader.WorkersReady, prometheus.NewRegistry(), noCompressionConf)
+		w := worker.NewWorker("someflow", llog, objStorage, &dummyExternalQueue{}, uploader.WorkersReady,
+			prometheus.NewRegistry(), noCompressionConf, time.Now)
 		go w.Run(ctx)
 	}
 
@@ -297,7 +298,8 @@ func testUploaderEnsuringEnqueuedItems(
 			},
 		}
 
-		w := worker.NewWorker("someflow", llog, objStorage, &dummyExternalQueue{}, uploader.WorkersReady, prometheus.NewRegistry(), noCompressionConf)
+		w := worker.NewWorker("someflow", llog, objStorage, &dummyExternalQueue{},
+			uploader.WorkersReady, prometheus.NewRegistry(), noCompressionConf, time.Now)
 		go w.Run(ctx)
 	}
 
