@@ -32,16 +32,14 @@ type Worker struct {
 	workVolunteeringChan chan chan *domain.WorkUnit
 	flowName             string
 	compressionConf      config.CompressionConfig
+	currentTimeProvider  func() time.Time
 }
 
 func NewWorker(
-	flowName string,
-	l *slog.Logger,
-	storage ObjStorage,
-	extQueue ExternalQueue,
-	workVolunteeringChan chan chan *domain.WorkUnit,
-	metricRegistry *prometheus.Registry,
-	compressionConf config.CompressionConfig) *Worker {
+	flowName string, l *slog.Logger, storage ObjStorage, extQueue ExternalQueue,
+	workVolunteeringChan chan chan *domain.WorkUnit, metricRegistry *prometheus.Registry,
+	compressionConf config.CompressionConfig, currentTimeProvider func() time.Time,
+) *Worker {
 
 	initializeMetrics(metricRegistry)
 
@@ -54,6 +52,7 @@ func NewWorker(
 		workChan:             workChan,
 		flowName:             flowName,
 		compressionConf:      compressionConf,
+		currentTimeProvider:  currentTimeProvider,
 	}
 }
 
@@ -82,13 +81,14 @@ func (w *Worker) work(workU *domain.WorkUnit) {
 
 	workU.Data = compressedData
 	uploadResult, err := w.storage.Upload(workU)
-
 	if err != nil {
 		w.l.Error("failed to upload object", "prefix", workU.Prefix, "filename", workU.Filename, "error", err)
 		return
 	} else {
 		w.l.Debug("finished uploading object", "prefix", workU.Prefix, "filename", workU.Filename)
 	}
+
+	uploadedAt := w.currentTimeProvider()
 
 	msgContext := &domain.MessageContext{
 		Bucket:          uploadResult.Bucket,
@@ -97,6 +97,7 @@ func (w *Worker) work(workU *domain.WorkUnit) {
 		URL:             uploadResult.URL,
 		SizeInBytes:     uploadResult.SizeInBytes,
 		CompressionType: w.compressionConf.Type,
+		SavedAt:         uploadedAt.Unix(),
 	}
 	err = w.queue.Enqueue(msgContext)
 

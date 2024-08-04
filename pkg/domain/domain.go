@@ -17,6 +17,7 @@ type MessageContext struct {
 	URL             string
 	SizeInBytes     int
 	CompressionType string
+	SavedAt         int64
 }
 
 type DataFlow interface {

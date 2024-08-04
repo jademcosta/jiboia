@@ -10,6 +10,7 @@ import (
 	"os/signal"
 	"regexp"
 	"syscall"
+	"time"
 
 	"github.com/jademcosta/jiboia/pkg/accumulator"
 	"github.com/jademcosta/jiboia/pkg/adapters/external_queue"
@@ -286,7 +287,7 @@ func createFlows(
 		for i := 0; i < flowConf.MaxConcurrentUploads; i++ {
 			worker := worker.NewWorker(
 				flowConf.Name, localLogger, objStorage, externalQueue, uploader.WorkersReady,
-				metricRegistry, flowConf.Compression,
+				metricRegistry, flowConf.Compression, time.Now,
 			)
 			f.UploadWorkers = append(f.UploadWorkers, worker)
 		}
