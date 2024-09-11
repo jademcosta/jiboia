@@ -56,6 +56,7 @@ func (objStorage *mockObjStorage) Upload(workU *domain.WorkUnit) (*domain.Upload
 
 type dummyObjStorage struct{}
 
+// nolint: nilnil
 func (queue *dummyObjStorage) Upload(workU *domain.WorkUnit) (*domain.UploadResult, error) {
 	return nil, nil
 }
