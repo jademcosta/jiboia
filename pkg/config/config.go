@@ -15,11 +15,7 @@ type Config struct {
 }
 
 func New(confData []byte) (*Config, error) {
-	c := &Config{
-		Api: ApiConfig{
-			Port: 9010,
-		},
-	}
+	c := &Config{}
 
 	err := yaml.Unmarshal(confData, &c)
 	if err != nil {

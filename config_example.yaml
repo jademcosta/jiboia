@@ -1,6 +1,14 @@
-log:
-  level: warn
-  format: json
+o11y:
+  #[optional] Set this to true if you want to enable tracing. Right now, only the HTTP exporter is
+  # used, so you need to set the env vars needed for it to find the otel-collector.
+  # Read more about these env vars here:
+  # https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp
+  # The default is `false`.
+  tracing_enabled: true
+  log:
+    # [optional] The level of logs. Default is `info`. Allowed values are `error`, `warn`, `info`, `debug`
+    level: warn
+    format: json
 
 # [optional] Set this to `true` if you want to disable go max procs "auto set" feature.
 # Default is `false` (meaning the automaxprocs will be turned on). Nonetheless, the lib respect
