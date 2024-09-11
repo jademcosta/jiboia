@@ -1,0 +1,37 @@
+run:
+  timeout: 2m
+linters:
+  enable:
+    - bodyclose
+    - durationcheck
+    - exhaustive
+    - forbidigo
+    - forcetypeassert
+    - goconst
+    - gofmt
+    - gosmopolitan
+    - loggercheck
+    - makezero
+    - mirror
+    # - mnd
+    - musttag
+    - nakedret
+    - nestif
+    - nilerr
+    - nilnil
+    - nonamedreturns
+    - prealloc
+    - predeclared
+    # - promlinter
+    - reassign
+    # - revive
+    - sloglint
+    - spancheck
+    # - stylecheck
+    - tagalign
+    # - testifylint
+    # - testpackage
+    # - unconvert
+    # - unparam
+    - usestdlibvars
+    - wastedassign
