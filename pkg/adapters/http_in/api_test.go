@@ -16,6 +16,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/domain/flow"
 	"github.com/jademcosta/jiboia/pkg/logger"
+	"github.com/jademcosta/jiboia/pkg/o11y/tracing"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sony/gobreaker"
 	"github.com/stretchr/testify/assert"
@@ -24,6 +25,11 @@ import (
 const version string = "0.0.0"
 
 var llog = logger.NewDummy()
+var testTracer = tracing.NewNoopTracer()
+var localConf = config.Config{
+	Api:  config.ApiConfig{Port: 9111},
+	O11y: config.O11yConfig{TracingEnabled: true},
+}
 
 var characters = []rune("abcdefghijklmnopqrstuvwxyz")
 
@@ -67,8 +73,6 @@ func (brokenDF *brokenDataFlow) Enqueue(data []byte) error {
 }
 
 func TestPassesDataFlows(t *testing.T) {
-	l := llog
-	c := config.ApiConfig{Port: 9111}
 
 	mockDF := &mockDataFlow{
 		calledWith: make([][]byte, 0),
@@ -91,7 +95,7 @@ func TestPassesDataFlows(t *testing.T) {
 		},
 	}
 
-	api := New(l, c, prometheus.NewRegistry(), version, flws)
+	api := New(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
 	srvr := httptest.NewServer(api.mux)
 	defer srvr.Close()
 
@@ -123,8 +127,6 @@ func TestPassesDataFlows(t *testing.T) {
 }
 
 func TestAnswersAnErrorIfNoBodyIsSent(t *testing.T) {
-	l := llog
-	c := config.ApiConfig{Port: 9111}
 
 	mockDF := &mockDataFlow{
 		calledWith: make([][]byte, 0),
@@ -138,7 +140,7 @@ func TestAnswersAnErrorIfNoBodyIsSent(t *testing.T) {
 		},
 	}
 
-	api := New(l, c, prometheus.NewRegistry(), version, flws)
+	api := New(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
 	srvr := httptest.NewServer(api.mux)
 	defer srvr.Close()
 
@@ -151,8 +153,6 @@ func TestAnswersAnErrorIfNoBodyIsSent(t *testing.T) {
 }
 
 func TestAnswersErrorIfEnqueueingFails(t *testing.T) {
-	l := llog
-	c := config.ApiConfig{Port: 9111}
 
 	mockDF := &dummyAlwaysFailDataFlow{}
 
@@ -164,7 +164,7 @@ func TestAnswersErrorIfEnqueueingFails(t *testing.T) {
 		},
 	}
 
-	api := New(l, c, prometheus.NewRegistry(), version, flws)
+	api := New(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
 	srvr := httptest.NewServer(api.mux)
 	defer srvr.Close()
 
@@ -176,8 +176,6 @@ func TestAnswersErrorIfEnqueueingFails(t *testing.T) {
 }
 
 func TestPanicResultInStatus500(t *testing.T) {
-	l := llog
-	c := config.ApiConfig{Port: 9111}
 
 	brokenDF := &brokenDataFlow{}
 
@@ -188,7 +186,7 @@ func TestPanicResultInStatus500(t *testing.T) {
 			CircuitBreaker: createCircuitBreaker("flow-1", 10*time.Millisecond),
 		},
 	}
-	api := New(l, c, prometheus.NewRegistry(), version, flws)
+	api := New(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
 	srvr := httptest.NewServer(api.mux)
 	defer srvr.Close()
 
@@ -201,8 +199,7 @@ func TestPanicResultInStatus500(t *testing.T) {
 }
 
 func TestPayloadSizeLimit(t *testing.T) {
-	l := llog
-	c := config.ApiConfig{Port: 9111, PayloadSizeLimit: "10"} //10 bytes limit
+	c := config.Config{Api: config.ApiConfig{Port: 9111, PayloadSizeLimit: "10"}} //10 bytes limit
 
 	df := &mockDataFlow{calledWith: make([][]byte, 0)}
 
@@ -214,7 +211,7 @@ func TestPayloadSizeLimit(t *testing.T) {
 		},
 	}
 
-	api := New(l, c, prometheus.NewRegistry(), version, flws)
+	api := New(llog, c, prometheus.NewRegistry(), testTracer, version, flws)
 	srvr := httptest.NewServer(api.mux)
 	defer srvr.Close()
 
@@ -251,8 +248,6 @@ func TestPayloadSizeLimit(t *testing.T) {
 }
 
 func TestApiToken(t *testing.T) {
-	l := llog
-	c := config.ApiConfig{Port: 9111}
 	token := "whatever token here random maybe bla bla bla"
 	token3 := "a different token"
 
@@ -286,7 +281,7 @@ func TestApiToken(t *testing.T) {
 		},
 	}
 
-	api := New(l, c, prometheus.NewRegistry(), version, flws)
+	api := New(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
 	srvr := httptest.NewServer(api.mux)
 	defer srvr.Close()
 
@@ -496,8 +491,6 @@ func TestApiToken(t *testing.T) {
 }
 
 func TestVersionEndpointInformsTheVersion(t *testing.T) {
-	l := llog
-	c := config.ApiConfig{Port: 9111}
 
 	mockDF := &dummyAlwaysFailDataFlow{}
 
@@ -509,7 +502,7 @@ func TestVersionEndpointInformsTheVersion(t *testing.T) {
 		},
 	}
 
-	api := New(l, c, prometheus.NewRegistry(), version, flws)
+	api := New(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
 	srvr := httptest.NewServer(api.mux)
 	defer srvr.Close()
 
@@ -527,8 +520,6 @@ func TestVersionEndpointInformsTheVersion(t *testing.T) {
 }
 
 func TestDecompressionOnIngestion(t *testing.T) {
-	l := llog
-	c := config.ApiConfig{Port: 9111}
 
 	t.Run("Happy path", func(t *testing.T) {
 		testCases := []struct {
@@ -556,7 +547,7 @@ func TestDecompressionOnIngestion(t *testing.T) {
 				},
 			}
 
-			api := New(l, c, prometheus.NewRegistry(), version, flws)
+			api := New(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
 			srvr := httptest.NewServer(api.mux)
 			defer srvr.Close()
 
@@ -632,7 +623,7 @@ func TestDecompressionOnIngestion(t *testing.T) {
 			},
 		}
 
-		api := New(l, c, prometheus.NewRegistry(), version, flws)
+		api := New(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
 		srvr := httptest.NewServer(api.mux)
 		defer srvr.Close()
 
@@ -688,8 +679,6 @@ func TestDecompressionOnIngestion(t *testing.T) {
 }
 
 func TestDecompressionOnIngestionConcurrencyLimit(t *testing.T) {
-	l := llog
-	c := config.ApiConfig{Port: 9111}
 
 	t.Run("when the load is smaller than the limit", func(t *testing.T) {
 		algorithm := "snappy"
@@ -706,7 +695,7 @@ func TestDecompressionOnIngestionConcurrencyLimit(t *testing.T) {
 			},
 		}
 
-		api := New(l, c, prometheus.NewRegistry(), version, flws)
+		api := New(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
 		srvr := httptest.NewServer(api.mux)
 		defer srvr.Close()
 
@@ -785,7 +774,7 @@ func TestDecompressionOnIngestionConcurrencyLimit(t *testing.T) {
 			},
 		}
 
-		api := New(l, c, prometheus.NewRegistry(), version, flws)
+		api := New(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
 		srvr := httptest.NewServer(api.mux)
 		defer srvr.Close()
 

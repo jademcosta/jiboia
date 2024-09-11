@@ -17,6 +17,10 @@ func (logConf LogConfig) fillDefaults() LogConfig {
 		logConf.Level = "info"
 	}
 
+	if logConf.Format == "" {
+		logConf.Format = "json"
+	}
+
 	return logConf
 }
 

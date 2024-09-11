@@ -53,6 +53,6 @@ func initializeConfig(configPath string) *config.Config {
 }
 
 func initializeLogger(c config.Config) *slog.Logger {
-	l := logger.New(&c.Log)
+	l := logger.New(&c.O11y.Log)
 	return l
 }

@@ -20,9 +20,10 @@ func TestDefaultValues(t *testing.T) {
 		assert.Fail(t, "should create a config %v", err)
 	}
 
-	assert.Equal(t, "json", conf.Log.Format, "default for log.format config doesn't match")
-	assert.Equal(t, "info", conf.Log.Level, "default for log.level config doesn't match")
-	assert.Equal(t, 9010, conf.Api.Port, "default for api.port config doesn't match")
+	assert.Equal(t, "json", conf.O11y.Log.Format, "default for o11y.log.format config doesn't match")
+	assert.Equal(t, "info", conf.O11y.Log.Level, "default for o11y.log.level config doesn't match")
+	assert.Equal(t, false, conf.O11y.TracingEnabled, "default for o11y.tracing_enabled is false")
+	assert.Equal(t, 9199, conf.Api.Port, "default for api.port config doesn't match")
 	assert.Equal(t, 50, conf.Flows[0].MaxConcurrentUploads,
 		"default for flow.max_concurrent_uploads config doesn't match")
 	assert.Equal(t, 1, conf.Flows[0].PathPrefixCount,
@@ -47,9 +48,11 @@ func TestDefaultValues(t *testing.T) {
 
 func TestConfigParsing(t *testing.T) {
 	configYaml := `
-log:
-  level: warn
-  format: json
+o11y:
+  tracing_enabled: true
+  log:
+    level: warn
+    format: json
 
 api:
   port: 9099
@@ -128,8 +131,9 @@ flows:
 		assert.Fail(t, "should create a config %v", err)
 	}
 
-	assert.Equal(t, "warn", conf.Log.Level, "should have parsed the correct log.level")
-	assert.Equal(t, "json", conf.Log.Format, "should have parsed the correct log.format")
+	assert.Equal(t, "warn", conf.O11y.Log.Level, "should have parsed the correct o11y.log.level")
+	assert.Equal(t, "json", conf.O11y.Log.Format, "should have parsed the correct o11y.log.format")
+	assert.Equal(t, true, conf.O11y.TracingEnabled, "should have parsed the correct o11y.tracing_enabled")
 
 	assert.Equal(t, 9099, conf.Api.Port, "should have parsed the correct api.port")
 
@@ -214,8 +218,9 @@ flows:
 
 func TestValidateLogLevelValues(t *testing.T) {
 	logLevelTemplate := `
-log:
-  level: %s
+o11y:
+  log:
+    level: %s
 flows:
   - name: first_f`
 
