@@ -7,7 +7,7 @@ import (
 )
 
 type Config struct {
-	Log             LogConfig    `yaml:"log"`
+	O11y            O11yConfig   `yaml:"o11y"`
 	Version         string       `yaml:"version"` //FIXME: fill the version
 	Api             ApiConfig    `yaml:"api"`
 	Flows           []FlowConfig `yaml:"flows"`
@@ -16,11 +16,6 @@ type Config struct {
 
 func New(confData []byte) (*Config, error) {
 	c := &Config{
-		Log: LogConfig{
-			Level:  "info",
-			Format: "json",
-		},
-
 		Api: ApiConfig{
 			Port: 9010,
 		},
@@ -65,7 +60,7 @@ func (c *Config) validate() error {
 		return err
 	}
 
-	err = c.Log.validate()
+	err = c.O11y.validate()
 	if err != nil {
 		return err
 	}
@@ -75,7 +70,7 @@ func (c *Config) validate() error {
 
 func (c *Config) fillDefaultValues() {
 
-	c.Log = c.Log.fillDefaults()
+	c.O11y = c.O11y.fillDefaults()
 	c.Api = c.Api.fillDefaults()
 
 	for idx, flow := range c.Flows {
