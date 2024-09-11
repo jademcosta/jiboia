@@ -193,7 +193,7 @@ func randomIntForPrefixCount() int {
 	s := rand.NewSource(time.Now().Unix())
 	r := rand.New(s)
 
-	min := 2
-	max := 12
-	return r.Intn(max-min) + min
+	minimum := 2
+	maximum := 12
+	return r.Intn(maximum-minimum) + minimum
 }
