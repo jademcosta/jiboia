@@ -31,7 +31,7 @@ func (adapt *closerAdapter) Close() error {
 	return nil
 }
 
-func (adapt *closerAdapter) Read(p []byte) (n int, err error) {
+func (adapt *closerAdapter) Read(p []byte) (int, error) {
 	return adapt.wrapped.Read(p)
 }
 

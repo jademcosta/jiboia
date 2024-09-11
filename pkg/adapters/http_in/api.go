@@ -56,7 +56,12 @@ func New(l *slog.Logger, conf config.ApiConfig, metricRegistry *prometheus.Regis
 
 func (api *Api) ListenAndServe() error {
 	api.log.Info(fmt.Sprintf("Starting HTTP server on port %d", api.port))
-	return fmt.Errorf("on serving HTTP: %w", api.srv.ListenAndServe())
+	err := api.srv.ListenAndServe()
+	if err != nil {
+		return fmt.Errorf("when serving HTTP: %w", err)
+	}
+
+	return nil
 }
 
 func (api *Api) Shutdown() error {

@@ -506,7 +506,7 @@ func testWithBatchSize(t *testing.T, confYaml string, stringExemplarSizes ...int
 	resultingValuesWithoutAcc := readFilesFromDir(t, testingPathNoAcc)
 
 	var expectedValues []string
-	var receivedValues []string = make([]string, 0, len(objStorageReceivedFlow1))
+	receivedValues := make([]string, 0, len(objStorageReceivedFlow1))
 	for _, data := range objStorageReceivedFlow1 {
 		receivedValues = append(receivedValues, string(data))
 	}
