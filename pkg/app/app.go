@@ -22,6 +22,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/domain/flow"
 	"github.com/jademcosta/jiboia/pkg/logger"
+	"github.com/jademcosta/jiboia/pkg/o11y/tracing"
 	"github.com/jademcosta/jiboia/pkg/uploader"
 	"github.com/jademcosta/jiboia/pkg/uploader/filepather"
 	"github.com/jademcosta/jiboia/pkg/worker"
@@ -56,11 +57,18 @@ func (a *App) Start() {
 	metricRegistry := prometheus.NewRegistry()
 	registerDefaultMetrics(metricRegistry)
 
+	tracer := tracing.NewNoopTracer()
+	if a.conf.O11y.TracingEnabled {
+		localTracer, shutdownFunc := tracing.NewTracer(*a.conf)
+		tracer = localTracer
+		defer shutdownTracer(shutdownFunc, a.logger)
+	}
+
 	flows := createFlows(a.logger, metricRegistry, a.conf.Flows)
 
 	apiShutdownDone := make(chan struct{})
 
-	api := http_in.New(a.logger, a.conf.Api, metricRegistry, a.conf.Version, flows)
+	api := http_in.New(a.logger, *a.conf, metricRegistry, tracer, a.conf.Version, flows)
 
 	//The shutdown of rungroup seems to be executed from a single goroutine. Meaning that if a
 	//waitgroup is added on some interrupt function, it might hang forever.
@@ -360,4 +368,13 @@ func createCircuitBreaker(
 		},
 	})
 
+}
+
+func shutdownTracer(shutdownFunc func(context.Context) error, logg *slog.Logger) {
+	ctxForShutdown, cancelFunc := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancelFunc()
+	err := shutdownFunc(ctxForShutdown)
+	if err != nil {
+		logg.Error("when shutting down tracing", "error", err)
+	}
 }

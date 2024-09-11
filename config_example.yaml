@@ -4,6 +4,8 @@ o11y:
   # Read more about these env vars here:
   # https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp
   # The default is `false`.
+  # IMPORTANT: right now tracing is less useful because it gets only the HTTP part of the request.
+  # This is intentional, to move slowly with theimplementation and avoid undesired bugs.
   tracing_enabled: true
   log:
     # [optional] The level of logs. Default is `info`. Allowed values are `error`, `warn`, `info`, `debug`
