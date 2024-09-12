@@ -34,6 +34,6 @@ func TestDateIsCurrentDate(t *testing.T) {
 	result := sut.Date()
 
 	assert.Regexp(t, regexp.MustCompile("[0-9]{4}-([10]{1}[0-9]{1})-([0123]{1}[0-9]{1})"), result, "should return a date in the format YYYY-MM-DD")
-	assert.Equal(t, time.Now().Format(datetimeprovider.TIME_FORMAT), result, "should be the current day")
-	assert.Equal(t, "2006-01-02", datetimeprovider.TIME_FORMAT, "should obey the specific time format of YYY-MM-DD that Go requires")
+	assert.Equal(t, time.Now().Format(time.DateOnly), result, "should be the current day")
+	assert.Equal(t, "2006-01-02", time.DateOnly, "should obey the specific time format of YYY-MM-DD that Go requires")
 }

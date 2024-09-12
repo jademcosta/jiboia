@@ -42,7 +42,7 @@ func New(
 		internalDataChan: make(chan []byte, queueCapacity),
 		WorkersReady:     make(chan chan *domain.WorkUnit, workersCount),
 		searchForWork:    make(chan struct{}, 1),
-		log:              l.With(logger.COMPONENT_KEY, "uploader"),
+		log:              l.With(logger.ComponentKey, "uploader"),
 		filePathProvider: filePathProvider,
 		metrics:          metrics,
 		workersCount:     workersCount,

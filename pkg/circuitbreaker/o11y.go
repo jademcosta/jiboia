@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	FLOW_METRIC_KEY string = "flow"
-	NAME_METRIC_KEY string = "name"
+	FlowMetricKey string = "flow"
+	NameMetricKey string = "name"
 
 	cbClosed = 0.0
 	cbOpen   = 1.0
@@ -41,7 +41,7 @@ func NewCBObservability(
 				Name:      "circuitbreaker_open",
 				Help:      "Value is 1 when the circuit breaker is open",
 			},
-			[]string{FLOW_METRIC_KEY, NAME_METRIC_KEY},
+			[]string{FlowMetricKey, NameMetricKey},
 		)
 
 		openCBTotal = prometheus.NewCounterVec(
@@ -50,7 +50,7 @@ func NewCBObservability(
 				Name:      "circuitbreaker_open_total",
 				Help:      "How many times have circuitbreaker opened",
 			},
-			[]string{FLOW_METRIC_KEY, NAME_METRIC_KEY},
+			[]string{FlowMetricKey, NameMetricKey},
 		)
 
 		registry.MustRegister(openCBGauge, openCBTotal)
@@ -59,7 +59,7 @@ func NewCBObservability(
 	return &CBObservability{
 		name: name,
 		flow: flow,
-		log:  log.With(logger.FLOW_KEY, flow, NAME_METRIC_KEY, name),
+		log:  log.With(logger.FlowKey, flow, NameMetricKey, name),
 	}
 }
 

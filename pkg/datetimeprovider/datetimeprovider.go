@@ -5,8 +5,6 @@ import (
 	"time"
 )
 
-const TIME_FORMAT string = "2006-01-02"
-
 type Provider struct{}
 
 func New() *Provider {
@@ -15,7 +13,7 @@ func New() *Provider {
 
 func (provider *Provider) Date() string {
 	currentTime := time.Now()
-	return currentTime.Format(TIME_FORMAT)
+	return currentTime.Format(time.DateOnly)
 }
 
 func (provider *Provider) Hour() string {

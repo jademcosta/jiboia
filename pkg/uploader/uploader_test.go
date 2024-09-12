@@ -280,8 +280,8 @@ func testUploaderEnsuringEnqueuedItems(
 
 	var waitG sync.WaitGroup
 	var mu sync.Mutex
-	var expected []string = make([]string, objectsToEnqueueCount)
-	var result []string = make([]string, 0, objectsToEnqueueCount)
+	expected := make([]string, objectsToEnqueueCount)
+	result := make([]string, 0, objectsToEnqueueCount)
 
 	ctx, cancel := context.WithCancel(context.Background())
 

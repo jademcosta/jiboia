@@ -372,7 +372,7 @@ func TestTheCapacityIsFixed(t *testing.T) {
 
 	separator := []byte("")
 	queueCapacity := 2
-	dataEnqueueCount := accumulator.MINIMUM_QUEUE_CAPACITY
+	dataEnqueueCount := accumulator.MinQueueCapacity
 
 	sut := accumulator.New("someflow", l, limitBytes, separator, queueCapacity, next, dummyCB, prometheus.NewRegistry())
 
@@ -515,7 +515,7 @@ func TestCallindEnqueueUsesACircuitBreakerAndRetriesOnFailure(t *testing.T) {
 	next.mu.Unlock()
 
 	time.Sleep(openInterval)
-	time.Sleep(accumulator.CB_RETRY_SLEEP_DURATION)
+	time.Sleep(accumulator.CBRetrySleepDuration)
 	time.Sleep(5 * time.Microsecond)
 
 	wanted := [][]byte{payload, payload}
@@ -525,7 +525,7 @@ func TestCallindEnqueueUsesACircuitBreakerAndRetriesOnFailure(t *testing.T) {
 	next.mu.Unlock()
 
 	time.Sleep(openInterval)
-	time.Sleep(accumulator.CB_RETRY_SLEEP_DURATION)
+	time.Sleep(accumulator.CBRetrySleepDuration)
 	time.Sleep(5 * time.Microsecond)
 
 	wanted = [][]byte{payload, payload, payload}
@@ -573,7 +573,7 @@ func TestItStopsRetryingOnceItSendsTheData(t *testing.T) {
 
 	next.SetFail(false)
 	time.Sleep(openInterval)
-	time.Sleep(accumulator.CB_RETRY_SLEEP_DURATION)
+	time.Sleep(accumulator.CBRetrySleepDuration)
 	time.Sleep(1 * time.Millisecond)
 
 	wanted := [][]byte{payload, payload}
@@ -591,7 +591,7 @@ func TestItStopsRetryingOnceItSendsTheData(t *testing.T) {
 	next.SetFail(false)
 
 	time.Sleep(openInterval * 5) //Waiting longer to show we don't have any more message
-	time.Sleep(accumulator.CB_RETRY_SLEEP_DURATION)
+	time.Sleep(accumulator.CBRetrySleepDuration)
 	time.Sleep(1 * time.Millisecond)
 
 	wanted = [][]byte{payload, payload, payload2, payload2}

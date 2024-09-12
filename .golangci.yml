@@ -27,11 +27,10 @@ linters:
     # - revive
     - sloglint
     - spancheck
-    # - stylecheck
+    - stylecheck
     - tagalign
     # - testifylint
     # - testpackage
-    # - unconvert
-    # - unparam
+    - unconvert
     - usestdlibvars
     - wastedassign

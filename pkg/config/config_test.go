@@ -23,7 +23,7 @@ func TestDefaultValues(t *testing.T) {
 	assert.Equal(t, "json", conf.O11y.Log.Format, "default for o11y.log.format config doesn't match")
 	assert.Equal(t, "info", conf.O11y.Log.Level, "default for o11y.log.level config doesn't match")
 	assert.Equal(t, false, conf.O11y.TracingEnabled, "default for o11y.tracing_enabled is false")
-	assert.Equal(t, 9199, conf.Api.Port, "default for api.port config doesn't match")
+	assert.Equal(t, 9199, conf.API.Port, "default for api.port config doesn't match")
 	assert.Equal(t, 50, conf.Flows[0].MaxConcurrentUploads,
 		"default for flow.max_concurrent_uploads config doesn't match")
 	assert.Equal(t, 1, conf.Flows[0].PathPrefixCount,
@@ -41,7 +41,7 @@ func TestDefaultValues(t *testing.T) {
 	assert.Equal(t, 2, conf.Flows[0].Compression.PreallocSlicePercentage,
 		"default flows.compression.prealloc_slice_percentage is 2")
 
-	sizeInBytes, err := conf.Api.PayloadSizeLimitInBytes()
+	sizeInBytes, err := conf.API.PayloadSizeLimitInBytes()
 	assert.Equal(t, int64(0), sizeInBytes, "default for api.payload_size_limit config doesn't match")
 	assert.NoError(t, err, "api.payload_size_limit should yield no error")
 }
@@ -135,9 +135,9 @@ flows:
 	assert.Equal(t, "json", conf.O11y.Log.Format, "should have parsed the correct o11y.log.format")
 	assert.Equal(t, true, conf.O11y.TracingEnabled, "should have parsed the correct o11y.tracing_enabled")
 
-	assert.Equal(t, 9099, conf.Api.Port, "should have parsed the correct api.port")
+	assert.Equal(t, 9099, conf.API.Port, "should have parsed the correct api.port")
 
-	sizeInBytes, err := conf.Api.PayloadSizeLimitInBytes()
+	sizeInBytes, err := conf.API.PayloadSizeLimitInBytes()
 	assert.Equal(t, int64(2097152), sizeInBytes, "should have parsed the correct api.payload_size_limit")
 	assert.NoError(t, err, "api.payload_size_limit should yield no error")
 
@@ -439,7 +439,7 @@ func TestApiPayloadSizeLimitValidation(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		conf := config.ApiConfig{PayloadSizeLimit: tc.size}
+		conf := config.APIConfig{PayloadSizeLimit: tc.size}
 
 		_, err := conf.PayloadSizeLimitInBytes()
 		if tc.shouldError {

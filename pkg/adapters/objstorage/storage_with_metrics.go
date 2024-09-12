@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	STORAGE_TYPE_LABEL string = "storage_type"
-	NAME_LABEL         string = "name"
-	FLOW_LABEL         string = "flow"
+	StorageTypeLabel string = "storage_type"
+	NameLabel        string = "name"
+	FlowLabel        string = "flow"
 )
 
 var (
@@ -40,7 +40,7 @@ func NewStorageWithMetrics(storage ObjStorageWithMetadata, metricRegistry *prome
 				Help:      "the time it took to finish the upload of data to object storage",
 				Buckets:   []float64{0.25, 0.5, 1.0, 1.5, 2.0, 5.0, 10.0, 30.0, 45.0, 60.0, 90.0, 120.0, 180.0, 240.0, 300.0, 600.0},
 			},
-			[]string{STORAGE_TYPE_LABEL, NAME_LABEL, FLOW_LABEL},
+			[]string{StorageTypeLabel, NameLabel, FlowLabel},
 		)
 
 		uploadCounter = prometheus.NewCounterVec(
@@ -50,7 +50,7 @@ func NewStorageWithMetrics(storage ObjStorageWithMetadata, metricRegistry *prome
 				Subsystem: "object_storage",
 				Help:      "count of uploads to object storage that finished",
 			},
-			[]string{STORAGE_TYPE_LABEL, NAME_LABEL, FLOW_LABEL},
+			[]string{StorageTypeLabel, NameLabel, FlowLabel},
 		)
 
 		uploadSuccessCounter = prometheus.NewCounterVec(
@@ -60,7 +60,7 @@ func NewStorageWithMetrics(storage ObjStorageWithMetadata, metricRegistry *prome
 				Subsystem: "object_storage",
 				Help:      "count of successes uploading to object storage",
 			},
-			[]string{STORAGE_TYPE_LABEL, NAME_LABEL, FLOW_LABEL},
+			[]string{StorageTypeLabel, NameLabel, FlowLabel},
 		)
 
 		uploadErrorCounter = prometheus.NewCounterVec(
@@ -70,7 +70,7 @@ func NewStorageWithMetrics(storage ObjStorageWithMetadata, metricRegistry *prome
 				Subsystem: "object_storage",
 				Help:      "count of errors uploading to object storage",
 			},
-			[]string{STORAGE_TYPE_LABEL, NAME_LABEL, FLOW_LABEL},
+			[]string{StorageTypeLabel, NameLabel, FlowLabel},
 		)
 
 		metricRegistry.MustRegister(

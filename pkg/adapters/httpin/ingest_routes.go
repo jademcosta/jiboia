@@ -1,4 +1,4 @@
-package http_in
+package httpin
 
 import (
 	"bytes"
@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/jademcosta/jiboia/pkg/adapters/http_in/httpmiddleware"
+	"github.com/jademcosta/jiboia/pkg/adapters/httpin/httpmiddleware"
 	"github.com/jademcosta/jiboia/pkg/circuitbreaker"
 	"github.com/jademcosta/jiboia/pkg/compressor"
 	"github.com/jademcosta/jiboia/pkg/config"
@@ -122,7 +122,7 @@ func (handler *ingestionRoute) ServeHTTP(w http.ResponseWriter, r *http.Request)
 }
 
 func RegisterIngestingRoutes(
-	api *Api,
+	api *API,
 	version string,
 	flws []flow.Flow,
 ) {

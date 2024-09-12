@@ -41,9 +41,9 @@ func (mock *mockedSendMsgs) SendMessage(input *sqs.SendMessageInput) (*sqs.SendM
 	return &sqs.SendMessageOutput{}, nil
 }
 func TestMessageContainsTheData(t *testing.T) {
-	queueUrl := "some-queue-url"
+	queueURL := "some-queue-url"
 	c := &Config{
-		URL:    queueUrl,
+		URL:    queueURL,
 		Region: "us-east-1",
 	}
 	flowName := "this-flow-name"
@@ -69,7 +69,7 @@ func TestMessageContainsTheData(t *testing.T) {
 	jsonMsg := "{\"schema_version\":\"0.0.1\",\"flow_name\":\"this-flow-name\",\"bucket\":{\"name\":\"my-bucket1\",\"region\":\"region-a\"},\"object\":{\"path\":\"filepath\",\"full_url\":\"some_url\",\"size_in_bytes\":1111,\"compression_algorithm\":\"some-compression\"}}"
 
 	expected := &sqs.SendMessageInput{
-		QueueUrl:    &queueUrl,
+		QueueUrl:    &queueURL,
 		MessageBody: &jsonMsg}
 
 	assert.Lenf(t, mockSQS.msgs, 1, "1 message should have been sent to SQS client")
@@ -77,9 +77,9 @@ func TestMessageContainsTheData(t *testing.T) {
 }
 
 func TestReturnsTheErrorOnEnqueueingError(t *testing.T) {
-	queueUrl := "some-queue-url"
+	queueURL := "some-queue-url"
 	c := &Config{
-		URL:    queueUrl,
+		URL:    queueURL,
 		Region: "us-east-1",
 	}
 

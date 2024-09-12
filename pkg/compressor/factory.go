@@ -16,11 +16,11 @@ import (
 )
 
 const (
-	GZIP_TYPE    = "gzip"
-	ZLIB_TYPE    = "zlib"
-	DEFLATE_TYPE = "deflate"
-	SNAPPY_TYPE  = "snappy"
-	ZSTD_TYPE    = "zstd"
+	GzipType    = "gzip"
+	ZlibType    = "zlib"
+	DeflateType = "deflate"
+	SnappyType  = "snappy"
+	ZstdType    = "zstd"
 )
 
 type closerAdapter struct {
@@ -53,15 +53,15 @@ func NewReader(
 	var decompressor CompressorReader
 	var err error
 	switch strings.ToLower(conf.Type) {
-	case GZIP_TYPE:
+	case GzipType:
 		decompressor, err = gzip.NewReader(reader)
-	case ZLIB_TYPE:
+	case ZlibType:
 		decompressor, err = zlib.NewReader(reader)
-	case DEFLATE_TYPE:
+	case DeflateType:
 		decompressor = flate.NewReader(reader)
-	case SNAPPY_TYPE:
+	case SnappyType:
 		decompressor = &closerAdapter{wrapped: snappy.NewReader(reader)}
-	case ZSTD_TYPE:
+	case ZstdType:
 		d, localErr := zstd.NewReader(reader)
 		err = localErr
 		if localErr == nil {
@@ -99,27 +99,27 @@ func NewWriter(
 	}
 
 	switch strings.ToLower(conf.Type) {
-	case GZIP_TYPE:
+	case GzipType:
 		if levelSet {
 			compressor, err = gzip.NewWriterLevel(writer, level)
 		} else {
 			compressor = gzip.NewWriter(writer)
 		}
-	case ZLIB_TYPE:
+	case ZlibType:
 		if levelSet {
 			compressor, err = zlib.NewWriterLevel(writer, level)
 		} else {
 			compressor = zlib.NewWriter(writer)
 		}
-	case DEFLATE_TYPE:
+	case DeflateType:
 		if levelSet {
 			compressor, err = flate.NewWriter(writer, level)
 		} else {
 			compressor, err = flate.NewWriter(writer, flate.DefaultCompression)
 		}
-	case SNAPPY_TYPE:
+	case SnappyType:
 		compressor = snappy.NewBufferedWriter(writer)
-	case ZSTD_TYPE:
+	case ZstdType:
 		if levelSet {
 			opts := zstd.WithEncoderLevel(zstd.EncoderLevel(level))
 			//TODO: level works differently on this package, we should not allow so many levels

@@ -15,17 +15,17 @@ import (
 const TYPE string = "httpstorage"
 
 type Config struct {
-	Url string `yaml:"url"`
+	URL string `yaml:"url"`
 }
 
-type HttpStorage struct {
+type HTTPStorage struct {
 	url    string
 	log    *slog.Logger
 	client *http.Client
 }
 
-func New(l *slog.Logger, c *Config) (*HttpStorage, error) {
-	url, err := validateAndFormatUrl(c.Url)
+func NewHTTPStorage(l *slog.Logger, c *Config) (*HTTPStorage, error) {
+	url, err := validateAndFormatURL(c.URL)
 	if err != nil {
 		return nil, fmt.Errorf("error creating httpstorage: %w", err)
 	}
@@ -38,7 +38,7 @@ func New(l *slog.Logger, c *Config) (*HttpStorage, error) {
 		},
 	}
 
-	return &HttpStorage{url: url, log: l, client: client}, nil
+	return &HTTPStorage{url: url, log: l, client: client}, nil
 }
 
 func ParseConfig(confData []byte) (*Config, error) {
@@ -52,9 +52,9 @@ func ParseConfig(confData []byte) (*Config, error) {
 	return conf, nil
 }
 
-func (storage *HttpStorage) Upload(workU *domain.WorkUnit) (*domain.UploadResult, error) {
+func (storage *HTTPStorage) Upload(workU *domain.WorkUnit) (*domain.UploadResult, error) {
 
-	url, path := assembleUrl(storage.url, workU.Prefix, workU.Filename)
+	url, path := assembleURL(storage.url, workU.Prefix, workU.Filename)
 
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(workU.Data))
 	if err != nil {
@@ -80,15 +80,15 @@ func (storage *HttpStorage) Upload(workU *domain.WorkUnit) (*domain.UploadResult
 	}, nil
 }
 
-func (storage *HttpStorage) Type() string {
+func (storage *HTTPStorage) Type() string {
 	return "httpstorage"
 }
 
-func (storage *HttpStorage) Name() string {
+func (storage *HTTPStorage) Name() string {
 	return "httpstorage"
 }
 
-func validateAndFormatUrl(url string) (string, error) {
+func validateAndFormatURL(url string) (string, error) {
 
 	if !strings.HasPrefix(url, "http") && !strings.HasPrefix(url, "https") {
 		return "", fmt.Errorf("the url should start with http or https")
@@ -109,7 +109,7 @@ func validateAndFormatUrl(url string) (string, error) {
 	return url, nil
 }
 
-func assembleUrl(url string, prefix string, filename string) (string, string) {
+func assembleURL(url string, prefix string, filename string) (string, string) {
 	if !strings.Contains(url, "%s") {
 		return url, ""
 	}

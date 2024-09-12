@@ -1,4 +1,4 @@
-package external_queue
+package externalqueue
 
 import (
 	"sync"
@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	QUEUE_TYPE_LABEL string = "queue_type"
-	NAME_LABEL       string = "name"
-	FLOW_LABEL       string = "flow"
+	QueueTypeLabel string = "queue_type"
+	NameLabel      string = "name"
+	FlowLabel      string = "flow"
 )
 
 var (
@@ -40,7 +40,7 @@ func NewExternalQueueWithMetrics(queue ExtQueueWithMetadata, metricRegistry *pro
 				Help:      "the time it took to finish the put action to a external queue (only successful cases)",
 				Buckets:   []float64{0.25, 0.5, 1.0, 1.5, 2.0, 5.0, 10.0, 30.0, 45.0, 60.0},
 			},
-			[]string{QUEUE_TYPE_LABEL, NAME_LABEL, FLOW_LABEL},
+			[]string{QueueTypeLabel, NameLabel, FlowLabel},
 		)
 
 		enqueueCounter = prometheus.NewCounterVec(
@@ -50,7 +50,7 @@ func NewExternalQueueWithMetrics(queue ExtQueueWithMetadata, metricRegistry *pro
 				Subsystem: "external_queue",
 				Help:      "count of put actions to external queues that finished (successful or not)",
 			},
-			[]string{QUEUE_TYPE_LABEL, NAME_LABEL, FLOW_LABEL},
+			[]string{QueueTypeLabel, NameLabel, FlowLabel},
 		)
 
 		enqueueErrorCounter = prometheus.NewCounterVec(
@@ -60,7 +60,7 @@ func NewExternalQueueWithMetrics(queue ExtQueueWithMetadata, metricRegistry *pro
 				Subsystem: "external_queue",
 				Help:      "count of errors putting to external queue",
 			},
-			[]string{QUEUE_TYPE_LABEL, NAME_LABEL, FLOW_LABEL},
+			[]string{QueueTypeLabel, NameLabel, FlowLabel},
 		)
 
 		enqueueSuccessCounter = prometheus.NewCounterVec(
@@ -70,7 +70,7 @@ func NewExternalQueueWithMetrics(queue ExtQueueWithMetadata, metricRegistry *pro
 				Subsystem: "external_queue",
 				Help:      "count of successes putting to external queue",
 			},
-			[]string{QUEUE_TYPE_LABEL, NAME_LABEL, FLOW_LABEL},
+			[]string{QueueTypeLabel, NameLabel, FlowLabel},
 		)
 
 		metricRegistry.MustRegister(latencyHistogram, enqueueCounter, enqueueErrorCounter, enqueueSuccessCounter)

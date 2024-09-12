@@ -9,7 +9,7 @@ import (
 type Config struct {
 	O11y            O11yConfig   `yaml:"o11y"`
 	Version         string       `yaml:"version"` //FIXME: fill the version
-	Api             ApiConfig    `yaml:"api"`
+	API             APIConfig    `yaml:"api"`
 	Flows           []FlowConfig `yaml:"flows"`
 	DisableMaxProcs bool         `yaml:"disable_max_procs"`
 }
@@ -51,7 +51,7 @@ func (c *Config) validate() error {
 		}
 	}
 
-	err := c.Api.validate()
+	err := c.API.validate()
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func (c *Config) validate() error {
 func (c *Config) fillDefaultValues() {
 
 	c.O11y = c.O11y.fillDefaults()
-	c.Api = c.Api.fillDefaults()
+	c.API = c.API.fillDefaults()
 
 	for idx, flow := range c.Flows {
 		c.Flows[idx] = flow.fillDefaultValues()

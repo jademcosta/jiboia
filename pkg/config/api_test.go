@@ -7,14 +7,14 @@ import (
 )
 
 func TestApiFillDefaults(t *testing.T) {
-	sut := ApiConfig{}
+	sut := APIConfig{}
 	sut = sut.fillDefaults()
 
 	assert.Equal(t, 9199, sut.Port, "default port is 9199")
 }
 
 func TestApiValidate(t *testing.T) {
-	sut := ApiConfig{}
+	sut := APIConfig{}
 	err := sut.validate()
 	assert.Error(t, err, "port cannot be zero")
 

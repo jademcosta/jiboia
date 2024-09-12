@@ -1,4 +1,4 @@
-package http_in
+package httpin
 
 import (
 	"sync"

@@ -40,7 +40,7 @@ func TestURLFormat(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		_, err := httpstorage.New(llog, &httpstorage.Config{Url: tc.url})
+		_, err := httpstorage.NewHTTPStorage(llog, &httpstorage.Config{URL: tc.url})
 		if tc.shouldError {
 			assert.Errorf(t, err,
 				"should return error when URL %s is used", tc.url)
@@ -71,8 +71,8 @@ func TestURLFormatWhenUploading(t *testing.T) {
 	defer externalServer.Close()
 
 	//server url is like http://127.0.0.1:57439
-	sut, err := httpstorage.New(llog, &httpstorage.Config{
-		Url: fmt.Sprintf("%s/something-to-upload", externalServer.URL)})
+	sut, err := httpstorage.NewHTTPStorage(llog, &httpstorage.Config{
+		URL: fmt.Sprintf("%s/something-to-upload", externalServer.URL)})
 	assert.NoError(t, err, "should not error on storage creation")
 
 	_, err = sut.Upload(&domain.WorkUnit{
@@ -89,8 +89,8 @@ func TestURLFormatWhenUploading(t *testing.T) {
 	assert.NoError(t, err, "the upload should return no error")
 
 	//server url is like http://127.0.0.1:57439
-	sut, err = httpstorage.New(llog, &httpstorage.Config{
-		Url: fmt.Sprintf("%s/something-to-upload/%s", externalServer.URL, "%s")})
+	sut, err = httpstorage.NewHTTPStorage(llog, &httpstorage.Config{
+		URL: fmt.Sprintf("%s/something-to-upload/%s", externalServer.URL, "%s")})
 	assert.NoError(t, err, "should not error on storage creation")
 
 	_, err = sut.Upload(&domain.WorkUnit{
@@ -115,8 +115,8 @@ func TestUploadSuccess(t *testing.T) {
 	defer externalServer.Close()
 
 	//server url is like http://127.0.0.1:57439
-	sut, err := httpstorage.New(llog, &httpstorage.Config{
-		Url: fmt.Sprintf("%s/something-to-upload/%%s", externalServer.URL)})
+	sut, err := httpstorage.NewHTTPStorage(llog, &httpstorage.Config{
+		URL: fmt.Sprintf("%s/something-to-upload/%%s", externalServer.URL)})
 	assert.NoError(t, err, "should not error on storage creation")
 
 	uploadResult, err := sut.Upload(&domain.WorkUnit{
@@ -165,8 +165,8 @@ func TestUploadErrors(t *testing.T) {
 			w.WriteHeader(tc.statusCode)
 		}))
 
-		sut, err := httpstorage.New(llog, &httpstorage.Config{
-			Url: fmt.Sprintf("%s/something-to-upload/%%s", externalServer.URL)})
+		sut, err := httpstorage.NewHTTPStorage(llog, &httpstorage.Config{
+			URL: fmt.Sprintf("%s/something-to-upload/%%s", externalServer.URL)})
 		assert.NoError(t, err, "should not error on storage creation")
 
 		_, err = sut.Upload(&domain.WorkUnit{

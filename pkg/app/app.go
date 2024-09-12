@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/jademcosta/jiboia/pkg/accumulator"
-	"github.com/jademcosta/jiboia/pkg/adapters/external_queue"
-	"github.com/jademcosta/jiboia/pkg/adapters/http_in"
+	"github.com/jademcosta/jiboia/pkg/adapters/externalqueue"
+	"github.com/jademcosta/jiboia/pkg/adapters/httpin"
 	"github.com/jademcosta/jiboia/pkg/adapters/objstorage"
 	"github.com/jademcosta/jiboia/pkg/circuitbreaker"
 	"github.com/jademcosta/jiboia/pkg/config"
@@ -68,7 +68,7 @@ func (a *App) Start() {
 
 	apiShutdownDone := make(chan struct{})
 
-	api := http_in.New(a.logger, *a.conf, metricRegistry, tracer, a.conf.Version, flows)
+	api := httpin.NewAPI(a.logger, *a.conf, metricRegistry, tracer, a.conf.Version, flows)
 
 	//The shutdown of rungroup seems to be executed from a single goroutine. Meaning that if a
 	//waitgroup is added on some interrupt function, it might hang forever.
@@ -212,7 +212,7 @@ func createExternalQueue(
 	l *slog.Logger, c config.ExternalQueueConfig, metricRegistry *prometheus.Registry,
 	flowName string,
 ) worker.ExternalQueue {
-	externalQueue, err := external_queue.New(l, metricRegistry, flowName, &c)
+	externalQueue, err := externalqueue.New(l, metricRegistry, flowName, &c)
 	if err != nil {
 		l.Error("error creating external queue", "error", err)
 		panic("error creating external queue")
@@ -252,7 +252,7 @@ func createFlows(
 
 	for _, conf := range confs {
 		flowConf := conf
-		localLogger := llog.With(logger.FLOW_KEY, flowConf.Name)
+		localLogger := llog.With(logger.FlowKey, flowConf.Name)
 		externalQueue := createExternalQueue(localLogger, flowConf.ExternalQueue, metricRegistry, flowConf.Name)
 		objStorage := createObjStorage(localLogger, flowConf.ObjectStorage, metricRegistry, flowConf.Name)
 

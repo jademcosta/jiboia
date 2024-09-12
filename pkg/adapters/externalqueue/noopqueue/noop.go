@@ -1,4 +1,4 @@
-package noop_ext_queue
+package noopqueue
 
 import (
 	"log/slog"

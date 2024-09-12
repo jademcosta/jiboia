@@ -1,4 +1,4 @@
-package http_in
+package httpin
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/jademcosta/jiboia/pkg/adapters/http_in/httpmiddleware"
+	"github.com/jademcosta/jiboia/pkg/adapters/httpin/httpmiddleware"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/domain/flow"
 	"github.com/jademcosta/jiboia/pkg/logger"
@@ -17,34 +17,34 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const API_COMPONENT_TYPE = "api"
+const APIComponentType = "api"
 const apiVersion = "v1"
 
-type Api struct {
+type API struct {
 	mux  *chi.Mux
 	log  *slog.Logger
 	srv  *http.Server
 	port int
 }
 
-func New(
+func NewAPI(
 	l *slog.Logger, conf config.Config, metricRegistry *prometheus.Registry, tracer trace.Tracer,
 	appVersion string, flws []flow.Flow,
-) *Api {
+) *API {
 
 	router := chi.NewRouter()
-	logg := l.With(logger.COMPONENT_KEY, API_COMPONENT_TYPE)
+	logg := l.With(logger.ComponentKey, APIComponentType)
 
-	sizeLimit, err := conf.Api.PayloadSizeLimitInBytes()
+	sizeLimit, err := conf.API.PayloadSizeLimitInBytes()
 	if err != nil {
 		panic("payload size limit could not be extracted")
 	}
 
-	api := &Api{
+	api := &API{
 		mux:  router,
 		log:  logg,
-		srv:  &http.Server{Addr: fmt.Sprintf(":%d", conf.Api.Port), Handler: router},
-		port: conf.Api.Port,
+		srv:  &http.Server{Addr: fmt.Sprintf(":%d", conf.API.Port), Handler: router},
+		port: conf.API.Port,
 	}
 
 	initializeMetrics(metricRegistry)
@@ -57,7 +57,7 @@ func New(
 	return api
 }
 
-func (api *Api) ListenAndServe() error {
+func (api *API) ListenAndServe() error {
 	api.log.Info(fmt.Sprintf("Starting HTTP server on port %d", api.port))
 	err := api.srv.ListenAndServe()
 	if err != nil {
@@ -67,7 +67,7 @@ func (api *Api) ListenAndServe() error {
 	return nil
 }
 
-func (api *Api) Shutdown() error {
+func (api *API) Shutdown() error {
 	//TODO: allow the grace period to be configured
 	shutdownCtx, shutdownCtxRelease := context.WithTimeout(context.Background(), 5*time.Second)
 	defer shutdownCtxRelease()
@@ -77,7 +77,7 @@ func (api *Api) Shutdown() error {
 }
 
 func registerDefaultMiddlewares(
-	api *Api,
+	api *API,
 	conf config.Config,
 	sizeLimit int64,
 	l *slog.Logger,
