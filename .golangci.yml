@@ -24,7 +24,7 @@ linters:
     - predeclared
     - promlinter
     - reassign
-    # - revive
+    - revive
     - sloglint
     - spancheck
     - stylecheck

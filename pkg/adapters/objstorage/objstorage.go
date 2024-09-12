@@ -13,15 +13,15 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type ObjStorageWithMetadata interface {
+type StorageWithMetadata interface {
 	worker.ObjStorage
 	Type() string
 	Name() string
 }
 
-func New(l *slog.Logger, metricRegistry *prometheus.Registry, flowName string, conf *config.ObjectStorageConfig) (ObjStorageWithMetadata, error) {
+func New(l *slog.Logger, metricRegistry *prometheus.Registry, flowName string, conf *config.ObjectStorageConfig) (StorageWithMetadata, error) {
 
-	var objStorage ObjStorageWithMetadata
+	var objStorage StorageWithMetadata
 	specificConf, err := yaml.Marshal(conf.Config)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing object storage config: %w", err)

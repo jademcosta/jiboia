@@ -11,7 +11,7 @@ import (
 
 	"github.com/jademcosta/jiboia/pkg/adapters/httpin/httpmiddleware"
 	"github.com/jademcosta/jiboia/pkg/circuitbreaker"
-	"github.com/jademcosta/jiboia/pkg/compressor"
+	"github.com/jademcosta/jiboia/pkg/compression"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/domain/flow"
 )
@@ -172,7 +172,7 @@ func decompress(data []byte, algorithm string, pathForMetrics string, bufferSize
 	increaseDecompressionCount(algorithm)
 	timeStart := time.Now()
 
-	decompressor, err := compressor.NewReader(&config.CompressionConfig{Type: algorithm}, bytes.NewReader(data))
+	decompressor, err := compression.NewReader(&config.CompressionConfig{Type: algorithm}, bytes.NewReader(data))
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +192,7 @@ func decompress(data []byte, algorithm string, pathForMetrics string, bufferSize
 	return decompressedData, nil
 }
 
-func localReadAll(r compressor.CompressorReader, initialSliceSize int) ([]byte, error) {
+func localReadAll(r compression.CompressorReader, initialSliceSize int) ([]byte, error) {
 	//Code copied from io.ReadAll
 	b := make([]byte, 0, initialSliceSize)
 	for {

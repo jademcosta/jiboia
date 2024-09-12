@@ -15,7 +15,7 @@ import (
 )
 
 var letters = []rune("abcdefghijklmnopqrstuvwxyz")
-var r1 *rand.Rand = rand.New(rand.NewSource(time.Now().UnixNano()))
+var r1 = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 var inputTable = []struct {
 	payloadSize int
@@ -28,7 +28,7 @@ var inputTable = []struct {
 
 type dummyDataEnqueuerMock struct{}
 
-func (w *dummyDataEnqueuerMock) Enqueue(data []byte) error {
+func (w *dummyDataEnqueuerMock) Enqueue(_ []byte) error {
 	//Do nothing
 	return nil
 }

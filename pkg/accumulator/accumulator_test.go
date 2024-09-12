@@ -491,7 +491,7 @@ func TestCallindEnqueueUsesACircuitBreakerAndRetriesOnFailure(t *testing.T) {
 		Name:        "accumulator-test",
 		MaxRequests: 1, //FIXME: magic number. This should be extracted into a const
 		Timeout:     openInterval,
-		ReadyToTrip: func(counts gobreaker.Counts) bool {
+		ReadyToTrip: func(_ gobreaker.Counts) bool {
 			return true
 		},
 	})
@@ -548,7 +548,7 @@ func TestItStopsRetryingOnceItSendsTheData(t *testing.T) {
 		Name:        "accumulator-test",
 		MaxRequests: 1, //FIXME: magic number. This should be extracted into a const
 		Timeout:     openInterval,
-		ReadyToTrip: func(counts gobreaker.Counts) bool {
+		ReadyToTrip: func(_ gobreaker.Counts) bool {
 			return true
 		},
 	})
