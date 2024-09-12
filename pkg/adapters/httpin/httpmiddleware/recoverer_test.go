@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func alwaysPanicHandler(w http.ResponseWriter, r *http.Request) {
+func alwaysPanicHandler(_ http.ResponseWriter, _ *http.Request) {
 	panic("WOW, panic handler!")
 }
 

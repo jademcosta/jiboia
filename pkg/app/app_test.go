@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var testingPathNoAcc string = "/tmp/int_test2"
+var testingPathNoAcc = "/tmp/int_test2"
 
 var characters = []rune("abcdefghijklmnopqrstuvwxyz")
 var l *slog.Logger
@@ -32,7 +32,7 @@ func TestAccumulatorCircuitBreaker(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 
-	storageServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	storageServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		time.Sleep(2 * time.Second)
 		w.WriteHeader(http.StatusInternalServerError)
 	}))

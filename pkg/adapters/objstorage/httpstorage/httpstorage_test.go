@@ -109,7 +109,7 @@ func TestURLFormatWhenUploading(t *testing.T) {
 
 func TestUploadSuccess(t *testing.T) {
 
-	externalServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	externalServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer externalServer.Close()
@@ -161,7 +161,7 @@ func TestUploadErrors(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		externalServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		externalServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(tc.statusCode)
 		}))
 

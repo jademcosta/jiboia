@@ -169,7 +169,7 @@ func addFlowActorToRunGroup(g *run.Group, apiShutdownDone <-chan struct{}, flw *
 		},
 	)
 
-	workersContext, workersCancel := context.WithCancel(context.Background()) //nolint:govet
+	workersContext, workersCancel := context.WithCancel(context.Background()) //nolint: govet
 	for _, worker := range flw.UploadWorkers {
 		workerCopy := worker
 		g.Add(
@@ -183,7 +183,7 @@ func addFlowActorToRunGroup(g *run.Group, apiShutdownDone <-chan struct{}, flw *
 			},
 		)
 	}
-} //nolint:govet
+} //nolint: govet
 
 func registerDefaultMetrics(registry *prometheus.Registry) {
 	registry.MustRegister(
@@ -327,10 +327,10 @@ func createTwoStepCircuitBreaker(
 		Name:        name,
 		MaxRequests: 1, //FIXME: magic number. This should be extracted into a const
 		Timeout:     cbConf.OpenIntervalAsDuration(),
-		ReadyToTrip: func(counts gobreaker.Counts) bool {
+		ReadyToTrip: func(_ gobreaker.Counts) bool {
 			return true
 		},
-		OnStateChange: func(name string, from, to gobreaker.State) {
+		OnStateChange: func(_ string, _, to gobreaker.State) {
 			if to == gobreaker.StateOpen {
 				cbO11y.SetCBOpen()
 			} else {
@@ -356,10 +356,10 @@ func createCircuitBreaker(
 		Name:        name,
 		MaxRequests: 1, //FIXME: magic number. This should be extracted into a const
 		Timeout:     cbConf.OpenIntervalAsDuration(),
-		ReadyToTrip: func(counts gobreaker.Counts) bool {
+		ReadyToTrip: func(_ gobreaker.Counts) bool {
 			return true
 		},
-		OnStateChange: func(name string, from, to gobreaker.State) {
+		OnStateChange: func(_ string, _, to gobreaker.State) {
 			if to == gobreaker.StateOpen {
 				cbO11y.SetCBOpen()
 			} else {

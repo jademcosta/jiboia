@@ -84,9 +84,8 @@ func (w *Worker) work(workU *domain.WorkUnit) {
 	if err != nil {
 		w.l.Error("failed to upload object", "prefix", workU.Prefix, "filename", workU.Filename, "error", err)
 		return
-	} else {
-		w.l.Debug("finished uploading object", "prefix", workU.Prefix, "filename", workU.Filename)
 	}
+	w.l.Debug("finished uploading object", "prefix", workU.Prefix, "filename", workU.Filename)
 
 	uploadedAt := w.currentTimeProvider()
 
