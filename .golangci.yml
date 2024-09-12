@@ -22,7 +22,7 @@ linters:
     - nonamedreturns
     - prealloc
     - predeclared
-    # - promlinter
+    - promlinter
     - reassign
     # - revive
     - sloglint

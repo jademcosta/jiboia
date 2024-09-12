@@ -36,7 +36,7 @@ func NewMetricCollector(flowName string, metricRegistry *prometheus.Registry) *m
 			prometheus.GaugeOpts{
 				Namespace: "jiboia",
 				Subsystem: "uploader",
-				Name:      "workers_count",
+				Name:      "workers_online",
 				Help:      "The total number of workers, meaning how many uploads can happen in parallel.",
 			},
 			[]string{FLOW_METRIC_KEY},
