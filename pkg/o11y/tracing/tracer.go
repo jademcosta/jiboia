@@ -19,6 +19,12 @@ func NewNoopTracer() trace.Tracer {
 }
 
 func NewTracer(conf config.Config) (trace.Tracer, func(context.Context) error) {
+	if !conf.O11y.TracingEnabled {
+		return NewNoopTracer(), func(_ context.Context) error {
+			return nil
+		}
+	}
+
 	bsp := sdktrace.NewBatchSpanProcessor(newExporter())
 	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
