@@ -20,7 +20,7 @@ type metricCollector struct {
 	flowName string
 }
 
-func NewMetricCollector(flowName string, metricRegistry *prometheus.Registry) *metricCollector {
+func newMetricCollector(flowName string, metricRegistry *prometheus.Registry) *metricCollector {
 	ensureMetricRegisteringOnce.Do(func() {
 		queueCapacityGauge = prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{

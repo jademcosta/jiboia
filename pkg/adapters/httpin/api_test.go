@@ -62,13 +62,13 @@ func (mockDF *mockDataFlow) Enqueue(data []byte) error {
 
 type dummyAlwaysFailDataFlow struct{}
 
-func (mockDF *dummyAlwaysFailDataFlow) Enqueue(data []byte) error {
+func (mockDF *dummyAlwaysFailDataFlow) Enqueue(_ []byte) error {
 	return fmt.Errorf("dummy error")
 }
 
 type brokenDataFlow struct{}
 
-func (brokenDF *brokenDataFlow) Enqueue(data []byte) error {
+func (brokenDF *brokenDataFlow) Enqueue(_ []byte) error {
 	panic("I always panic")
 }
 
@@ -862,7 +862,7 @@ func createCircuitBreaker(name string, timeout time.Duration) *gobreaker.TwoStep
 		Name:        fmt.Sprintf("%s_ingestion_cb_TEST", name),
 		MaxRequests: 1,
 		Timeout:     timeout,
-		ReadyToTrip: func(counts gobreaker.Counts) bool {
+		ReadyToTrip: func(_ gobreaker.Counts) bool {
 			return true
 		},
 	})

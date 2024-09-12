@@ -33,7 +33,7 @@ func New(
 	metricRegistry *prometheus.Registry,
 ) *NonBlockingUploader {
 
-	metrics := NewMetricCollector(flowName, metricRegistry)
+	metrics := newMetricCollector(flowName, metricRegistry)
 
 	metrics.queueCapacity(queueCapacity)
 	metrics.workersCount(workersCount)

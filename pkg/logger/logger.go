@@ -62,9 +62,9 @@ func (h *dummyHandler) Enabled(context.Context, slog.Level) bool {
 func (h *dummyHandler) Handle(context.Context, slog.Record) error {
 	return nil
 }
-func (h *dummyHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+func (h *dummyHandler) WithAttrs(_ []slog.Attr) slog.Handler {
 	return h
 }
-func (h *dummyHandler) WithGroup(name string) slog.Handler {
+func (h *dummyHandler) WithGroup(_ string) slog.Handler {
 	return h
 }

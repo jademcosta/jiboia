@@ -155,8 +155,7 @@ func main() {
 	if string(buf.Bytes()) != expected {
 		fmt.Printf("String inside S3 file is not the expected one. Expected: %s\nGot: %s\n", expected, string(buf.Bytes()))
 		os.Exit(1)
-	} else {
-		fmt.Println("Expected content is correct!")
-		os.Exit(0)
 	}
+	fmt.Println("Expected content is correct!")
+	os.Exit(0)
 }

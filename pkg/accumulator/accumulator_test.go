@@ -33,7 +33,7 @@ func (w *dataEnqueuerMock) Enqueue(data []byte) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	w.callCount += 1
+	w.callCount++
 	w.dataWritten = append(w.dataWritten, data)
 	return nil
 }
@@ -49,13 +49,12 @@ func (denq *failingDataEnqueuerMock) Enqueue(data []byte) error {
 	denq.mu.Lock()
 	defer denq.mu.Unlock()
 
-	denq.callCount += 1
+	denq.callCount++
 	denq.dataWritten = append(denq.dataWritten, data)
 	if denq.fail {
 		return errors.New("i always fail")
-	} else {
-		return nil
 	}
+	return nil
 
 }
 

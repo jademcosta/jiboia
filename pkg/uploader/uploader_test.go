@@ -37,7 +37,7 @@ func (mock *mockFilePather) Prefix() *string {
 
 type dummyExternalQueue struct{}
 
-func (queue *dummyExternalQueue) Enqueue(data *domain.MessageContext) error {
+func (queue *dummyExternalQueue) Enqueue(_ *domain.MessageContext) error {
 	return nil
 }
 
@@ -48,7 +48,7 @@ type mockCounterObjStorage struct {
 	wg             *sync.WaitGroup
 }
 
-func (objStorage *mockCounterObjStorage) Upload(workU *domain.WorkUnit) (*domain.UploadResult, error) {
+func (objStorage *mockCounterObjStorage) Upload(_ *domain.WorkUnit) (*domain.UploadResult, error) {
 	defer objStorage.wg.Done()
 	if objStorage.returnError {
 		return nil, fmt.Errorf("Error from mockCounterObjStorage")

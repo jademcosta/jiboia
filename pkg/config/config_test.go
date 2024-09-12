@@ -450,6 +450,7 @@ func TestApiPayloadSizeLimitValidation(t *testing.T) {
 	}
 }
 
+// nolint: revive
 func TestErrorOnInvalidLogFormat(t *testing.T) {
 	//TODO: implement me
 }
