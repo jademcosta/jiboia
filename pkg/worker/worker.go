@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/jademcosta/jiboia/pkg/compressor"
+	"github.com/jademcosta/jiboia/pkg/compression"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
@@ -110,7 +110,7 @@ func (w *Worker) work(workU *domain.WorkUnit) {
 func compress(conf config.CompressionConfig, data []byte) ([]byte, error) {
 	startTime := time.Now()
 	buf := newCompressionResultBuffer(conf, len(data))
-	compressWorker, err := compressor.NewWriter(&conf, buf)
+	compressWorker, err := compression.NewWriter(&conf, buf)
 	if err != nil {
 		return nil, fmt.Errorf("error creating compressor: %w", err)
 	}

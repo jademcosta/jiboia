@@ -1,4 +1,4 @@
-package compressor_test
+package compression_test
 
 import (
 	"bytes"
@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/jademcosta/jiboia/pkg/compressor"
+	"github.com/jademcosta/jiboia/pkg/compression"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
@@ -39,7 +39,7 @@ func TestDecompressionAfterCompressionKeepsDataUnchanged(t *testing.T) {
 	for _, tc := range testCases {
 		buf := &bytes.Buffer{}
 
-		compressorWriter, err := compressor.NewWriter(&tc.conf, buf)
+		compressorWriter, err := compression.NewWriter(&tc.conf, buf)
 		assert.NoError(t, err, "compression writer creation should return no error")
 
 		_, err = compressorWriter.Write([]byte(data))
@@ -51,7 +51,7 @@ func TestDecompressionAfterCompressionKeepsDataUnchanged(t *testing.T) {
 		assert.NotEqual(t, []byte(data), compressedData,
 			"the compressed data should be different from the original")
 
-		compressorReader, err := compressor.NewReader(&tc.conf, buf)
+		compressorReader, err := compression.NewReader(&tc.conf, buf)
 		assert.NoError(t, err, "compression reader creation should return no error")
 
 		result, err := io.ReadAll(compressorReader)
@@ -70,7 +70,7 @@ func TestEmptyConfigDoesNotApplyCompression(t *testing.T) {
 	conf := config.CompressionConfig{}
 	buf := &bytes.Buffer{}
 
-	compressorWriter, err := compressor.NewWriter(&conf, buf)
+	compressorWriter, err := compression.NewWriter(&conf, buf)
 	assert.NoError(t, err, "compression writer creation should return no error")
 
 	_, err = compressorWriter.Write([]byte(data))
@@ -83,7 +83,7 @@ func TestEmptyConfigDoesNotApplyCompression(t *testing.T) {
 		"the compressed data should be equal to the original")
 	assert.Equal(t, dataSize, len(compressedData), "the compressed data should have the same size as the original")
 
-	compressorReader, err := compressor.NewReader(&conf, buf)
+	compressorReader, err := compression.NewReader(&conf, buf)
 	assert.NoError(t, err, "compression reader creation should return no error")
 
 	result, err := io.ReadAll(compressorReader)

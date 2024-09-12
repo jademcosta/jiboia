@@ -43,14 +43,14 @@ type Config struct {
 	SecretKey string `yaml:"secret_key"`
 }
 
-type sqsRep struct {
+type Queue struct {
 	log      *slog.Logger
 	client   sqsiface.SQSAPI
 	queueURL string
 	flowName string
 }
 
-func New(l *slog.Logger, c *Config, flowName string) (*sqsRep, error) {
+func New(l *slog.Logger, c *Config, flowName string) (*Queue, error) {
 	//TODO: session claims to be safe to read concurrently. Can I use a single one?
 	sess, err := session.NewSession(&aws.Config{
 		Region:   aws.String(c.Region),
@@ -72,7 +72,7 @@ func New(l *slog.Logger, c *Config, flowName string) (*sqsRep, error) {
 
 	sqsClient := awsSqs.New(sess)
 
-	return &sqsRep{
+	return &Queue{
 		log:      l.With(logger.ExternalQueueTypeKey, "sqs"),
 		client:   sqsClient,
 		queueURL: queueURL,
@@ -91,7 +91,7 @@ func ParseConfig(confData []byte) (*Config, error) {
 	return conf, nil
 }
 
-func (internalSqs *sqsRep) Enqueue(msg *domain.MessageContext) error {
+func (internalSqs *Queue) Enqueue(msg *domain.MessageContext) error {
 	message := Message{
 		SchemaVersion: domain.MsgSchemaVersion,
 		FlowName:      internalSqs.Name(),
@@ -138,10 +138,10 @@ func validURL(url string) bool {
 	// TODO: validate the format here
 }
 
-func (internalSqs *sqsRep) Type() string {
+func (internalSqs *Queue) Type() string {
 	return TYPE
 }
 
-func (internalSqs *sqsRep) Name() string {
+func (internalSqs *Queue) Name() string {
 	return internalSqs.flowName
 }

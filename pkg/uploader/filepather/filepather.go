@@ -26,24 +26,23 @@ func New(dtProvider DateTimeProvider, prefixVariety int, fileExtension string) d
 			randomPrefix:  uuid.New().String(),
 			fileExtension: fileExtension,
 		}
-	} else {
-		prefixes := make([]string, 0, prefixVariety)
-		for i := 0; i < prefixVariety; i++ {
-			prefixes = append(prefixes, uuid.New().String())
-		}
-
-		s := rand.NewSource(time.Now().Unix())
-		r := rand.New(s)
-
-		return &MultiplePrefixesFilePather{
-			dtProvider:      dtProvider,
-			randomPrefixes:  prefixes,
-			prefixCount:     len(prefixes),
-			randomGenerator: r,
-			fileExtension:   fileExtension,
-		}
 	}
 
+	prefixes := make([]string, 0, prefixVariety)
+	for i := 0; i < prefixVariety; i++ {
+		prefixes = append(prefixes, uuid.New().String())
+	}
+
+	s := rand.NewSource(time.Now().Unix())
+	r := rand.New(s)
+
+	return &MultiplePrefixesFilePather{
+		dtProvider:      dtProvider,
+		randomPrefixes:  prefixes,
+		prefixCount:     len(prefixes),
+		randomGenerator: r,
+		fileExtension:   fileExtension,
+	}
 }
 
 type SinglePrefixFilePather struct {

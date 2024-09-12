@@ -60,7 +60,7 @@ func New(
 		panic(fmt.Sprintf("the accumulator capacity cannot be less than %d", MinQueueCapacity))
 	}
 
-	metrics := NewMetricCollector(flowName, metricRegistry)
+	metrics := newMetricCollector(flowName, metricRegistry)
 	metrics.queueCapacity(queueCapacity)
 
 	return &Accumulator{

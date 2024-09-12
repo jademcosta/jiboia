@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jademcosta/jiboia/pkg/compressor"
+	"github.com/jademcosta/jiboia/pkg/compression"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
@@ -78,7 +78,7 @@ func (queue *mockExternalQueue) Enqueue(data *domain.MessageContext) error {
 
 type dummyExternalQueue struct{}
 
-func (queue *dummyExternalQueue) Enqueue(data *domain.MessageContext) error {
+func (queue *dummyExternalQueue) Enqueue(_ *domain.MessageContext) error {
 	return nil
 }
 
@@ -423,7 +423,7 @@ func TestUsesCompressionConfig(t *testing.T) {
 		assert.NotEqualf(t, data, string(compressedData), "the compressed data should be different from original %v", tc)
 		assert.NotEqualf(t, len(data), len(compressedData), "the compressed data should have different sizes")
 
-		compressorReader, err := compressor.NewReader(&tc.compressConf, bytes.NewReader(compressedData))
+		compressorReader, err := compression.NewReader(&tc.compressConf, bytes.NewReader(compressedData))
 		assert.NoError(t, err, "compression reader creation should return no error")
 
 		result, err := io.ReadAll(compressorReader)

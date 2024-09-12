@@ -30,7 +30,7 @@ type Config struct {
 	ForcePathStyle  bool   `yaml:"force_path_style"`
 }
 
-type S3Bucket struct {
+type Bucket struct {
 	name            string
 	region          string
 	fixedPrefix     string
@@ -39,7 +39,7 @@ type S3Bucket struct {
 	log             *slog.Logger
 }
 
-func New(l *slog.Logger, c *Config) (*S3Bucket, error) {
+func New(l *slog.Logger, c *Config) (*Bucket, error) {
 	//TODO: the session is safe to be read concurrently, can we use a single one?
 
 	// TODO: expore the configs:
@@ -59,7 +59,7 @@ func New(l *slog.Logger, c *Config) (*S3Bucket, error) {
 	// TODO: configure concurrency on the uploader
 	uploader := s3manager.NewUploader(session)
 
-	return &S3Bucket{
+	return &Bucket{
 		uploader:        uploader,
 		log:             l.With(logger.ObjStorageTypeKey, "s3"),
 		name:            c.Bucket,
@@ -80,7 +80,7 @@ func ParseConfig(confData []byte) (*Config, error) {
 	return conf, nil
 }
 
-func (bucket *S3Bucket) Upload(workU *domain.WorkUnit) (*domain.UploadResult, error) {
+func (bucket *Bucket) Upload(workU *domain.WorkUnit) (*domain.UploadResult, error) {
 	key := mergeParts(bucket.fixedPrefix, workU.Prefix, workU.Filename)
 
 	uploadInput := &s3manager.UploadInput{
@@ -105,11 +105,11 @@ func (bucket *S3Bucket) Upload(workU *domain.WorkUnit) (*domain.UploadResult, er
 	return result, nil
 }
 
-func (bucket *S3Bucket) Type() string {
+func (bucket *Bucket) Type() string {
 	return TYPE
 }
 
-func (bucket *S3Bucket) Name() string {
+func (bucket *Bucket) Name() string {
 	return bucket.name
 }
 
@@ -123,7 +123,7 @@ func mergeParts(fixedPrefix string, dynamicPrefix string, key string) string {
 	return strings.Trim(result, "/")
 }
 
-func (bucket *S3Bucket) doUpload(input *s3manager.UploadInput) (*s3manager.UploadOutput, error) {
+func (bucket *Bucket) doUpload(input *s3manager.UploadInput) (*s3manager.UploadOutput, error) {
 	// TODO: uploader claims to be concurrency-safe
 	hasTimeout := bucket.timeoutInMillis != 0
 
@@ -131,7 +131,6 @@ func (bucket *S3Bucket) doUpload(input *s3manager.UploadInput) (*s3manager.Uploa
 		ctx, cancelFunc := context.WithTimeout(context.Background(), time.Duration(bucket.timeoutInMillis)*time.Millisecond)
 		defer cancelFunc()
 		return bucket.uploader.UploadWithContext(ctx, input)
-	} else {
-		return bucket.uploader.Upload(input)
 	}
+	return bucket.uploader.Upload(input)
 }

@@ -86,7 +86,7 @@ func TestReturnsTheErrorOnEnqueueingError(t *testing.T) {
 	l := logger.NewDummy()
 
 	sut, err := New(l, c, fakeFlowName)
-	mockErr := errors.New("mock error!")
+	mockErr := errors.New("mock error")
 	mockSQS := &mockedSendMsgs{msgs: make([]*sqs.SendMessageInput, 0), err: mockErr}
 	sut.client = mockSQS
 

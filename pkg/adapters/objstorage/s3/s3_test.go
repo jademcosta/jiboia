@@ -25,7 +25,7 @@ type mockedAWSS3Uploader struct {
 	answer            *s3manager.UploadOutput
 }
 
-func (mock *mockedAWSS3Uploader) Upload(input *s3manager.UploadInput, opts ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error) {
+func (mock *mockedAWSS3Uploader) Upload(input *s3manager.UploadInput, _ ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error) {
 	mock.calledWith = append(mock.calledWith, input)
 	if mock.err != nil {
 		return nil, mock.err
@@ -37,7 +37,7 @@ func (mock *mockedAWSS3Uploader) Upload(input *s3manager.UploadInput, opts ...fu
 	return &s3manager.UploadOutput{Location: mock.location}, nil
 }
 
-func (mock *mockedAWSS3Uploader) UploadWithContext(ctx aws.Context, input *s3manager.UploadInput, opts ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error) {
+func (mock *mockedAWSS3Uploader) UploadWithContext(ctx aws.Context, input *s3manager.UploadInput, _ ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error) {
 	mock.calledWith = append(mock.calledWith, input)
 	if ctx != nil {
 		mock.calledWithContext = append(mock.calledWithContext, ctx)

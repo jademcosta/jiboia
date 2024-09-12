@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jademcosta/jiboia/pkg/compressor"
+	"github.com/jademcosta/jiboia/pkg/compression"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/stretchr/testify/assert"
@@ -258,7 +258,7 @@ func TestIngestionDecompression(t *testing.T) {
 
 	payload := randSeq(100)
 	buf1 := &bytes.Buffer{}
-	writer, err := compressor.NewWriter(&config.CompressionConfig{Type: "snappy"}, buf1)
+	writer, err := compression.NewWriter(&config.CompressionConfig{Type: "snappy"}, buf1)
 	assert.NoError(t, err, "error on compressor writer creation", err)
 	_, err = writer.Write([]byte(payload))
 	assert.NoError(t, err, "error compressing data")
@@ -267,7 +267,7 @@ func TestIngestionDecompression(t *testing.T) {
 
 	highlyCompressRatioPayload := strings.Repeat("ab", 50)
 	buf2 := &bytes.Buffer{}
-	writer, err = compressor.NewWriter(&config.CompressionConfig{Type: "gzip"}, buf2)
+	writer, err = compression.NewWriter(&config.CompressionConfig{Type: "gzip"}, buf2)
 	assert.NoError(t, err, "error on compressor writer creation", err)
 	_, err = writer.Write([]byte(highlyCompressRatioPayload))
 	assert.NoError(t, err, "error compressing data")
@@ -386,7 +386,7 @@ func TestCompression(t *testing.T) {
 	assert.NotEqual(t, []byte(ingestedPayload), objStorageReceived[0],
 		"the data should have been compressed")
 
-	compressorReader, err := compressor.NewReader(&conf.Flows[1].Compression, bytes.NewReader(objStorageReceived[0]))
+	compressorReader, err := compression.NewReader(&conf.Flows[1].Compression, bytes.NewReader(objStorageReceived[0]))
 	assert.NoError(t, err, "compression reader creation should return no error")
 
 	decompressed, err := io.ReadAll(compressorReader)

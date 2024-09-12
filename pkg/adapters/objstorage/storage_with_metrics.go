@@ -30,7 +30,7 @@ type storageWithMetrics struct {
 	name        string
 }
 
-func NewStorageWithMetrics(storage ObjStorageWithMetadata, metricRegistry *prometheus.Registry, name string) ObjStorageWithMetadata {
+func NewStorageWithMetrics(storage StorageWithMetadata, metricRegistry *prometheus.Registry, name string) StorageWithMetadata {
 	ensureMetricRegisteringOnce.Do(func() {
 		latencyHistogram = prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
