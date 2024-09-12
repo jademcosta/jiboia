@@ -1,11 +1,11 @@
-package external_queue
+package externalqueue
 
 import (
 	"fmt"
 	"log/slog"
 
-	"github.com/jademcosta/jiboia/pkg/adapters/external_queue/noop_ext_queue"
-	"github.com/jademcosta/jiboia/pkg/adapters/external_queue/sqs"
+	"github.com/jademcosta/jiboia/pkg/adapters/externalqueue/noopqueue"
+	"github.com/jademcosta/jiboia/pkg/adapters/externalqueue/sqs"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/worker"
 	"github.com/prometheus/client_golang/prometheus"
@@ -27,8 +27,8 @@ func New(l *slog.Logger, metricRegistry *prometheus.Registry, flowName string, c
 	}
 
 	switch conf.Type {
-	case noop_ext_queue.TYPE:
-		externalQueue = noop_ext_queue.New(l)
+	case noopqueue.TYPE:
+		externalQueue = noopqueue.New(l)
 	case sqs.TYPE:
 		c, err := sqs.ParseConfig(specificConf)
 		if err != nil {

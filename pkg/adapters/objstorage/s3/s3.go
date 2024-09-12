@@ -61,7 +61,7 @@ func New(l *slog.Logger, c *Config) (*S3Bucket, error) {
 
 	return &S3Bucket{
 		uploader:        uploader,
-		log:             l.With(logger.OBJ_STORAGE_TYPE_KEY, "s3"),
+		log:             l.With(logger.ObjStorageTypeKey, "s3"),
 		name:            c.Bucket,
 		region:          c.Region,
 		fixedPrefix:     c.Prefix,

@@ -15,9 +15,9 @@ import (
 )
 
 const (
-	MINIMUM_QUEUE_CAPACITY  = 2
-	CB_RETRY_SLEEP_DURATION = 10 * time.Millisecond // TODO: fine tune this value
-	COMPONENT_NAME          = "accumulator"
+	MinQueueCapacity     = 2
+	CBRetrySleepDuration = 10 * time.Millisecond // TODO: fine tune this value
+	ComponentName        = "accumulator"
 )
 
 type Accumulator struct {
@@ -54,17 +54,17 @@ func New(
 		panic("separator length in bytes should be smaller than limit")
 	}
 
-	if queueCapacity < MINIMUM_QUEUE_CAPACITY {
+	if queueCapacity < MinQueueCapacity {
 		l.Error(fmt.Sprintf("the accumulator capacity cannot be less than %d", //TODO: move this validation to config
-			MINIMUM_QUEUE_CAPACITY), "flow", flowName)
-		panic(fmt.Sprintf("the accumulator capacity cannot be less than %d", MINIMUM_QUEUE_CAPACITY))
+			MinQueueCapacity), "flow", flowName)
+		panic(fmt.Sprintf("the accumulator capacity cannot be less than %d", MinQueueCapacity))
 	}
 
 	metrics := NewMetricCollector(flowName, metricRegistry)
 	metrics.queueCapacity(queueCapacity)
 
 	return &Accumulator{
-		l:                l.With(logger.COMPONENT_KEY, COMPONENT_NAME),
+		l:                l.With(logger.ComponentKey, ComponentName),
 		limitOfBytes:     limitOfBytes,
 		separator:        separator,
 		separatorLen:     len(separator),
@@ -192,7 +192,7 @@ func (b *Accumulator) enqueueOnNext(data []byte) {
 	})
 
 	for err != nil {
-		time.Sleep(CB_RETRY_SLEEP_DURATION)
+		time.Sleep(CBRetrySleepDuration)
 		_, err = b.circBreaker.Execute(func() (interface{}, error) {
 			return nil, b.next.Enqueue(data)
 		})

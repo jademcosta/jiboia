@@ -54,7 +54,7 @@ func New(l *slog.Logger, metricRegistry *prometheus.Registry, flowName string, c
 			return nil, fmt.Errorf("error parsing httpstorage-specific config: %w", err)
 		}
 
-		objStorage, err = httpstorage.New(l, httpStorageConf)
+		objStorage, err = httpstorage.NewHTTPStorage(l, httpStorageConf)
 		if err != nil {
 			return nil, fmt.Errorf("error creating httpstorage object storage: %w", err)
 		}

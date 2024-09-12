@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/jademcosta/jiboia/pkg/adapters/http_in/httpmiddleware"
+	"github.com/jademcosta/jiboia/pkg/adapters/httpin/httpmiddleware"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/stretchr/testify/assert"
 )

@@ -6,7 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const FLOW_METRIC_KEY string = "flow"
+const FlowMetricKey string = "flow"
 
 var ensureMetricRegisteringOnce sync.Once
 var enqueueCounter *prometheus.CounterVec
@@ -28,85 +28,85 @@ func NewMetricCollector(flowName string, metricRegistry *prometheus.Registry) *m
 		enqueueCounter = prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: "jiboia",
-				Subsystem: COMPONENT_NAME,
+				Subsystem: ComponentName,
 				Name:      "enqueue_calls_total",
 				Help:      "The total number of times that data was enqueued.",
 			},
-			[]string{FLOW_METRIC_KEY})
+			[]string{FlowMetricKey})
 
 		nextCounter = prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: "jiboia",
-				Subsystem: COMPONENT_NAME,
+				Subsystem: ComponentName,
 				Name:      "next_calls_total",
 				Help:      "The total number of times that data was sent to next step.",
 			},
-			[]string{FLOW_METRIC_KEY})
+			[]string{FlowMetricKey})
 
 		capacityGauge = prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: "jiboia",
-				Subsystem: COMPONENT_NAME,
+				Subsystem: ComponentName,
 				Name:      "queue_capacity",
 				Help:      "The total capacity of the internal queue.",
 			},
-			[]string{FLOW_METRIC_KEY},
+			[]string{FlowMetricKey},
 		)
 
 		enqueuedItemsGauge = prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: "jiboia",
-				Subsystem: COMPONENT_NAME,
+				Subsystem: ComponentName,
 				Name:      "items_in_queue",
 				Help:      "The count of current items in the internal queue.",
 			},
-			[]string{FLOW_METRIC_KEY},
+			[]string{FlowMetricKey},
 		)
 
 		dataSizeInBytesCounter = prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: "jiboia",
-				Subsystem: COMPONENT_NAME,
+				Subsystem: ComponentName,
 				Name:      "data_in_bytes",
 				Help:      "The amount of data that has been worked by accumulator component, in bytes.",
 			},
-			[]string{FLOW_METRIC_KEY})
+			[]string{FlowMetricKey})
 
 		dataSizeOutBytesCounter = prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: "jiboia",
-				Subsystem: COMPONENT_NAME,
+				Subsystem: ComponentName,
 				Name:      "data_out_bytes",
 				Help:      "The amount of data that has been sent forward (to the next compoenent) by accumulator component, in bytes.",
 			},
-			[]string{FLOW_METRIC_KEY})
+			[]string{FlowMetricKey})
 
 		dataSizeInKBsCounter = prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: "jiboia",
-				Subsystem: COMPONENT_NAME,
+				Subsystem: ComponentName,
 				Name:      "data_in_kbs",
 				Help:      "The amount of data that has been worked by accumulator component, in KBs.",
 			},
-			[]string{FLOW_METRIC_KEY})
+			[]string{FlowMetricKey})
 
 		dataSizeOutKBsCounter = prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: "jiboia",
-				Subsystem: COMPONENT_NAME,
+				Subsystem: ComponentName,
 				Name:      "data_out_kbs",
 				Help:      "The amount of data that has been sent forward (to the next compoenent) by accumulator component, in KBs.",
 			},
-			[]string{FLOW_METRIC_KEY})
+			[]string{FlowMetricKey})
 
 		enqueueFailed = prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: "jiboia",
-				Subsystem: COMPONENT_NAME,
+				Subsystem: ComponentName,
 				Name:      "enqueue_failed_total",
 				Help:      "Counter for failures when trying to enqueue data on it",
 			},
-			[]string{FLOW_METRIC_KEY})
+			[]string{FlowMetricKey})
 
 		metricRegistry.MustRegister(
 			enqueueCounter,

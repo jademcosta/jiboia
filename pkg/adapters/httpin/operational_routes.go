@@ -1,4 +1,4 @@
-package http_in
+package httpin
 
 import (
 	"encoding/json"
@@ -8,7 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func RegisterOperatinalRoutes(api *Api, version string, metricRegistry *prometheus.Registry) {
+func RegisterOperatinalRoutes(api *API, version string, metricRegistry *prometheus.Registry) {
 	metricHandler := promhttp.HandlerFor(metricRegistry, promhttp.HandlerOpts{Registry: metricRegistry})
 
 	api.mux.Get("/version", versionHandler(version))

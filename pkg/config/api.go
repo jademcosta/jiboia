@@ -7,12 +7,12 @@ import (
 
 const DefaultPort = 9199
 
-type ApiConfig struct {
+type APIConfig struct {
 	Port             int    `yaml:"port"`
 	PayloadSizeLimit string `yaml:"payload_size_limit"`
 }
 
-func (apiConf ApiConfig) fillDefaults() ApiConfig {
+func (apiConf APIConfig) fillDefaults() APIConfig {
 	if apiConf.Port == 0 {
 		apiConf.Port = DefaultPort
 	}
@@ -20,7 +20,7 @@ func (apiConf ApiConfig) fillDefaults() ApiConfig {
 	return apiConf
 }
 
-func (apiConf ApiConfig) validate() error {
+func (apiConf APIConfig) validate() error {
 
 	if apiConf.PayloadSizeLimit != "" {
 		_, err := ToBytes(apiConf.PayloadSizeLimit)
@@ -35,6 +35,6 @@ func (apiConf ApiConfig) validate() error {
 	return nil
 }
 
-func (apiconf ApiConfig) PayloadSizeLimitInBytes() (int64, error) {
-	return ToBytes(apiconf.PayloadSizeLimit)
+func (apiConf APIConfig) PayloadSizeLimitInBytes() (int64, error) {
+	return ToBytes(apiConf.PayloadSizeLimit)
 }

@@ -45,7 +45,7 @@ func NewWorker(
 
 	workChan := make(chan *domain.WorkUnit, 1)
 	return &Worker{
-		l:                    l.With(logger.COMPONENT_KEY, "worker"),
+		l:                    l.With(logger.ComponentKey, "worker"),
 		storage:              storage,
 		queue:                extQueue,
 		workVolunteeringChan: workVolunteeringChan,

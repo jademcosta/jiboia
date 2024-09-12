@@ -1,4 +1,4 @@
-package http_in
+package httpin
 
 import (
 	"bytes"
@@ -27,7 +27,7 @@ const version string = "0.0.0"
 var llog = logger.NewDummy()
 var testTracer = tracing.NewNoopTracer()
 var localConf = config.Config{
-	Api:  config.ApiConfig{Port: 9111},
+	API:  config.APIConfig{Port: 9111},
 	O11y: config.O11yConfig{TracingEnabled: true},
 }
 
@@ -95,7 +95,7 @@ func TestPassesDataFlows(t *testing.T) {
 		},
 	}
 
-	api := New(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
+	api := NewAPI(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
 	srvr := httptest.NewServer(api.mux)
 	defer srvr.Close()
 
@@ -140,7 +140,7 @@ func TestAnswersAnErrorIfNoBodyIsSent(t *testing.T) {
 		},
 	}
 
-	api := New(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
+	api := NewAPI(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
 	srvr := httptest.NewServer(api.mux)
 	defer srvr.Close()
 
@@ -164,7 +164,7 @@ func TestAnswersErrorIfEnqueueingFails(t *testing.T) {
 		},
 	}
 
-	api := New(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
+	api := NewAPI(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
 	srvr := httptest.NewServer(api.mux)
 	defer srvr.Close()
 
@@ -186,7 +186,7 @@ func TestPanicResultInStatus500(t *testing.T) {
 			CircuitBreaker: createCircuitBreaker("flow-1", 10*time.Millisecond),
 		},
 	}
-	api := New(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
+	api := NewAPI(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
 	srvr := httptest.NewServer(api.mux)
 	defer srvr.Close()
 
@@ -199,7 +199,7 @@ func TestPanicResultInStatus500(t *testing.T) {
 }
 
 func TestPayloadSizeLimit(t *testing.T) {
-	c := config.Config{Api: config.ApiConfig{Port: 9111, PayloadSizeLimit: "10"}} //10 bytes limit
+	c := config.Config{API: config.APIConfig{Port: 9111, PayloadSizeLimit: "10"}} //10 bytes limit
 
 	df := &mockDataFlow{calledWith: make([][]byte, 0)}
 
@@ -211,7 +211,7 @@ func TestPayloadSizeLimit(t *testing.T) {
 		},
 	}
 
-	api := New(llog, c, prometheus.NewRegistry(), testTracer, version, flws)
+	api := NewAPI(llog, c, prometheus.NewRegistry(), testTracer, version, flws)
 	srvr := httptest.NewServer(api.mux)
 	defer srvr.Close()
 
@@ -281,7 +281,7 @@ func TestApiToken(t *testing.T) {
 		},
 	}
 
-	api := New(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
+	api := NewAPI(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
 	srvr := httptest.NewServer(api.mux)
 	defer srvr.Close()
 
@@ -502,7 +502,7 @@ func TestVersionEndpointInformsTheVersion(t *testing.T) {
 		},
 	}
 
-	api := New(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
+	api := NewAPI(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
 	srvr := httptest.NewServer(api.mux)
 	defer srvr.Close()
 
@@ -547,7 +547,7 @@ func TestDecompressionOnIngestion(t *testing.T) {
 				},
 			}
 
-			api := New(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
+			api := NewAPI(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
 			srvr := httptest.NewServer(api.mux)
 			defer srvr.Close()
 
@@ -623,7 +623,7 @@ func TestDecompressionOnIngestion(t *testing.T) {
 			},
 		}
 
-		api := New(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
+		api := NewAPI(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
 		srvr := httptest.NewServer(api.mux)
 		defer srvr.Close()
 
@@ -695,7 +695,7 @@ func TestDecompressionOnIngestionConcurrencyLimit(t *testing.T) {
 			},
 		}
 
-		api := New(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
+		api := NewAPI(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
 		srvr := httptest.NewServer(api.mux)
 		defer srvr.Close()
 
@@ -774,7 +774,7 @@ func TestDecompressionOnIngestionConcurrencyLimit(t *testing.T) {
 			},
 		}
 
-		api := New(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
+		api := NewAPI(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
 		srvr := httptest.NewServer(api.mux)
 		defer srvr.Close()
 

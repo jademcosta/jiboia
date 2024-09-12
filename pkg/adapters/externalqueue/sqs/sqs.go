@@ -46,7 +46,7 @@ type Config struct {
 type sqsRep struct {
 	log      *slog.Logger
 	client   sqsiface.SQSAPI
-	queueUrl string
+	queueURL string
 	flowName string
 }
 
@@ -65,17 +65,17 @@ func New(l *slog.Logger, c *Config, flowName string) (*sqsRep, error) {
 		return nil, fmt.Errorf("error creating creating SQS session: %w", err)
 	}
 
-	queueUrl := c.URL
-	if !validUrl(queueUrl) {
-		return nil, fmt.Errorf("invalid url for SQS %s", queueUrl)
+	queueURL := c.URL
+	if !validURL(queueURL) {
+		return nil, fmt.Errorf("invalid url for SQS %s", queueURL)
 	}
 
 	sqsClient := awsSqs.New(sess)
 
 	return &sqsRep{
-		log:      l.With(logger.EXT_QUEUE_TYPE_KEY, "sqs"),
+		log:      l.With(logger.ExternalQueueTypeKey, "sqs"),
 		client:   sqsClient,
-		queueUrl: queueUrl,
+		queueURL: queueURL,
 		flowName: flowName,
 	}, nil
 }
@@ -93,7 +93,7 @@ func ParseConfig(confData []byte) (*Config, error) {
 
 func (internalSqs *sqsRep) Enqueue(msg *domain.MessageContext) error {
 	message := Message{
-		SchemaVersion: domain.MESSAGE_SCHEMA_VERSION,
+		SchemaVersion: domain.MsgSchemaVersion,
 		FlowName:      internalSqs.Name(),
 		Bucket: Bucket{
 			Name:   msg.Bucket,
@@ -116,7 +116,7 @@ func (internalSqs *sqsRep) Enqueue(msg *domain.MessageContext) error {
 
 	messageInput := &awsSqs.SendMessageInput{
 		MessageBody: &body,
-		QueueUrl:    &internalSqs.queueUrl,
+		QueueUrl:    &internalSqs.queueURL,
 	}
 
 	err = messageInput.Validate()
@@ -124,7 +124,7 @@ func (internalSqs *sqsRep) Enqueue(msg *domain.MessageContext) error {
 		return fmt.Errorf("error on SQS message validation: %w", err)
 	}
 
-	internalSqs.log.Debug("sending SQS message", "queue_url", internalSqs.queueUrl)
+	internalSqs.log.Debug("sending SQS message", "queue_url", internalSqs.queueURL)
 	enqueueOutput, err := internalSqs.client.SendMessage(messageInput)
 	if err == nil {
 		internalSqs.log.Debug("enqueued message on SQS", "message_id", enqueueOutput.MessageId)
@@ -133,15 +133,15 @@ func (internalSqs *sqsRep) Enqueue(msg *domain.MessageContext) error {
 	return err
 }
 
-func validUrl(url string) bool {
+func validURL(url string) bool {
 	return len(url) > 0
 	// TODO: validate the format here
 }
 
-func (s *sqsRep) Type() string {
+func (internalSqs *sqsRep) Type() string {
 	return TYPE
 }
 
-func (s *sqsRep) Name() string {
-	return s.flowName
+func (internalSqs *sqsRep) Name() string {
+	return internalSqs.flowName
 }

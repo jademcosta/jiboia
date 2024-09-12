@@ -27,7 +27,7 @@ linters:
     # - revive
     - sloglint
     - spancheck
-    # - stylecheck
+    - stylecheck
     - tagalign
     # - testifylint
     # - testpackage

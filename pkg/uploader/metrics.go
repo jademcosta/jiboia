@@ -6,7 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-const FLOW_METRIC_KEY string = "flow"
+const FlowMetricKey string = "flow"
 
 var ensureMetricRegisteringOnce sync.Once
 
@@ -29,7 +29,7 @@ func NewMetricCollector(flowName string, metricRegistry *prometheus.Registry) *m
 				Name:      "queue_capacity",
 				Help:      "The total capacity of the internal queue.",
 			},
-			[]string{FLOW_METRIC_KEY},
+			[]string{FlowMetricKey},
 		)
 
 		workersCountGauge = prometheus.NewGaugeVec(
@@ -39,7 +39,7 @@ func NewMetricCollector(flowName string, metricRegistry *prometheus.Registry) *m
 				Name:      "workers_online",
 				Help:      "The total number of workers, meaning how many uploads can happen in parallel.",
 			},
-			[]string{FLOW_METRIC_KEY},
+			[]string{FlowMetricKey},
 		)
 
 		enqueueCounter = prometheus.NewCounterVec(
@@ -49,7 +49,7 @@ func NewMetricCollector(flowName string, metricRegistry *prometheus.Registry) *m
 				Name:      "enqueue_calls_total",
 				Help:      "The total number of times that data was enqueued.",
 			},
-			[]string{FLOW_METRIC_KEY},
+			[]string{FlowMetricKey},
 		)
 
 		enqueuedItemsGauge = prometheus.NewGaugeVec(
@@ -59,7 +59,7 @@ func NewMetricCollector(flowName string, metricRegistry *prometheus.Registry) *m
 				Name:      "items_in_queue",
 				Help:      "The count of current items in the internal queue, waiting to be uploaded.",
 			},
-			[]string{FLOW_METRIC_KEY},
+			[]string{FlowMetricKey},
 		)
 
 		enqueueFailed = prometheus.NewCounterVec(
@@ -69,7 +69,7 @@ func NewMetricCollector(flowName string, metricRegistry *prometheus.Registry) *m
 				Name:      "enqueue_failed_total",
 				Help:      "Counter for failures when trying to enqueue data on it",
 			},
-			[]string{FLOW_METRIC_KEY})
+			[]string{FlowMetricKey})
 
 		metricRegistry.MustRegister(
 			queueCapacityGauge, workersCountGauge, enqueueCounter, enqueuedItemsGauge,
