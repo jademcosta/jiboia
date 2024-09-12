@@ -31,7 +31,6 @@ linters:
     - tagalign
     # - testifylint
     # - testpackage
-    # - unconvert
-    # - unparam
+    - unconvert
     - usestdlibvars
     - wastedassign

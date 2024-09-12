@@ -21,7 +21,7 @@ func TestDefaultConfig(t *testing.T) {
 	assert.NoError(t, err, "should not return error when reading config file")
 	assert.NotEmpty(t, confYaml, "config content should not be empty")
 
-	conf, err := config.New([]byte(confYaml))
+	conf, err := config.New(confYaml)
 	assert.NoError(t, err, "should not return error when creating config")
 
 	l := logger.New(&conf.O11y.Log)
