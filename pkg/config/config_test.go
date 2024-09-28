@@ -7,6 +7,7 @@ import (
 
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDefaultValues(t *testing.T) {
@@ -22,7 +23,8 @@ func TestDefaultValues(t *testing.T) {
 
 	assert.Equal(t, "json", conf.O11y.Log.Format, "default for o11y.log.format config doesn't match")
 	assert.Equal(t, "info", conf.O11y.Log.Level, "default for o11y.log.level config doesn't match")
-	assert.Equal(t, false, conf.O11y.TracingEnabled, "default for o11y.tracing_enabled is false")
+	assert.False(t, conf.O11y.Tracing.Enabled, "default for o11y.tracing.enabled is false")
+	assert.Equal(t, "jiboia", conf.O11y.Tracing.ServiceName, "default for o11y.tracing.service_name is jiboia")
 	assert.Equal(t, 9199, conf.API.Port, "default for api.port config doesn't match")
 	assert.Equal(t, 50, conf.Flows[0].MaxConcurrentUploads,
 		"default for flow.max_concurrent_uploads config doesn't match")
@@ -49,7 +51,9 @@ func TestDefaultValues(t *testing.T) {
 func TestConfigParsing(t *testing.T) {
 	configYaml := `
 o11y:
-  tracing_enabled: true
+  tracing:
+    enabled: true
+    service_name: some_name
   log:
     level: warn
     format: json
@@ -127,13 +131,12 @@ flows:
 `
 
 	conf, err := config.New([]byte(configYaml))
-	if err != nil {
-		assert.Fail(t, "should create a config %v", err)
-	}
+	require.NoError(t, err, "should parse the config")
 
 	assert.Equal(t, "warn", conf.O11y.Log.Level, "should have parsed the correct o11y.log.level")
 	assert.Equal(t, "json", conf.O11y.Log.Format, "should have parsed the correct o11y.log.format")
-	assert.Equal(t, true, conf.O11y.TracingEnabled, "should have parsed the correct o11y.tracing_enabled")
+	assert.True(t, conf.O11y.Tracing.Enabled, "should have parsed the correct o11y.tracing.enabled")
+	assert.Equal(t, "some_name", conf.O11y.Tracing.ServiceName, "should have parsed the correct o11y.tracing.service_name")
 
 	assert.Equal(t, 9099, conf.API.Port, "should have parsed the correct api.port")
 
