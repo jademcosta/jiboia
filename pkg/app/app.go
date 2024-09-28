@@ -57,12 +57,8 @@ func (a *App) Start() {
 	metricRegistry := prometheus.NewRegistry()
 	registerDefaultMetrics(metricRegistry)
 
-	tracer := tracing.NewNoopTracer()
-	if a.conf.O11y.TracingEnabled {
-		localTracer, shutdownFunc := tracing.NewTracer(*a.conf)
-		tracer = localTracer
-		defer shutdownTracer(shutdownFunc, a.logger)
-	}
+	tracer, shutdownFunc := tracing.NewTracer(a.conf.O11y.Tracing)
+	defer shutdownTracer(shutdownFunc, a.logger)
 
 	flows := createFlows(a.logger, metricRegistry, a.conf.Flows)
 

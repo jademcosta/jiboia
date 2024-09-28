@@ -1,5 +1,7 @@
 package config
 
+import "fmt"
+
 type AccumulatorConfig struct {
 	Size           string               `yaml:"size"`
 	Separator      string               `yaml:"separator"`
@@ -19,7 +21,7 @@ func (accConf AccumulatorConfig) fillDefaultValues() AccumulatorConfig {
 func (accConf AccumulatorConfig) validate() error {
 	err := accConf.CircuitBreaker.validate()
 	if err != nil {
-		return err
+		return fmt.Errorf("on acumulator: %w", err)
 	}
 	return nil
 }

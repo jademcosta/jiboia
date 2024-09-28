@@ -32,7 +32,6 @@ func (flwConf FlowConfig) fillDefaultValues() FlowConfig {
 	flwConf.ExternalQueue = flwConf.ExternalQueue.fillDefaultValues()
 	flwConf.ObjectStorage = flwConf.ObjectStorage.fillDefaultValues()
 	flwConf.Compression = flwConf.Compression.fillDefaultValues()
-
 	return flwConf
 }
 

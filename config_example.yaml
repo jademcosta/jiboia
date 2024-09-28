@@ -1,15 +1,23 @@
 o11y:
-  #[optional] Set this to true if you want to enable tracing. Right now, only the HTTP exporter is
-  # used, so you need to set the env vars needed for it to find the otel-collector.
-  # Read more about these env vars here:
-  # https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp
-  # The default is `false`.
-  # IMPORTANT: right now tracing is less useful because it gets only the HTTP part of the request.
-  # This is intentional, to move slowly with theimplementation and avoid undesired bugs.
-  tracing_enabled: true
+  #[optional] Configs related with tracing. By default, tracing is disabled at all.
+  tracing:
+    #[optional] Set this to true if you want to enable tracing. Right now, only the HTTP exporter is
+    # used, so you need to set the env vars needed for it to find the otel-collector.
+    # Read more about these env vars here:
+    # https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp
+    # The default is `false`.
+    # IMPORTANT: right now tracing is less useful because it gets only the HTTP part of the request.
+    # This is intentional, to move slowly with theimplementation and avoid undesired bugs.
+    enabled: true
+    #[optional] The name of service which will be sent at the app.name field in spans.
+    # Useful in case you have multiple deployments of Jiboia. Default is "jiboia".
+    service_name: "jiboia"
   log:
-    # [optional] The level of logs. Default is `info`. Allowed values are `error`, `warn`, `info`, `debug`
+    # [optional] The level of logs. Allowed values are `error`, `warn`, `info`, `debug`.
+    # Default is `info`.
     level: warn
+    # [optional] The format of logs. Only JSON is allowed right now, so you can forget about this field :)
+    # Default is `json`.
     format: json
 
 # [optional] Set this to `true` if you want to disable go max procs "auto set" feature.
