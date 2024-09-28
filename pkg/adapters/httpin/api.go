@@ -48,7 +48,7 @@ func NewAPI(
 	}
 
 	initializeMetrics(metricRegistry)
-	registerDefaultMiddlewares(api, conf, sizeLimit, logg, metricRegistry, tracer)
+	registerDefaultMiddlewares(api, sizeLimit, logg, metricRegistry, tracer)
 
 	RegisterIngestingRoutes(api, apiVersion, flws)
 	RegisterOperatinalRoutes(api, appVersion, metricRegistry)
@@ -78,7 +78,6 @@ func (api *API) Shutdown() error {
 
 func registerDefaultMiddlewares(
 	api *API,
-	conf config.Config,
 	sizeLimit int64,
 	l *slog.Logger,
 	metricRegistry *prometheus.Registry,
@@ -87,9 +86,7 @@ func registerDefaultMiddlewares(
 
 	//Middlewares on the top wrap the ones in the bottom
 	api.mux.Use(httpmiddleware.NewLoggingMiddleware(l))
-	if conf.O11y.TracingEnabled {
-		api.mux.Use(httpmiddleware.NewTracingMiddleware(tracer))
-	}
+	api.mux.Use(httpmiddleware.NewTracingMiddleware(tracer))
 	api.mux.Use(httpmiddleware.NewMetricsMiddleware(metricRegistry))
 	api.mux.Use(httpmiddleware.NewRecoverer(l))
 

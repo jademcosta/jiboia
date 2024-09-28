@@ -18,8 +18,8 @@ func NewNoopTracer() trace.Tracer {
 	return noop.NewTracerProvider().Tracer("github.com/jademcosta/jiboia")
 }
 
-func NewTracer(conf config.Config) (trace.Tracer, func(context.Context) error) {
-	if !conf.O11y.TracingEnabled {
+func NewTracer(conf config.TracingConfig) (trace.Tracer, func(context.Context) error) {
+	if !conf.Enabled {
 		return NewNoopTracer(), func(_ context.Context) error {
 			return nil
 		}
@@ -28,7 +28,7 @@ func NewTracer(conf config.Config) (trace.Tracer, func(context.Context) error) {
 	bsp := sdktrace.NewBatchSpanProcessor(newExporter())
 	tracerProvider := sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
-		sdktrace.WithResource(buildResource()),
+		sdktrace.WithResource(buildResource(conf)),
 		sdktrace.WithSpanProcessor(bsp),
 	)
 
@@ -49,12 +49,12 @@ func newExporter() sdktrace.SpanExporter {
 	return exporter
 }
 
-func buildResource() *resource.Resource {
+func buildResource(conf config.TracingConfig) *resource.Resource {
 	res, err := resource.Merge(
 		resource.Default(),
 		resource.NewWithAttributes(
 			semconv.SchemaURL,
-			semconv.ServiceName("jiboia"),
+			semconv.ServiceName(conf.ServiceName),
 		),
 	)
 

@@ -1,5 +1,7 @@
 package config
 
+import "fmt"
+
 type IngestionConfig struct {
 	Token          string               `yaml:"token"`
 	Decompression  DescompressionConfig `yaml:"decompress"`
@@ -15,7 +17,7 @@ func (ingConf IngestionConfig) fillDefaultValues() IngestionConfig {
 func (ingConf IngestionConfig) validate() error {
 	err := ingConf.CircuitBreaker.validate()
 	if err != nil {
-		return err
+		return fmt.Errorf("on ingestion: %w", err)
 	}
 
 	err = ingConf.Decompression.validate()

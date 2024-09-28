@@ -28,7 +28,7 @@ var llog = logger.NewDummy()
 var testTracer = tracing.NewNoopTracer()
 var localConf = config.Config{
 	API:  config.APIConfig{Port: 9111},
-	O11y: config.O11yConfig{TracingEnabled: true},
+	O11y: config.O11yConfig{Tracing: config.TracingConfig{Enabled: true}},
 }
 
 var characters = []rune("abcdefghijklmnopqrstuvwxyz")
