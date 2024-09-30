@@ -5,7 +5,7 @@ go 1.23
 require (
 	github.com/aws/aws-sdk-go v1.55.5
 	github.com/go-chi/chi/v5 v5.1.0
-	github.com/klauspost/compress v1.17.9
+	github.com/klauspost/compress v1.17.10
 	github.com/oklog/run v1.1.0
 	github.com/prometheus/client_golang v1.20.4
 	github.com/sony/gobreaker v1.0.0
@@ -14,7 +14,7 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.30.0
 	go.opentelemetry.io/otel/sdk v1.30.0
 	go.opentelemetry.io/otel/trace v1.30.0
-	go.uber.org/automaxprocs v1.5.3
+	go.uber.org/automaxprocs v1.6.0
 	gopkg.in/yaml.v2 v2.4.0
 )
 
