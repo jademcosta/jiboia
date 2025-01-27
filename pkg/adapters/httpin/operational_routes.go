@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
@@ -22,6 +23,8 @@ func RegisterOperatinalRoutes(api *API, version string, metricRegistry *promethe
 		//TODO: we need to check if other components are running
 		//TODO: This can be used to rule the pod out of LB when it is overloaded?
 	})
+
+	api.mux.Mount("/debug", middleware.Profiler())
 }
 
 func versionHandler(version string) http.HandlerFunc {

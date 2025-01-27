@@ -52,7 +52,6 @@ func NewAPI(
 
 	RegisterIngestingRoutes(api, apiVersion, flws)
 	RegisterOperatinalRoutes(api, appVersion, metricRegistry)
-	api.mux.Mount("/debug", middleware.Profiler())
 
 	return api
 }
