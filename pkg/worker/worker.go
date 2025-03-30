@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/jademcosta/jiboia/pkg/compression"
@@ -32,6 +33,8 @@ type Worker struct {
 	flowName            string
 	compressionConf     config.CompressionConfig
 	currentTimeProvider func() time.Time
+	doneChan            chan struct{}
+	doneChanMu          sync.Mutex
 }
 
 func NewWorker(
@@ -55,6 +58,11 @@ func NewWorker(
 
 // Run should be called on a goroutine
 func (w *Worker) Run(ctx context.Context) {
+	w.doneChanMu.Lock()
+	w.doneChan = make(chan struct{})
+	defer close(w.doneChan)
+	w.doneChanMu.Unlock()
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -66,6 +74,12 @@ func (w *Worker) Run(ctx context.Context) {
 			}
 		}
 	}
+}
+
+func (w *Worker) Done() <-chan struct{} {
+	w.doneChanMu.Lock()
+	defer w.doneChanMu.Unlock()
+	return w.doneChan
 }
 
 func (w *Worker) work(workU *domain.WorkUnit) {

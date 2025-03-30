@@ -10,6 +10,7 @@ import (
 
 type Runnable interface {
 	Run(context.Context)
+	Done() <-chan struct{}
 }
 
 type DataFlowRunnable interface {

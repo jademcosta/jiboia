@@ -61,9 +61,6 @@ func (a *App) Start() {
 	defer shutdownTracer(shutdownFunc, a.logger)
 
 	flows := createFlows(a.logger, metricRegistry, a.conf.Flows)
-
-	apiShutdownDone := make(chan struct{})
-
 	api := httpin.NewAPI(a.logger, *a.conf, metricRegistry, tracer, a.conf.Version, flows)
 
 	//The shutdown of rungroup seems to be executed from a single goroutine. Meaning that if a
@@ -72,30 +69,23 @@ func (a *App) Start() {
 
 	a.addShutdownRelatedActors(&g)
 
-	g.Add(
-		func() error {
-			defer close(apiShutdownDone)
-			err := api.ListenAndServe()
-			if err != nil && !errors.Is(err, http.ErrServerClosed) {
-				a.logger.Error("api listening and serving failed", "error", err)
-			}
+	g.Add(func() error {
+		err := api.ListenAndServe()
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			a.logger.Error("api listening and serving failed", "error", err)
+		}
 
-			return err
-		},
-		func(error) {
-			a.logger.Info("shutting down api")
-			//TODO: Improve shutdown? Or oklog already takes care of it for us?
-			//https://stackoverflow.com/questions/39320025/how-to-stop-http-listenandserve
-			// apiCancel() // FIXME: I believe we might not need this
-			if err := api.Shutdown(); err != nil {
-				a.logger.Error("api shutdown failed", "error", err)
-			}
-		},
-	)
+		return err
+	}, func(_ error) {
+		a.logger.Info("shutting down api")
+		if err := api.Shutdown(); err != nil {
+			a.logger.Error("api shutdown failed", "error", err)
+		}
+	})
 
 	for _, flw := range flows {
 		flowCopy := flw
-		addFlowActorToRunGroup(&g, apiShutdownDone, &flowCopy)
+		addFlowActorToRunGroup(&g, &flowCopy)
 	}
 
 	err := g.Run()
@@ -128,56 +118,38 @@ func (a *App) Stop() <-chan struct{} {
 	return a.shutdownDone
 }
 
-func addFlowActorToRunGroup(g *run.Group, apiShutdownDone <-chan struct{}, flw *flow.Flow) {
-
-	accumulatorShutdownDone := make(chan struct{})
-	uploaderShutdownDone := make(chan struct{})
-
+func addFlowActorToRunGroup(g *run.Group, flw *flow.Flow) {
 	if flw.Accumulator != nil {
 		accumulatorContext, accumulatorCancel := context.WithCancel(context.Background())
 
-		g.Add(
-			func() error {
-				defer close(accumulatorShutdownDone)
-				flw.Accumulator.Run(accumulatorContext)
-				return nil
-			},
-			func(error) {
-				<-apiShutdownDone
-				accumulatorCancel()
-			},
-		)
-	} else {
-		close(accumulatorShutdownDone)
+		g.Add(func() error {
+			flw.Accumulator.Run(accumulatorContext)
+			return nil
+		}, func(_ error) {
+			accumulatorCancel()
+			<-flw.Accumulator.Done()
+		})
 	}
 
 	uploaderContext, uploaderCancel := context.WithCancel(context.Background())
-	g.Add(
-		func() error {
-			defer close(uploaderShutdownDone)
-			flw.Uploader.Run(uploaderContext)
-			return nil
-		},
-		func(error) {
-			<-apiShutdownDone
-			<-accumulatorShutdownDone
-			uploaderCancel()
-		},
-	)
+	g.Add(func() error {
+		flw.Uploader.Run(uploaderContext)
+		return nil
+	}, func(_ error) {
+		uploaderCancel()
+		<-flw.Uploader.Done()
+	})
 
 	workersContext, workersCancel := context.WithCancel(context.Background()) //nolint: govet
 	for _, worker := range flw.UploadWorkers {
 		workerCopy := worker
-		g.Add(
-			func() error {
-				workerCopy.Run(workersContext)
-				return nil
-			},
-			func(error) {
-				<-uploaderShutdownDone
-				workersCancel()
-			},
-		)
+		g.Add(func() error {
+			workerCopy.Run(workersContext)
+			return nil
+		}, func(_ error) {
+			workersCancel()
+			<-workerCopy.Done()
+		})
 	}
 } //nolint: govet
 

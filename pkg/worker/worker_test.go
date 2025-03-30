@@ -85,7 +85,7 @@ func TestCallsObjUploaderWithDataPassed(t *testing.T) {
 	}
 	queue := &dummyExternalQueue{}
 
-	workChan := make(chan *domain.WorkUnit, 1)
+	workChan := make(chan *domain.WorkUnit, 2)
 
 	sut := worker.NewWorker("someflow", llog, objStorage, queue, workChan,
 		prometheus.NewRegistry(), noCompressionConf, constantTimeProvider(currentTime))
@@ -109,7 +109,9 @@ func TestCallsObjUploaderWithDataPassed(t *testing.T) {
 	assert.Same(t, workU, objStorage.calledWith[0], "should have called objUploader with the correct data")
 	assert.Equal(t, workU.Data, objStorage.calledWith[0].Data, "should have called objUploader with the correct data")
 
+	close(workChan)
 	cancel()
+	<-sut.Done()
 }
 
 func TestCallsEnqueuerWithUploaderResult(t *testing.T) {
@@ -163,6 +165,7 @@ func TestCallsEnqueuerWithUploaderResult(t *testing.T) {
 
 	close(workChan)
 	cancel()
+	<-sut.Done()
 }
 
 func TestKeepsGettingWorkAfterWorking(t *testing.T) {
@@ -198,6 +201,7 @@ func TestKeepsGettingWorkAfterWorking(t *testing.T) {
 
 	close(workChan)
 	cancel()
+	<-sut.Done()
 }
 
 func TestDrainsWorkChanAfterContextIsCancelled(t *testing.T) {
@@ -252,6 +256,7 @@ func TestDrainsWorkChanAfterContextIsCancelled(t *testing.T) {
 	assert.Same(t, workU2, objStorage.calledWith[1], "should have called objUploader with the correct data")
 	assert.Same(t, workU3, objStorage.calledWith[2], "should have called objUploader with the correct data")
 	close(workChan)
+	<-sut.Done()
 }
 
 func TestDoesNotCallEnqueueWhenObjUploadFails(t *testing.T) {
@@ -292,6 +297,7 @@ func TestDoesNotCallEnqueueWhenObjUploadFails(t *testing.T) {
 
 	close(workChan)
 	cancel()
+	<-sut.Done()
 }
 
 func TestUsesCompressionConfig(t *testing.T) {
@@ -379,6 +385,7 @@ func TestUsesCompressionConfig(t *testing.T) {
 		assert.Equal(t, expectedEnqueue, queue.calledWith[0], "worker should have called enqueue with correct message context")
 		close(workChan)
 		cancel()
+		<-sut.Done()
 	}
 }
 
@@ -409,4 +416,5 @@ func TestDoesNotCallUploaderIfWorkIsNil(t *testing.T) {
 	assert.Empty(t, queue.calledWith, "should not have called enqueuer")
 
 	cancel()
+	<-sut.Done()
 }

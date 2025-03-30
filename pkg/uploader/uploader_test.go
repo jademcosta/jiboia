@@ -78,7 +78,7 @@ func TestWorkSentDownstreamHasTheCorrectDataInIt(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	uploader := New(
+	sut := New(
 		"someflow",
 		llog,
 		workersCount,
@@ -88,9 +88,9 @@ func TestWorkSentDownstreamHasTheCorrectDataInIt(t *testing.T) {
 		nextQueue,
 	)
 
-	go uploader.Run(ctx)
+	go sut.Run(ctx)
 
-	err := uploader.Enqueue([]byte("1"))
+	err := sut.Enqueue([]byte("1"))
 	assert.NoError(t, err, "should not err on enqueue")
 
 	select {
@@ -102,6 +102,7 @@ func TestWorkSentDownstreamHasTheCorrectDataInIt(t *testing.T) {
 	}
 
 	cancel()
+	<-sut.Done()
 }
 
 func TestItDeniesWorkAfterContextIsCanceled(t *testing.T) {
@@ -111,7 +112,7 @@ func TestItDeniesWorkAfterContextIsCanceled(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	uploader := New(
+	sut := New(
 		"someflow",
 		llog,
 		workersCount,
@@ -121,9 +122,9 @@ func TestItDeniesWorkAfterContextIsCanceled(t *testing.T) {
 		nextQueue,
 	)
 
-	go uploader.Run(ctx)
+	go sut.Run(ctx)
 
-	err := uploader.Enqueue([]byte("1"))
+	err := sut.Enqueue([]byte("1"))
 	assert.NoError(t, err, "should not err on enqueue")
 
 	select {
@@ -134,8 +135,8 @@ func TestItDeniesWorkAfterContextIsCanceled(t *testing.T) {
 	}
 
 	cancel()
-	time.Sleep(10 * time.Millisecond)
-	err = uploader.Enqueue([]byte("2"))
+	<-sut.Done()
+	err = sut.Enqueue([]byte("2"))
 	assert.Error(t, err, "enqueue should return error when context has been canceled")
 }
 
@@ -145,7 +146,7 @@ func TestItFlushesAllPendingDataWhenContextIsCancelled(t *testing.T) {
 	nextQueue := make(chan *domain.WorkUnit, 10)
 	ctx, cancel := context.WithCancel(context.Background())
 
-	uploader := New(
+	sut := New(
 		"someflow",
 		llog,
 		workersCount,
@@ -155,15 +156,15 @@ func TestItFlushesAllPendingDataWhenContextIsCancelled(t *testing.T) {
 		nextQueue,
 	)
 
-	go uploader.Run(ctx)
-	err := uploader.Enqueue([]byte("1"))
+	go sut.Run(ctx)
+	err := sut.Enqueue([]byte("1"))
 	assert.NoError(t, err, "should not err on enqueue")
-	err = uploader.Enqueue([]byte("2"))
+	err = sut.Enqueue([]byte("2"))
 	assert.NoError(t, err, "should not err on enqueue")
 	time.Sleep(10 * time.Millisecond)
 
 	cancel()
-	time.Sleep(10 * time.Millisecond)
+	<-sut.Done()
 
 	select {
 	case work := <-nextQueue:
@@ -179,7 +180,7 @@ func TestItFlushesAllPendingDataWhenContextIsCancelled(t *testing.T) {
 		assert.Fail(t, "uploader should have distributed work")
 	}
 
-	err = uploader.Enqueue([]byte("3"))
+	err = sut.Enqueue([]byte("3"))
 	assert.Error(t, err, "should err on enqueue")
 
 	select {
@@ -239,7 +240,7 @@ func testUploader(
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	uploader := uploaderFactory(
+	sut := uploaderFactory(
 		"someflow", llog, workersCount, capacity, &mockFilePather{}, prometheus.NewRegistry(), nextQueue,
 	)
 
@@ -256,10 +257,10 @@ func testUploader(
 		go w.Run(ctx)
 	}
 
-	go uploader.Run(ctx)
+	go sut.Run(ctx)
 
 	for i := 0; i < objectsToEnqueueCount; i++ {
-		err := uploader.Enqueue([]byte(fmt.Sprint(i)))
+		err := sut.Enqueue([]byte(fmt.Sprint(i)))
 		assert.NoError(t, err, "should not err on enqueue")
 		if sleepTimeBeforeProducing != 0 {
 			time.Sleep(sleepTimeBeforeProducing)
@@ -276,6 +277,7 @@ func testUploader(
 		workersCount, objectsToEnqueueCount, uploadDuration)
 	assert.Equal(t, int64(objectsToEnqueueCount), resultCounter, testErrorString)
 	cancel()
+	<-sut.Done()
 }
 
 func testUploaderEnsuringEnqueuedItems(
@@ -294,7 +296,7 @@ func testUploaderEnsuringEnqueuedItems(
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	uploader := uploaderFactory(
+	sut := uploaderFactory(
 		"someflow", llog, workersCount, capacity, &mockFilePather{}, prometheus.NewRegistry(), nextQueue,
 	)
 
@@ -314,10 +316,10 @@ func testUploaderEnsuringEnqueuedItems(
 		go w.Run(ctx)
 	}
 
-	go uploader.Run(ctx)
+	go sut.Run(ctx)
 
 	for i := 0; i < objectsToEnqueueCount; i++ {
-		err := uploader.Enqueue([]byte(fmt.Sprint(i)))
+		err := sut.Enqueue([]byte(fmt.Sprint(i)))
 		assert.NoError(t, err, "should not err on enqueue")
 		expected[i] = fmt.Sprint(i)
 	}
@@ -332,6 +334,7 @@ func testUploaderEnsuringEnqueuedItems(
 		workersCount, objectsToEnqueueCount)
 	assert.Equal(t, expected, result, testErrorString)
 	cancel()
+	<-sut.Done()
 }
 
 //TODO: ele fecha o next no shutdown

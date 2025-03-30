@@ -32,6 +32,8 @@ type Accumulator struct {
 	shutdownMutex    sync.RWMutex
 	circBreaker      circuitbreaker.CircuitBreaker
 	shuttingDown     bool
+	doneChan         chan struct{}
+	doneChanMu       sync.Mutex
 }
 
 func New(
@@ -98,7 +100,11 @@ func (b *Accumulator) Enqueue(data []byte) error {
 
 // Run should be called in a new goroutine
 func (b *Accumulator) Run(ctx context.Context) {
-	// TODO: add flush based on time
+	b.doneChanMu.Lock()
+	b.doneChan = make(chan struct{})
+	defer close(b.doneChan)
+	b.doneChanMu.Unlock()
+
 	b.l.Info("Starting non-blocking accumulator")
 	for {
 		select {
@@ -112,6 +118,12 @@ func (b *Accumulator) Run(ctx context.Context) {
 			return
 		}
 	}
+}
+
+func (b *Accumulator) Done() <-chan struct{} {
+	b.doneChanMu.Lock()
+	defer b.doneChanMu.Unlock()
+	return b.doneChan
 }
 
 func (b *Accumulator) append(data []byte) {
