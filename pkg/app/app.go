@@ -251,6 +251,7 @@ func createFlows(
 		localLogger := llog.With(logger.FlowKey, flowConf.Name)
 		externalQueue := createExternalQueue(localLogger, flowConf.ExternalQueue, metricRegistry, flowConf.Name)
 		objStorage := createObjStorage(localLogger, flowConf.ObjectStorage, metricRegistry, flowConf.Name)
+		workersIngestionQueue := make(chan *domain.WorkUnit, flowConf.MaxConcurrentUploads)
 
 		uploader := uploader.New(
 			flowConf.Name,
@@ -258,7 +259,9 @@ func createFlows(
 			flowConf.MaxConcurrentUploads,
 			flowConf.QueueMaxSize,
 			filepather.New(datetimeprovider.New(), flowConf.PathPrefixCount, flowConf.Compression.Type),
-			metricRegistry)
+			metricRegistry,
+			workersIngestionQueue,
+		)
 
 		initialDecompressionBufferSize, err := flowConf.Ingestion.Decompression.InitialBufferSizeAsBytes()
 		if err != nil {
@@ -290,7 +293,7 @@ func createFlows(
 
 		for i := 0; i < flowConf.MaxConcurrentUploads; i++ {
 			worker := worker.NewWorker(
-				flowConf.Name, localLogger, objStorage, externalQueue, uploader.WorkersReady,
+				flowConf.Name, localLogger, objStorage, externalQueue, workersIngestionQueue,
 				metricRegistry, flowConf.Compression, time.Now,
 			)
 			f.UploadWorkers = append(f.UploadWorkers, worker)

@@ -25,7 +25,7 @@ import (
 var testingPathNoAcc = "/tmp/int_test2"
 
 var characters = []rune("abcdefghijklmnopqrstuvwxyz")
-var l *slog.Logger
+var logg *slog.Logger
 
 func TestAccumulatorCircuitBreaker(t *testing.T) {
 	if testing.Short() {
@@ -39,21 +39,21 @@ func TestAccumulatorCircuitBreaker(t *testing.T) {
 	defer storageServer.Close()
 
 	confFull := strings.Replace(confForCBYaml, "{{OBJ_STORAGE_URL}}",
-		fmt.Sprintf("%s/%s", storageServer.URL, "%s"), 1)
+		fmt.Sprintf("%s/%s", storageServer.URL, "whatever"), 1)
 
 	conf, err := config.New([]byte(confFull))
 	assert.NoError(t, err, "should initialize config")
-	l = logger.New(&conf.O11y.Log)
+	logg = logger.New(&conf.O11y.Log)
 
-	app := New(conf, l)
+	app := New(conf, logg)
 	go app.Start()
 	time.Sleep(2 * time.Second)
 
 	payload := randSeq(20)
 
-	for i := 0; i <= 8; i++ {
-		//why 8? 3 payload on workers, 2 on uploader queue, 2 on accumulator queue,
-		// 1 on accumulator "current"
+	for i := 0; i <= 11; i++ {
+		//why 11? 3 payload on workers, 3 on queue from uploader to workers, 2 on uploader queue,
+		// 2 on accumulator queue, 1 on accumulator "current"
 		response, err := http.Post("http://localhost:9098/cb_flow/async_ingestion", "application/json", strings.NewReader(payload))
 		assert.NoError(t, err, "ingesting items should not return error on cb_flow")
 		// The status might not be 2XX here, as it is dependant on the order at which parallel
@@ -101,9 +101,9 @@ func TestPayloadSizeLimit(t *testing.T) {
 
 	conf, err := config.New([]byte(confFull))
 	assert.NoError(t, err, "should initialize config")
-	l = logger.New(&conf.O11y.Log)
+	logg = logger.New(&conf.O11y.Log)
 
-	app := New(conf, l)
+	app := New(conf, logg)
 	go app.Start()
 	time.Sleep(2 * time.Second)
 
@@ -176,9 +176,9 @@ func TestApiToken(t *testing.T) {
 
 	conf, err := config.New([]byte(confFull))
 	assert.NoError(t, err, "should initialize config")
-	l = logger.New(&conf.O11y.Log)
+	logg = logger.New(&conf.O11y.Log)
 
-	app := New(conf, l)
+	app := New(conf, logg)
 	go app.Start()
 	time.Sleep(2 * time.Second)
 
@@ -250,9 +250,9 @@ func TestIngestionDecompression(t *testing.T) {
 
 	conf, err := config.New([]byte(confFull))
 	assert.NoError(t, err, "should initialize config")
-	l = logger.New(&conf.O11y.Log)
+	logg = logger.New(&conf.O11y.Log)
 
-	app := New(conf, l)
+	app := New(conf, logg)
 	go app.Start()
 	time.Sleep(2 * time.Second)
 
@@ -362,9 +362,9 @@ func TestCompression(t *testing.T) {
 
 	conf, err := config.New([]byte(confFull))
 	assert.NoError(t, err, "should initialize config")
-	l = logger.New(&conf.O11y.Log)
+	logg = logger.New(&conf.O11y.Log)
 
-	app := New(conf, l)
+	app := New(conf, logg)
 	go app.Start()
 	time.Sleep(2 * time.Second)
 
@@ -466,12 +466,12 @@ func testWithBatchSize(t *testing.T, confYaml string, stringExemplarSizes ...int
 
 	conf, err := config.New([]byte(confFull))
 	assert.NoError(t, err, "should initialize config")
-	l = logger.New(&conf.O11y.Log)
+	logg = logger.New(&conf.O11y.Log)
 
 	deleteDir(t, testingPathNoAcc)
 	createDir(t, testingPathNoAcc)
 
-	app := New(conf, l)
+	app := New(conf, logg)
 	go app.Start()
 	time.Sleep(2 * time.Second)
 

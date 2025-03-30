@@ -1,9 +1,10 @@
 package app
 
 const confYaml = `
-log:
-  level: error
-  format: json
+o11y:
+  log:
+    level: error
+    format: json
 
 api:
   port: 9099
@@ -70,9 +71,10 @@ flows:
 `
 
 const confForCompressionYaml = `
-log:
-  level: error
-  format: json
+o11y:
+  log:
+    level: error
+    format: json
 
 api:
   port: 9099
@@ -108,9 +110,10 @@ flows:
 `
 
 const confForCBYaml = `
-log:
-  level: error
-  format: json
+o11y:
+  log:
+    level: error
+    format: json
 
 api:
   port: 9098
