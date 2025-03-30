@@ -5,8 +5,6 @@ import (
 	"errors"
 	"log/slog"
 	"sync"
-	"sync/atomic"
-	"time"
 
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
@@ -23,7 +21,6 @@ type NonBlockingUploader struct {
 	shutdownMutex    sync.RWMutex
 	shuttingDown     bool
 	ctx              context.Context
-	enqueueHappening atomic.Int64
 }
 
 func New(
@@ -61,8 +58,6 @@ func (s *NonBlockingUploader) Enqueue(data []byte) error {
 		return errors.New("uploader shutting down")
 	}
 
-	s.enqueueHappening.Add(1)
-	defer s.enqueueHappening.Add(-1)
 	s.metrics.increaseEnqueueCounter()
 
 	select {
@@ -111,7 +106,6 @@ func (s *NonBlockingUploader) updateEnqueuedItemsMetric() {
 
 func (s *NonBlockingUploader) shutdown() {
 	s.setShutdown()
-	s.waitAllEnqueuesToFinish()
 	close(s.internalDataChan)
 
 	for {
@@ -128,11 +122,4 @@ func (s *NonBlockingUploader) setShutdown() {
 	s.shutdownMutex.Lock()
 	defer s.shutdownMutex.Unlock()
 	s.shuttingDown = true
-}
-
-func (s *NonBlockingUploader) waitAllEnqueuesToFinish() {
-	pendingCounter := s.enqueueHappening.Load()
-	for pendingCounter != 0 {
-		time.Sleep(10 * time.Millisecond)
-	}
 }
