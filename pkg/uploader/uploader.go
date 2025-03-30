@@ -114,7 +114,11 @@ func (s *NonBlockingUploader) shutdown() {
 	s.waitAllEnqueuesToFinish()
 	close(s.internalDataChan)
 
-	for data := range s.internalDataChan {
+	for {
+		data, moreWork := <-s.internalDataChan
+		if !moreWork {
+			break
+		}
 		s.sendWorkToNext(data)
 	}
 	close(s.next)

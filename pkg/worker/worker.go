@@ -107,7 +107,12 @@ func (w *Worker) work(workU *domain.WorkUnit) {
 }
 
 func (w *Worker) drainWorkChan() {
-	for workU := range w.incomingWorkChan {
+	for {
+		workU, moreWork := <-w.incomingWorkChan
+		if !moreWork {
+			break
+		}
+
 		w.work(workU)
 	}
 }
