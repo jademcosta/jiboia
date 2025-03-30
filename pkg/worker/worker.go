@@ -32,6 +32,7 @@ type Worker struct {
 	flowName            string
 	compressionConf     config.CompressionConfig
 	currentTimeProvider func() time.Time
+	doneChan            chan struct{}
 }
 
 func NewWorker(
@@ -55,6 +56,9 @@ func NewWorker(
 
 // Run should be called on a goroutine
 func (w *Worker) Run(ctx context.Context) {
+	w.doneChan = make(chan struct{})
+	defer close(w.doneChan)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -66,6 +70,10 @@ func (w *Worker) Run(ctx context.Context) {
 			}
 		}
 	}
+}
+
+func (w *Worker) Done() <-chan struct{} {
+	return w.doneChan
 }
 
 func (w *Worker) work(workU *domain.WorkUnit) {
