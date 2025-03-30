@@ -54,13 +54,6 @@ func (objStorage *mockObjStorage) Upload(workU *domain.WorkUnit) (*domain.Upload
 	return &domain.UploadResult{}, nil
 }
 
-type dummyObjStorage struct{}
-
-// nolint: nilnil
-func (queue *dummyObjStorage) Upload(_ *domain.WorkUnit) (*domain.UploadResult, error) {
-	return nil, nil
-}
-
 type mockExternalQueue struct {
 	calledWith []*domain.MessageContext
 	mu         sync.Mutex
@@ -82,28 +75,6 @@ func (queue *dummyExternalQueue) Enqueue(_ *domain.MessageContext) error {
 	return nil
 }
 
-func TestRegistersItsChannelOnStartup(t *testing.T) {
-	ctx, cancel := context.WithCancel(context.Background())
-	objStorage := &dummyObjStorage{}
-
-	queue := &dummyExternalQueue{}
-
-	workerQueueChan := make(chan chan *domain.WorkUnit, 1)
-
-	sut := worker.NewWorker(
-		"someflow", llog, objStorage, queue, workerQueueChan, prometheus.NewRegistry(),
-		noCompressionConf, constantTimeProvider(currentTime))
-	go sut.Run(ctx)
-
-	select {
-	case <-workerQueueChan:
-		// Success
-	case <-time.After(1 * time.Millisecond):
-		assert.Fail(t, "should register itself on workChannel when Run is called.")
-	}
-	cancel()
-}
-
 func TestCallsObjUploaderWithDataPassed(t *testing.T) {
 
 	var wg sync.WaitGroup
@@ -114,20 +85,12 @@ func TestCallsObjUploaderWithDataPassed(t *testing.T) {
 	}
 	queue := &dummyExternalQueue{}
 
-	workerQueueChan := make(chan chan *domain.WorkUnit, 1)
+	workChan := make(chan *domain.WorkUnit, 1)
 
-	sut := worker.NewWorker("someflow", llog, objStorage, queue, workerQueueChan,
+	sut := worker.NewWorker("someflow", llog, objStorage, queue, workChan,
 		prometheus.NewRegistry(), noCompressionConf, constantTimeProvider(currentTime))
 	go sut.Run(ctx)
-
-	var workerChan chan *domain.WorkUnit
-
-	select {
-	case workerChan = <-workerQueueChan:
-		// Success
-	case <-time.After(1 * time.Millisecond):
-		assert.Fail(t, "should register itself on workChannel when Run is called.")
-	}
+	time.Sleep(time.Millisecond)
 
 	workU := &domain.WorkUnit{
 		Filename: "some-filename",
@@ -136,7 +99,7 @@ func TestCallsObjUploaderWithDataPassed(t *testing.T) {
 	}
 
 	wg.Add(1)
-	workerChan <- workU
+	workChan <- workU
 	time.Sleep(1 * time.Millisecond)
 
 	wg.Wait()
@@ -166,20 +129,12 @@ func TestCallsEnqueuerWithUploaderResult(t *testing.T) {
 	}
 
 	queue := &mockExternalQueue{calledWith: make([]*domain.MessageContext, 0), wg: &wg}
-	workerQueueChan := make(chan chan *domain.WorkUnit, 1)
+	workChan := make(chan *domain.WorkUnit, 1)
 
-	sut := worker.NewWorker("someflow", llog, objStorage, queue, workerQueueChan,
+	sut := worker.NewWorker("someflow", llog, objStorage, queue, workChan,
 		prometheus.NewRegistry(), noCompressionConf, constantTimeProvider(currentTime))
 	go sut.Run(ctx)
-
-	var workerChan chan *domain.WorkUnit
-
-	select {
-	case workerChan = <-workerQueueChan:
-		// Success
-	case <-time.After(1 * time.Millisecond):
-		assert.Fail(t, "should register itself on workChannel when Run is called.")
-	}
+	time.Sleep(time.Millisecond)
 
 	workU := &domain.WorkUnit{
 		Filename: "some-filename",
@@ -188,7 +143,7 @@ func TestCallsEnqueuerWithUploaderResult(t *testing.T) {
 	}
 
 	wg.Add(2)
-	workerChan <- workU
+	workChan <- workU
 	time.Sleep(1 * time.Millisecond)
 
 	expected := &domain.MessageContext{
@@ -206,10 +161,11 @@ func TestCallsEnqueuerWithUploaderResult(t *testing.T) {
 	assert.Len(t, queue.calledWith, 1, "should have called enqueuer")
 	assert.Equal(t, expected, queue.calledWith[0], "should have called enqueuer with the correct data")
 
+	close(workChan)
 	cancel()
 }
 
-func TestRegistersItselfForWorkAgainAfterWorking(t *testing.T) {
+func TestKeepsGettingWorkAfterWorking(t *testing.T) {
 
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
@@ -218,29 +174,21 @@ func TestRegistersItselfForWorkAgainAfterWorking(t *testing.T) {
 		wg:         &wg,
 	}
 	queue := &dummyExternalQueue{}
-	workerQueueChan := make(chan chan *domain.WorkUnit, 1)
+	workChan := make(chan *domain.WorkUnit, 1)
 
-	sut := worker.NewWorker("someflow", llog, objStorage, queue, workerQueueChan,
+	sut := worker.NewWorker("someflow", llog, objStorage, queue, workChan,
 		prometheus.NewRegistry(), noCompressionConf, constantTimeProvider(currentTime))
 	go sut.Run(ctx)
+	time.Sleep(time.Millisecond)
 
 	wg.Add(11)
-	var workerChan chan *domain.WorkUnit
-
 	for i := 0; i < 11; i++ {
-		select {
-		case workerChan = <-workerQueueChan:
-			// Success
-		case <-time.After(10 * time.Millisecond):
-			assert.Fail(t, "should register itself on workChannel when Run is called.")
-		}
-
 		workU := &domain.WorkUnit{
 			Filename: "some-filename",
 			Prefix:   "some-prefix",
 			Data:     []byte(fmt.Sprint(i)),
 		}
-		workerChan <- workU
+		workChan <- workU
 	}
 
 	wg.Wait()
@@ -248,11 +196,11 @@ func TestRegistersItselfForWorkAgainAfterWorking(t *testing.T) {
 	defer objStorage.mu.Unlock()
 	assert.Len(t, objStorage.calledWith, 11, "should have called uploader")
 
+	close(workChan)
 	cancel()
 }
 
-func TestStopsAcceptingWorkAfterContextIsCancelled(t *testing.T) {
-
+func TestDrainsWorkChanAfterContextIsCancelled(t *testing.T) {
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithCancel(context.Background())
 	objStorage := &mockObjStorage{
@@ -260,20 +208,12 @@ func TestStopsAcceptingWorkAfterContextIsCancelled(t *testing.T) {
 		wg:         &wg,
 	}
 	queue := &dummyExternalQueue{}
-	workerQueueChan := make(chan chan *domain.WorkUnit, 1)
+	workChan := make(chan *domain.WorkUnit, 10)
 
-	sut := worker.NewWorker("someflow", llog, objStorage, queue, workerQueueChan,
+	sut := worker.NewWorker("someflow", llog, objStorage, queue, workChan,
 		prometheus.NewRegistry(), noCompressionConf, constantTimeProvider(currentTime))
 	go sut.Run(ctx)
-
-	var workerChan chan *domain.WorkUnit
-
-	select {
-	case workerChan = <-workerQueueChan:
-		// Success
-	case <-time.After(1 * time.Millisecond):
-		assert.Fail(t, "should register itself on workChannel when Run is called.")
-	}
+	time.Sleep(time.Millisecond)
 
 	workU := &domain.WorkUnit{
 		Filename: "some-filename",
@@ -281,34 +221,37 @@ func TestStopsAcceptingWorkAfterContextIsCancelled(t *testing.T) {
 		Data:     []byte("some data"),
 	}
 
-	wg.Add(2)
-	workerChan <- workU
-	time.Sleep(1 * time.Millisecond)
+	workU2 := &domain.WorkUnit{
+		Filename: "some-filename",
+		Prefix:   "some-prefix",
+		Data:     []byte("some data2"),
+	}
+
+	workU3 := &domain.WorkUnit{
+		Filename: "some-filename",
+		Prefix:   "some-prefix",
+		Data:     []byte("some data3"),
+	}
+
+	wg.Add(3)
+	workChan <- workU
+	time.Sleep(time.Millisecond)
 
 	cancel()
+	time.Sleep(time.Millisecond)
 
-	select {
-	case workerChan = <-workerQueueChan:
-		// Success
-	case <-time.After(1 * time.Millisecond):
-		assert.Fail(t, "should register itself on workChannel when Run is called.")
-	}
-
-	workerChan <- workU
-
-	time.Sleep(1 * time.Millisecond)
-
-	select {
-	case <-workerQueueChan:
-		assert.Fail(t, "should not register itself on workChannel after cancel is called.")
-	case <-time.After(1 * time.Millisecond):
-		//Success
-	}
+	workChan <- workU2
+	workChan <- workU3
+	time.Sleep(time.Millisecond)
+	wg.Wait()
 
 	objStorage.mu.Lock()
 	defer objStorage.mu.Unlock()
-	assert.Len(t, objStorage.calledWith, 1, "should have called uploader")
+	assert.Len(t, objStorage.calledWith, 3, "should have called uploader")
 	assert.Same(t, workU, objStorage.calledWith[0], "should have called objUploader with the correct data")
+	assert.Same(t, workU2, objStorage.calledWith[1], "should have called objUploader with the correct data")
+	assert.Same(t, workU3, objStorage.calledWith[2], "should have called objUploader with the correct data")
+	close(workChan)
 }
 
 func TestDoesNotCallEnqueueWhenObjUploadFails(t *testing.T) {
@@ -322,20 +265,12 @@ func TestDoesNotCallEnqueueWhenObjUploadFails(t *testing.T) {
 	}
 
 	queue := &mockExternalQueue{calledWith: make([]*domain.MessageContext, 0), wg: &wg}
-	workerQueueChan := make(chan chan *domain.WorkUnit, 1)
+	workChan := make(chan *domain.WorkUnit, 10)
 
-	sut := worker.NewWorker("someflow", llog, objStorage, queue, workerQueueChan,
+	sut := worker.NewWorker("someflow", llog, objStorage, queue, workChan,
 		prometheus.NewRegistry(), noCompressionConf, constantTimeProvider(currentTime))
 	go sut.Run(ctx)
-
-	var workerChan chan *domain.WorkUnit
-
-	select {
-	case workerChan = <-workerQueueChan:
-		// Success
-	case <-time.After(1 * time.Millisecond):
-		assert.Fail(t, "should register itself on workChannel when Run is called.")
-	}
+	time.Sleep(time.Millisecond)
 
 	workU := &domain.WorkUnit{
 		Filename: "some-filename",
@@ -344,8 +279,8 @@ func TestDoesNotCallEnqueueWhenObjUploadFails(t *testing.T) {
 	}
 
 	wg.Add(1)
-	workerChan <- workU
-	time.Sleep(1 * time.Millisecond)
+	workChan <- workU
+	time.Sleep(time.Millisecond)
 
 	wg.Wait()
 	queue.mu.Lock()
@@ -355,6 +290,7 @@ func TestDoesNotCallEnqueueWhenObjUploadFails(t *testing.T) {
 	assert.Len(t, objStorage.calledWith, 1, "should have called upload")
 	assert.Len(t, queue.calledWith, 0, "should not have called enqueuer")
 
+	close(workChan)
 	cancel()
 }
 
@@ -391,13 +327,12 @@ func TestUsesCompressionConfig(t *testing.T) {
 		}
 
 		queue := &mockExternalQueue{calledWith: make([]*domain.MessageContext, 0), wg: &wg}
-		workerQueueChan := make(chan chan *domain.WorkUnit, 1)
+		workChan := make(chan *domain.WorkUnit, 1)
 
-		sut := worker.NewWorker("someflow", llog, objStorage, queue, workerQueueChan,
+		sut := worker.NewWorker("someflow", llog, objStorage, queue, workChan,
 			prometheus.NewRegistry(), tc.compressConf, constantTimeProvider(currentTime))
 		go sut.Run(ctx)
-
-		workerChan := <-workerQueueChan
+		time.Sleep(time.Millisecond)
 
 		data := strings.Repeat("a", 20480) // 20KB
 
@@ -408,9 +343,9 @@ func TestUsesCompressionConfig(t *testing.T) {
 		}
 
 		wg.Add(2)
-		workerChan <- workU
-
+		workChan <- workU
 		wg.Wait()
+
 		queue.mu.Lock()
 		defer queue.mu.Unlock()
 		objStorage.mu.Lock()
@@ -442,6 +377,36 @@ func TestUsesCompressionConfig(t *testing.T) {
 			SavedAt:         currentTime.Unix(),
 		}
 		assert.Equal(t, expectedEnqueue, queue.calledWith[0], "worker should have called enqueue with correct message context")
+		close(workChan)
 		cancel()
 	}
+}
+
+func TestDoesNotCallUploaderIfWorkIsNil(t *testing.T) {
+	var wg sync.WaitGroup
+	ctx, cancel := context.WithCancel(context.Background())
+
+	objStorage := &mockObjStorage{
+		calledWith: make([]*domain.WorkUnit, 0),
+		wg:         &wg,
+	}
+
+	queue := &mockExternalQueue{calledWith: make([]*domain.MessageContext, 0), wg: &wg}
+	workChan := make(chan *domain.WorkUnit, 10)
+
+	sut := worker.NewWorker("someflow", llog, objStorage, queue, workChan,
+		prometheus.NewRegistry(), noCompressionConf, constantTimeProvider(currentTime))
+	go sut.Run(ctx)
+	time.Sleep(time.Millisecond)
+	close(workChan)
+	time.Sleep(time.Millisecond)
+
+	queue.mu.Lock()
+	defer queue.mu.Unlock()
+	objStorage.mu.Lock()
+	defer objStorage.mu.Unlock()
+	assert.Empty(t, objStorage.calledWith, "should not have called upload")
+	assert.Empty(t, queue.calledWith, "should not have called enqueuer")
+
+	cancel()
 }

@@ -13,14 +13,13 @@ import (
 
 type NonBlockingUploader struct {
 	internalDataChan chan []byte
-	WorkersReady     chan chan *domain.WorkUnit
+	next             chan *domain.WorkUnit
 	searchForWork    chan struct{}
 	log              *slog.Logger
 	filePathProvider domain.FilePathProvider
 	metrics          *metricCollector
 	shutdownMutex    sync.RWMutex
 	shuttingDown     bool
-	workersCount     int
 	ctx              context.Context
 }
 
@@ -31,6 +30,8 @@ func New(
 	queueCapacity int,
 	filePathProvider domain.FilePathProvider,
 	metricRegistry *prometheus.Registry,
+	next chan *domain.WorkUnit,
+
 ) *NonBlockingUploader {
 
 	metrics := newMetricCollector(flowName, metricRegistry)
@@ -40,12 +41,11 @@ func New(
 
 	uploader := &NonBlockingUploader{
 		internalDataChan: make(chan []byte, queueCapacity),
-		WorkersReady:     make(chan chan *domain.WorkUnit, workersCount),
+		next:             next,
 		searchForWork:    make(chan struct{}, 1),
 		log:              l.With(logger.ComponentKey, "uploader"),
 		filePathProvider: filePathProvider,
 		metrics:          metrics,
-		workersCount:     workersCount,
 	}
 
 	return uploader
@@ -77,32 +77,26 @@ func (s *NonBlockingUploader) Run(ctx context.Context) {
 	s.ctx = ctx
 	for {
 		select {
-		case worker := <-s.WorkersReady:
-			s.sendWork(worker)
 		case <-ctx.Done():
 			s.log.Debug("uploader starting shutdown")
 			s.shutdown()
 			s.log.Info("uploader shutdown finished")
 			return
+		case payload := <-s.internalDataChan:
+			s.sendWorkToNext(payload)
 		}
 	}
 }
 
-func (s *NonBlockingUploader) sendWork(worker chan *domain.WorkUnit) {
-	select {
-	case <-s.ctx.Done(): //TODO: this is ugly. We shopuldn't need to hear for done on 2 places
-		s.WorkersReady <- worker
-		return
-	case data := <-s.internalDataChan:
-		workU := &domain.WorkUnit{
-			Filename: *s.filePathProvider.Filename(),
-			Prefix:   *s.filePathProvider.Prefix(),
-			Data:     data,
-		}
-
-		worker <- workU
-		s.updateEnqueuedItemsMetric()
+func (s *NonBlockingUploader) sendWorkToNext(data []byte) {
+	workU := &domain.WorkUnit{
+		Filename: *s.filePathProvider.Filename(),
+		Prefix:   *s.filePathProvider.Prefix(),
+		Data:     data,
 	}
+
+	s.next <- workU
+	s.updateEnqueuedItemsMetric()
 }
 
 func (s *NonBlockingUploader) updateEnqueuedItemsMetric() {
@@ -112,29 +106,16 @@ func (s *NonBlockingUploader) updateEnqueuedItemsMetric() {
 
 func (s *NonBlockingUploader) shutdown() {
 	s.setShutdown()
-
-	workerShutdownCounter := 0
+	close(s.internalDataChan)
 
 	for {
-		worker := <-s.WorkersReady
-		dataPendingExists := len(s.internalDataChan) > 0
-
-		if dataPendingExists {
-			s.sendWork(worker)
-		} else {
-			workerShutdownCounter++
-			allWorkersShutdown := workerShutdownCounter == s.workersCount
-
-			if allWorkersShutdown {
-				// close(s.WorkersReady)
-				// close(s.internalDataChan)
-				//TODO (jademcosta): this throws a race error. The problem is that close() needs
-				// synchronization structures. On the other hand, I don't wanna make workers use a Mutex
-				// right now, so I'm leaving the channels without being closed.
-				return
-			}
+		data, moreWork := <-s.internalDataChan
+		if !moreWork {
+			break
 		}
+		s.sendWorkToNext(data)
 	}
+	close(s.next)
 }
 
 func (s *NonBlockingUploader) setShutdown() {

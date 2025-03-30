@@ -25,46 +25,45 @@ type ExternalQueue interface {
 }
 
 type Worker struct {
-	l                    *slog.Logger
-	workChan             chan *domain.WorkUnit
-	storage              ObjStorage
-	queue                ExternalQueue
-	workVolunteeringChan chan chan *domain.WorkUnit
-	flowName             string
-	compressionConf      config.CompressionConfig
-	currentTimeProvider  func() time.Time
+	l                   *slog.Logger
+	storage             ObjStorage
+	queue               ExternalQueue
+	incomingWorkChan    <-chan *domain.WorkUnit
+	flowName            string
+	compressionConf     config.CompressionConfig
+	currentTimeProvider func() time.Time
 }
 
 func NewWorker(
 	flowName string, l *slog.Logger, storage ObjStorage, extQueue ExternalQueue,
-	workVolunteeringChan chan chan *domain.WorkUnit, metricRegistry *prometheus.Registry,
+	incomingWorkChan <-chan *domain.WorkUnit, metricRegistry *prometheus.Registry,
 	compressionConf config.CompressionConfig, currentTimeProvider func() time.Time,
 ) *Worker {
 
 	initializeMetrics(metricRegistry)
 
-	workChan := make(chan *domain.WorkUnit, 1)
 	return &Worker{
-		l:                    l.With(logger.ComponentKey, "worker"),
-		storage:              storage,
-		queue:                extQueue,
-		workVolunteeringChan: workVolunteeringChan,
-		workChan:             workChan,
-		flowName:             flowName,
-		compressionConf:      compressionConf,
-		currentTimeProvider:  currentTimeProvider,
+		l:                   l.With(logger.ComponentKey, "worker"),
+		storage:             storage,
+		queue:               extQueue,
+		incomingWorkChan:    incomingWorkChan,
+		flowName:            flowName,
+		compressionConf:     compressionConf,
+		currentTimeProvider: currentTimeProvider,
 	}
 }
 
 // Run should be called on a goroutine
 func (w *Worker) Run(ctx context.Context) {
 	for {
-		w.workVolunteeringChan <- w.workChan
 		select {
-		case workU := <-w.workChan:
-			w.work(workU)
 		case <-ctx.Done():
+			w.drainWorkChan()
 			return
+		case workU := <-w.incomingWorkChan:
+			if workU != nil {
+				w.work(workU)
+			}
 		}
 	}
 }
@@ -104,6 +103,17 @@ func (w *Worker) work(workU *domain.WorkUnit) {
 		w.l.Error("failed to enqueue data", "object_path", uploadResult.Path, "error", err)
 	} else {
 		w.l.Debug("finished enqueueing data", "object_path", uploadResult.Path)
+	}
+}
+
+func (w *Worker) drainWorkChan() {
+	for {
+		workU, moreWork := <-w.incomingWorkChan
+		if !moreWork {
+			break
+		}
+
+		w.work(workU)
 	}
 }
 
