@@ -74,22 +74,27 @@ func (objStorage *mockObjStorageWithAppend) Upload(workU *domain.WorkUnit) (*dom
 func TestWorkSentDownstreamHasTheCorrectDataInIt(t *testing.T) {
 	workersCount := 2
 	capacity := 3
+	nextQueue := make(chan *domain.WorkUnit, 10)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	uploader := New("someflow", llog, workersCount, capacity,
-		&mockFilePather{prefix: "some-prefix", filename: "some-random-filename"}, prometheus.NewRegistry())
-
-	receiver := make(chan *domain.WorkUnit, 1)
+	uploader := New(
+		"someflow",
+		llog,
+		workersCount,
+		capacity,
+		&mockFilePather{prefix: "some-prefix", filename: "some-random-filename"},
+		prometheus.NewRegistry(),
+		nextQueue,
+	)
 
 	go uploader.Run(ctx)
 
 	err := uploader.Enqueue([]byte("1"))
 	assert.NoError(t, err, "should not err on enqueue")
-	uploader.WorkersReady <- receiver
 
 	select {
-	case work := <-receiver:
+	case work := <-nextQueue:
 		assert.Equal(t, "some-prefix", work.Prefix, "should have used the prefix from filepather")
 		assert.Equal(t, "some-random-filename", work.Filename, "should have used the filename from filepather")
 	case <-time.After(10 * time.Millisecond):
@@ -102,21 +107,27 @@ func TestWorkSentDownstreamHasTheCorrectDataInIt(t *testing.T) {
 func TestItDeniesWorkAfterContextIsCanceled(t *testing.T) {
 	workersCount := 10
 	capacity := 3
+	nextQueue := make(chan *domain.WorkUnit, 10)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	uploader := New("someflow", llog, workersCount, capacity,
-		&mockFilePather{prefix: "some-prefix", filename: "some-random-filename"}, prometheus.NewRegistry())
-	receiver := make(chan *domain.WorkUnit, 1)
+	uploader := New(
+		"someflow",
+		llog,
+		workersCount,
+		capacity,
+		&mockFilePather{prefix: "some-prefix", filename: "some-random-filename"},
+		prometheus.NewRegistry(),
+		nextQueue,
+	)
 
 	go uploader.Run(ctx)
 
 	err := uploader.Enqueue([]byte("1"))
 	assert.NoError(t, err, "should not err on enqueue")
-	uploader.WorkersReady <- receiver
 
 	select {
-	case <-receiver:
+	case <-nextQueue:
 		// Success
 	case <-time.After(10 * time.Millisecond):
 		assert.Fail(t, "uploader should have distributed work")
@@ -131,59 +142,52 @@ func TestItDeniesWorkAfterContextIsCanceled(t *testing.T) {
 func TestItFlushesAllPendingDataWhenContextIsCancelled(t *testing.T) {
 	workersCount := 2
 	capacity := 3
-
+	nextQueue := make(chan *domain.WorkUnit, 10)
 	ctx, cancel := context.WithCancel(context.Background())
 
-	uploader := New("someflow", llog, workersCount, capacity,
-		&mockFilePather{prefix: "some-prefix", filename: "some-random-filename"}, prometheus.NewRegistry())
-	receiver := make(chan *domain.WorkUnit, 1)
+	uploader := New(
+		"someflow",
+		llog,
+		workersCount,
+		capacity,
+		&mockFilePather{prefix: "some-prefix", filename: "some-random-filename"},
+		prometheus.NewRegistry(),
+		nextQueue,
+	)
 
 	go uploader.Run(ctx)
 	err := uploader.Enqueue([]byte("1"))
 	assert.NoError(t, err, "should not err on enqueue")
 	err = uploader.Enqueue([]byte("2"))
 	assert.NoError(t, err, "should not err on enqueue")
+	time.Sleep(10 * time.Millisecond)
 
 	cancel()
 	time.Sleep(10 * time.Millisecond)
 
-	uploader.WorkersReady <- receiver
 	select {
-	case work := <-receiver:
+	case work := <-nextQueue:
 		assert.Equal(t, []byte("1"), work.Data, "should have sent the correct data to be worked")
 	case <-time.After(10 * time.Millisecond):
 		assert.Fail(t, "uploader should have distributed work")
 	}
 
-	uploader.WorkersReady <- receiver
 	select {
-	case work := <-receiver:
+	case work := <-nextQueue:
 		assert.Equal(t, []byte("2"), work.Data, "should have sent the correct data to be worked")
 	case <-time.After(10 * time.Millisecond):
 		assert.Fail(t, "uploader should have distributed work")
 	}
 
-	uploader.WorkersReady <- receiver
-	uploader.WorkersReady <- receiver
-	time.Sleep(1 * time.Millisecond)
+	err = uploader.Enqueue([]byte("3"))
+	assert.Error(t, err, "should err on enqueue")
 
-	uploader.WorkersReady <- receiver
 	select {
-	case <-receiver:
-		assert.Fail(t, "uploader should not have distributed work")
+	case work := <-nextQueue:
+		assert.Nil(t, work, "uploader should not have distributed work. work is: %s", work)
 	case <-time.After(10 * time.Millisecond):
 		// Success
 	}
-
-	//TODO: look at the shutdown function. The channel is not being closed.
-	// assert.Panics(
-	// 	t,
-	// 	func() {
-	// 		uploader.shutdownMutex.RLock()
-	// 		defer uploader.shutdownMutex.RUnlock()
-	// 		uploader.WorkersReady <- receiver
-	// 	},
-	// 	"should have closed the channel after all workers have been shutdown")
 }
 
 func TestUploadersSendAllEnqueuedItems(t *testing.T) {
@@ -226,15 +230,18 @@ func testUploader(
 	workersCount int,
 	objectsToEnqueueCount int,
 	capacity int,
-	uploaderFactory func(string, *slog.Logger, int, int, domain.FilePathProvider, *prometheus.Registry) *NonBlockingUploader,
+	uploaderFactory func(string, *slog.Logger, int, int, domain.FilePathProvider, *prometheus.Registry, chan *domain.WorkUnit) *NonBlockingUploader,
 	sleepTimeBeforeProducing time.Duration) {
 
 	resultCounter := int64(0)
 	var waitG sync.WaitGroup
+	nextQueue := make(chan *domain.WorkUnit, 10)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	uploader := uploaderFactory("someflow", llog, workersCount, capacity, &mockFilePather{}, prometheus.NewRegistry())
+	uploader := uploaderFactory(
+		"someflow", llog, workersCount, capacity, &mockFilePather{}, prometheus.NewRegistry(), nextQueue,
+	)
 
 	waitG.Add(objectsToEnqueueCount)
 	for i := 0; i < workersCount; i++ {
@@ -244,7 +251,7 @@ func testUploader(
 			wg:             &waitG,
 		}
 
-		w := worker.NewWorker("someflow", llog, objStorage, &dummyExternalQueue{}, uploader.WorkersReady,
+		w := worker.NewWorker("someflow", llog, objStorage, &dummyExternalQueue{}, nextQueue,
 			prometheus.NewRegistry(), noCompressionConf, time.Now)
 		go w.Run(ctx)
 	}
@@ -276,16 +283,20 @@ func testUploaderEnsuringEnqueuedItems(
 	workersCount int,
 	objectsToEnqueueCount int,
 	capacity int,
-	uploaderFactory func(string, *slog.Logger, int, int, domain.FilePathProvider, *prometheus.Registry) *NonBlockingUploader) {
+	uploaderFactory func(string, *slog.Logger, int, int, domain.FilePathProvider, *prometheus.Registry, chan *domain.WorkUnit) *NonBlockingUploader,
+) {
 
 	var waitG sync.WaitGroup
 	var mu sync.Mutex
 	expected := make([]string, objectsToEnqueueCount)
 	result := make([]string, 0, objectsToEnqueueCount)
+	nextQueue := make(chan *domain.WorkUnit, 10)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	uploader := uploaderFactory("someflow", llog, workersCount, capacity, &mockFilePather{}, prometheus.NewRegistry())
+	uploader := uploaderFactory(
+		"someflow", llog, workersCount, capacity, &mockFilePather{}, prometheus.NewRegistry(), nextQueue,
+	)
 
 	waitG.Add(objectsToEnqueueCount)
 	for i := 0; i < workersCount; i++ {
@@ -299,7 +310,7 @@ func testUploaderEnsuringEnqueuedItems(
 		}
 
 		w := worker.NewWorker("someflow", llog, objStorage, &dummyExternalQueue{},
-			uploader.WorkersReady, prometheus.NewRegistry(), noCompressionConf, time.Now)
+			nextQueue, prometheus.NewRegistry(), noCompressionConf, time.Now)
 		go w.Run(ctx)
 	}
 
@@ -322,3 +333,5 @@ func testUploaderEnsuringEnqueuedItems(
 	assert.Equal(t, expected, result, testErrorString)
 	cancel()
 }
+
+//TODO: ele fecha o next no shutdown
