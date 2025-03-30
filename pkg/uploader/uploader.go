@@ -22,6 +22,7 @@ type NonBlockingUploader struct {
 	shuttingDown     bool
 	ctx              context.Context
 	doneChan         chan struct{}
+	doneChanMu       sync.Mutex
 }
 
 func New(
@@ -74,8 +75,10 @@ func (s *NonBlockingUploader) Enqueue(data []byte) error {
 
 // Run should be called in a new goroutine
 func (s *NonBlockingUploader) Run(ctx context.Context) {
+	s.doneChanMu.Lock()
 	s.doneChan = make(chan struct{})
 	defer close(s.doneChan)
+	s.doneChanMu.Unlock()
 
 	s.log.Info("starting non-blocking uploader loop")
 	s.ctx = ctx
@@ -93,6 +96,8 @@ func (s *NonBlockingUploader) Run(ctx context.Context) {
 }
 
 func (s *NonBlockingUploader) Done() <-chan struct{} {
+	s.doneChanMu.Lock()
+	defer s.doneChanMu.Unlock()
 	return s.doneChan
 }
 

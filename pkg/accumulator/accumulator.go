@@ -33,6 +33,7 @@ type Accumulator struct {
 	circBreaker      circuitbreaker.CircuitBreaker
 	shuttingDown     bool
 	doneChan         chan struct{}
+	doneChanMu       sync.Mutex
 }
 
 func New(
@@ -99,8 +100,10 @@ func (b *Accumulator) Enqueue(data []byte) error {
 
 // Run should be called in a new goroutine
 func (b *Accumulator) Run(ctx context.Context) {
+	b.doneChanMu.Lock()
 	b.doneChan = make(chan struct{})
 	defer close(b.doneChan)
+	b.doneChanMu.Unlock()
 
 	b.l.Info("Starting non-blocking accumulator")
 	for {
@@ -118,6 +121,8 @@ func (b *Accumulator) Run(ctx context.Context) {
 }
 
 func (b *Accumulator) Done() <-chan struct{} {
+	b.doneChanMu.Lock()
+	defer b.doneChanMu.Unlock()
 	return b.doneChan
 }
 
