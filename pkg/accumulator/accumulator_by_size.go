@@ -10,6 +10,7 @@ import (
 
 	"github.com/jademcosta/jiboia/pkg/circuitbreaker"
 	"github.com/jademcosta/jiboia/pkg/domain"
+	"github.com/jademcosta/jiboia/pkg/domain/flow"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -21,7 +22,7 @@ const (
 )
 
 type AccumulatorBySize struct {
-	l                *slog.Logger
+	logg             *slog.Logger
 	limitOfBytes     int
 	separator        []byte
 	separatorLen     int
@@ -38,26 +39,29 @@ type AccumulatorBySize struct {
 
 func NewAccumulatorBySize(
 	flowName string,
-	l *slog.Logger,
+	logg *slog.Logger,
 	limitOfBytes int,
 	separator []byte,
 	queueCapacity int,
 	next domain.DataFlow,
 	cb circuitbreaker.CircuitBreaker,
-	metricRegistry *prometheus.Registry) *AccumulatorBySize {
+	metricRegistry *prometheus.Registry,
+	currentTimeProvider func() time.Time,
+	forceFlushAfter time.Duration,
+) flow.DataFlowRunnable {
 
 	if limitOfBytes <= 1 {
-		l.Error("limit of bytes in accumulator should be >= 2", "flow", flowName)
+		logg.Error("limit of bytes in accumulator should be >= 2", "flow", flowName)
 		panic("limit of bytes in accumulator should be >= 2")
 	}
 
 	if len(separator) >= limitOfBytes {
-		l.Error("separator length in bytes should be smaller than limit", "flow", flowName)
+		logg.Error("separator length in bytes should be smaller than limit", "flow", flowName)
 		panic("separator length in bytes should be smaller than limit")
 	}
 
 	if queueCapacity < MinQueueCapacity {
-		l.Error(fmt.Sprintf("the accumulator capacity cannot be less than %d", //TODO: move this validation to config
+		logg.Error(fmt.Sprintf("the accumulator capacity cannot be less than %d", //TODO: move this validation to config
 			MinQueueCapacity), "flow", flowName)
 		panic(fmt.Sprintf("the accumulator capacity cannot be less than %d", MinQueueCapacity))
 	}
@@ -66,7 +70,7 @@ func NewAccumulatorBySize(
 	metrics.queueCapacity(queueCapacity)
 
 	return &AccumulatorBySize{
-		l:                l.With(logger.ComponentKey, ComponentName),
+		logg:             logg.With(logger.ComponentKey, ComponentName),
 		limitOfBytes:     limitOfBytes,
 		separator:        separator,
 		separatorLen:     len(separator),
@@ -105,16 +109,16 @@ func (acc *AccumulatorBySize) Run(ctx context.Context) {
 	defer close(acc.doneChan)
 	acc.doneChanMu.Unlock()
 
-	acc.l.Info("Starting non-blocking accumulator")
+	acc.logg.Info("Starting non-blocking accumulator")
 	for {
 		select {
 		case data := <-acc.internalDataChan:
 			acc.append(data)
 			acc.updateEnqueuedItemsMetric()
 		case <-ctx.Done():
-			acc.l.Debug("accumulator starting shutdown")
+			acc.logg.Debug("accumulator starting shutdown")
 			acc.shutdown()
-			acc.l.Info("accumulator shutdown finished")
+			acc.logg.Info("accumulator shutdown finished")
 			return
 		}
 	}

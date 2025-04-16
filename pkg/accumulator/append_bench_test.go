@@ -47,8 +47,8 @@ func BenchmarkAccumulatorAppend(b *testing.B) {
 		l := logger.NewDummy()
 		acc := NewAccumulatorBySize(
 			"someflow", l, (10 * tc.payloadSize), []byte("_n_"), 50,
-			&dummyDataEnqueuerMock{}, circuitbreaker.NewDummyCircuitBreaker(), prometheus.NewRegistry(),
-		)
+			&dummyDataEnqueuerMock{}, circuitbreaker.NewDummyCircuitBreaker(), prometheus.NewRegistry(), time.Now, 1*time.Minute,
+		).(*AccumulatorBySize)
 
 		b.Run(fmt.Sprintf("input_size_%d", tc.payloadSize), func(b *testing.B) {
 			for n := 0; n < b.N; n++ {

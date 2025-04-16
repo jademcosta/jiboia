@@ -10,6 +10,7 @@ import (
 
 	"github.com/jademcosta/jiboia/pkg/circuitbreaker"
 	"github.com/jademcosta/jiboia/pkg/domain"
+	"github.com/jademcosta/jiboia/pkg/domain/flow"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -18,7 +19,7 @@ import (
 const tickerInterval = 1 * time.Second
 
 type AccumulatorByTimeAndSize struct {
-	l                   *slog.Logger
+	logg                *slog.Logger
 	limitOfBytes        int
 	separator           []byte
 	separatorLen        int
@@ -48,7 +49,7 @@ func NewAccumulatorByTimeAndSize(
 	metricRegistry *prometheus.Registry,
 	currentTimeProvider func() time.Time,
 	forceFlushAfter time.Duration,
-) *AccumulatorByTimeAndSize {
+) flow.DataFlowRunnable {
 
 	if limitOfBytes <= 1 {
 		logg.Error("limit of bytes in accumulator should be >= 2", "flow", flowName)
@@ -70,7 +71,7 @@ func NewAccumulatorByTimeAndSize(
 	metrics.queueCapacity(queueCapacity)
 
 	return &AccumulatorByTimeAndSize{
-		l:                   logg.With(logger.ComponentKey, ComponentName),
+		logg:                logg.With(logger.ComponentKey, ComponentName),
 		limitOfBytes:        limitOfBytes,
 		separator:           separator,
 		separatorLen:        len(separator),
@@ -112,20 +113,20 @@ func (acc *AccumulatorByTimeAndSize) Run(ctx context.Context) {
 	defer close(acc.doneChan)
 	acc.doneChanMu.Unlock()
 
-	acc.l.Info("Starting non-blocking accumulator")
+	acc.logg.Info("Starting non-blocking accumulator")
 	for {
 		select {
 		case data := <-acc.internalDataChan:
 			acc.append(data)
 			acc.updateEnqueuedItemsMetric()
 		case <-ctx.Done():
-			acc.l.Debug("accumulator starting shutdown")
+			acc.logg.Debug("accumulator starting shutdown")
 			acc.shutdown()
-			acc.l.Info("accumulator shutdown finished")
+			acc.logg.Info("accumulator shutdown finished")
 			return
 		case currentTime := <-acc.timeCheckTicker.C:
 			if !acc.oldestDataTime.IsZero() && currentTime.Sub(acc.oldestDataTime) >= acc.forceFlushAfter {
-				acc.l.Debug("flushing data due to timeout")
+				acc.logg.Debug("flushing data due to timeout")
 				acc.flush()
 			}
 		}

@@ -208,7 +208,9 @@ func createAccumulator(
 		c.QueueCapacity,
 		uploader,
 		cb,
-		registry)
+		registry,
+		time.Now,
+		time.Minute) //FIXME wrong duration
 }
 
 func createFlows(
