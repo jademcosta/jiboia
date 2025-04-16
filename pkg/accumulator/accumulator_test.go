@@ -70,14 +70,14 @@ func TestPanicsIfLimitIsOneOrLess(t *testing.T) {
 	separator := []byte("")
 
 	assert.Panics(t, func() {
-		accumulator.New("someflow", l, 0, separator, 30, next, dummyCB, prometheus.NewRegistry())
+		accumulator.NewAccumulatorBySize("someflow", l, 0, separator, 30, next, dummyCB, prometheus.NewRegistry())
 	}, "limit of bytes 0 is not allowed")
 	assert.Panics(t, func() {
-		accumulator.New("someflow", l, 1, separator, 30, next, dummyCB, prometheus.NewRegistry())
+		accumulator.NewAccumulatorBySize("someflow", l, 1, separator, 30, next, dummyCB, prometheus.NewRegistry())
 	}, "limit of bytes 1 is not allowed")
 
 	assert.NotPanics(t, func() {
-		accumulator.New("someflow", l, 2, separator, 30, next, dummyCB, prometheus.NewRegistry())
+		accumulator.NewAccumulatorBySize("someflow", l, 2, separator, 30, next, dummyCB, prometheus.NewRegistry())
 	}, "limit of bytes 2 is allowed")
 }
 
@@ -89,14 +89,14 @@ func TestPanicsIfSeparatorLenEqualOrBiggerThanLimit(t *testing.T) {
 	separator := []byte("abcdefghij")
 
 	assert.Panics(t, func() {
-		accumulator.New("someflow", l, limitOfBytes, separator, 30, next, dummyCB, prometheus.NewRegistry())
+		accumulator.NewAccumulatorBySize("someflow", l, limitOfBytes, separator, 30, next, dummyCB, prometheus.NewRegistry())
 	}, "separator size == limit is not allowed")
 
 	limitOfBytes = 10
 	separator = []byte("abcdefghijk")
 
 	assert.Panics(t, func() {
-		accumulator.New("someflow", l, limitOfBytes, separator, 30, next, dummyCB, prometheus.NewRegistry())
+		accumulator.NewAccumulatorBySize("someflow", l, limitOfBytes, separator, 30, next, dummyCB, prometheus.NewRegistry())
 	}, "separator size > limit is not allowed")
 }
 
@@ -107,14 +107,14 @@ func TestPanicsIfQueueSizeIsTwoOrLess(t *testing.T) {
 	bytesSizeLimit := 11
 
 	assert.Panics(t, func() {
-		accumulator.New("someflow", l, bytesSizeLimit, separator, 0, next, dummyCB, prometheus.NewRegistry())
+		accumulator.NewAccumulatorBySize("someflow", l, bytesSizeLimit, separator, 0, next, dummyCB, prometheus.NewRegistry())
 	}, "queue size of 0 is not allowed")
 	assert.Panics(t, func() {
-		accumulator.New("someflow", l, bytesSizeLimit, separator, 1, next, dummyCB, prometheus.NewRegistry())
+		accumulator.NewAccumulatorBySize("someflow", l, bytesSizeLimit, separator, 1, next, dummyCB, prometheus.NewRegistry())
 	}, "queue size of 1 is not allowed")
 
 	assert.NotPanics(t, func() {
-		accumulator.New("someflow", l, bytesSizeLimit, separator, 2, next, dummyCB, prometheus.NewRegistry())
+		accumulator.NewAccumulatorBySize("someflow", l, bytesSizeLimit, separator, 2, next, dummyCB, prometheus.NewRegistry())
 	}, "queue size of 2 should be allowed")
 }
 
@@ -139,7 +139,7 @@ func TestItDoesNotPassDataIfLimitNotReached(t *testing.T) {
 		next := &dataEnqueuerMock{dataWritten: make([][]byte, 0)}
 		ctx, cancel := context.WithCancel(context.Background())
 
-		sut := accumulator.New("someflow", l, tc.limitBytes, tc.separator, queueCapacity, next, dummyCB, prometheus.NewRegistry())
+		sut := accumulator.NewAccumulatorBySize("someflow", l, tc.limitBytes, tc.separator, queueCapacity, next, dummyCB, prometheus.NewRegistry())
 
 		go sut.Run(ctx)
 		err := sut.Enqueue(tc.data)
@@ -203,7 +203,7 @@ func TestWritesTheDataIfSizeEqualOrBiggerThanCapacity(t *testing.T) {
 		next := &dataEnqueuerMock{dataWritten: make([][]byte, 0)}
 		ctx, cancel := context.WithCancel(context.Background())
 
-		sut := accumulator.New("someflow", l, tc.limitBytes, tc.separator, queueCapacity, next, dummyCB, prometheus.NewRegistry())
+		sut := accumulator.NewAccumulatorBySize("someflow", l, tc.limitBytes, tc.separator, queueCapacity, next, dummyCB, prometheus.NewRegistry())
 
 		go sut.Run(ctx)
 		err := sut.Enqueue(tc.data)
@@ -301,7 +301,7 @@ func TestWritesTheDataWhenLimitIsHitAfterMultipleCalls(t *testing.T) {
 		next := &dataEnqueuerMock{dataWritten: make([][]byte, 0)}
 		ctx, cancel := context.WithCancel(context.Background())
 
-		sut := accumulator.New("someflow", l, tc.limitBytes, tc.separator, queueCapacity, next, dummyCB, prometheus.NewRegistry())
+		sut := accumulator.NewAccumulatorBySize("someflow", l, tc.limitBytes, tc.separator, queueCapacity, next, dummyCB, prometheus.NewRegistry())
 
 		go sut.Run(ctx)
 		for _, data := range tc.data {
@@ -343,7 +343,7 @@ func TestRejectsDataIfAtFullCapacity(t *testing.T) {
 	for _, tc := range testCases {
 		next := &dataEnqueuerMock{dataWritten: make([][]byte, 0)}
 
-		sut := accumulator.New("someflow", l, limitBytes, tc.separator, tc.queueCapacity, next, dummyCB, prometheus.NewRegistry())
+		sut := accumulator.NewAccumulatorBySize("someflow", l, limitBytes, tc.separator, tc.queueCapacity, next, dummyCB, prometheus.NewRegistry())
 
 		for i := 0; i < tc.dataEnqueueCount; i++ {
 			_ = sut.Enqueue([]byte(fmt.Sprint(i)))
@@ -373,7 +373,7 @@ func TestTheCapacityIsFixed(t *testing.T) {
 	queueCapacity := 2
 	dataEnqueueCount := accumulator.MinQueueCapacity
 
-	sut := accumulator.New("someflow", l, limitBytes, separator, queueCapacity, next, dummyCB, prometheus.NewRegistry())
+	sut := accumulator.NewAccumulatorBySize("someflow", l, limitBytes, separator, queueCapacity, next, dummyCB, prometheus.NewRegistry())
 
 	for i := 0; i < dataEnqueueCount; i++ {
 		err := sut.Enqueue([]byte(fmt.Sprint(i)))
@@ -426,7 +426,7 @@ func TestSendsPendingDataWhenContextIsCancelled(t *testing.T) {
 
 		ctx, cancel := context.WithCancel(context.Background())
 
-		sut := accumulator.New("someflow", l, limitBytes, separator, queueCapacity, next, dummyCB, prometheus.NewRegistry())
+		sut := accumulator.NewAccumulatorBySize("someflow", l, limitBytes, separator, queueCapacity, next, dummyCB, prometheus.NewRegistry())
 
 		go sut.Run(ctx)
 
@@ -462,7 +462,7 @@ func TestEnqueuesErrorsAfterContextCancelled(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	sut := accumulator.New("someflow", l, limitBytes, separator, queueCapacity, next, dummyCB, prometheus.NewRegistry())
+	sut := accumulator.NewAccumulatorBySize("someflow", l, limitBytes, separator, queueCapacity, next, dummyCB, prometheus.NewRegistry())
 
 	go sut.Run(ctx)
 	time.Sleep(1 * time.Millisecond)
@@ -499,7 +499,7 @@ func TestCallindEnqueueUsesACircuitBreakerAndRetriesOnFailure(t *testing.T) {
 	limitOfBytes := 3
 	separator := []byte("")
 
-	sut := accumulator.New("someflow", l, limitOfBytes, separator, queueCapacity, next, cb, registry)
+	sut := accumulator.NewAccumulatorBySize("someflow", l, limitOfBytes, separator, queueCapacity, next, cb, registry)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go sut.Run(ctx)
@@ -556,7 +556,7 @@ func TestItStopsRetryingOnceItSendsTheData(t *testing.T) {
 	limitOfBytes := 3
 	separator := []byte("")
 
-	sut := accumulator.New("someflow", l, limitOfBytes, separator, queueCapacity, next, cb, registry)
+	sut := accumulator.NewAccumulatorBySize("someflow", l, limitOfBytes, separator, queueCapacity, next, cb, registry)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go sut.Run(ctx)

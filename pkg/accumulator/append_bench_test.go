@@ -45,7 +45,7 @@ func randSeq(n int) string {
 func BenchmarkAccumulatorAppend(b *testing.B) {
 	for _, tc := range inputTable {
 		l := logger.NewDummy()
-		acc := New(
+		acc := NewAccumulatorBySize(
 			"someflow", l, (10 * tc.payloadSize), []byte("_n_"), 50,
 			&dummyDataEnqueuerMock{}, circuitbreaker.NewDummyCircuitBreaker(), prometheus.NewRegistry(),
 		)
