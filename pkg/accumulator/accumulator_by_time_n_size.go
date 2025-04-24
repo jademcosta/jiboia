@@ -18,7 +18,7 @@ import (
 // The time between each check of the oldest data in the accumulator
 const tickerInterval = 1 * time.Second
 
-type AccumulatorByTimeAndSize struct {
+type ByTimeAndSize struct {
 	logg                *slog.Logger
 	limitOfBytes        int
 	separator           []byte
@@ -70,7 +70,7 @@ func NewAccumulatorByTimeAndSize(
 	metrics := newMetricCollector(flowName, metricRegistry)
 	metrics.queueCapacity(queueCapacity)
 
-	return &AccumulatorByTimeAndSize{
+	return &ByTimeAndSize{
 		logg:                logg.With(logger.ComponentKey, ComponentName),
 		limitOfBytes:        limitOfBytes,
 		separator:           separator,
@@ -86,7 +86,7 @@ func NewAccumulatorByTimeAndSize(
 	}
 }
 
-func (acc *AccumulatorByTimeAndSize) Enqueue(data []byte) error {
+func (acc *ByTimeAndSize) Enqueue(data []byte) error {
 	acc.shutdownMutex.RLock()
 	defer acc.shutdownMutex.RUnlock()
 	if acc.shuttingDown {
@@ -107,7 +107,7 @@ func (acc *AccumulatorByTimeAndSize) Enqueue(data []byte) error {
 }
 
 // Run should be called in a new goroutine
-func (acc *AccumulatorByTimeAndSize) Run(ctx context.Context) {
+func (acc *ByTimeAndSize) Run(ctx context.Context) {
 	acc.doneChanMu.Lock()
 	acc.doneChan = make(chan struct{})
 	defer close(acc.doneChan)
@@ -133,13 +133,13 @@ func (acc *AccumulatorByTimeAndSize) Run(ctx context.Context) {
 	}
 }
 
-func (acc *AccumulatorByTimeAndSize) Done() <-chan struct{} {
+func (acc *ByTimeAndSize) Done() <-chan struct{} {
 	acc.doneChanMu.Lock()
 	defer acc.doneChanMu.Unlock()
 	return acc.doneChan
 }
 
-func (acc *AccumulatorByTimeAndSize) append(data []byte) {
+func (acc *ByTimeAndSize) append(data []byte) {
 
 	dataLen := len(data)
 	noData := dataLen == 0
@@ -170,7 +170,7 @@ func (acc *AccumulatorByTimeAndSize) append(data []byte) {
 	}
 }
 
-func (acc *AccumulatorByTimeAndSize) flush() {
+func (acc *ByTimeAndSize) flush() {
 	chunksCount := len(acc.current)
 	if chunksCount == 0 {
 		return
@@ -195,7 +195,7 @@ func (acc *AccumulatorByTimeAndSize) flush() {
 	acc.oldestDataTime = time.Time{}
 }
 
-func (acc *AccumulatorByTimeAndSize) currentBufferLen() int {
+func (acc *ByTimeAndSize) currentBufferLen() int {
 	// TODO: save this result in a variable so we don't call it multiple times?
 	separatorLen := acc.separatorLen
 	var total int
@@ -208,7 +208,7 @@ func (acc *AccumulatorByTimeAndSize) currentBufferLen() int {
 	return total
 }
 
-func (acc *AccumulatorByTimeAndSize) enqueueOnNext(data []byte) {
+func (acc *ByTimeAndSize) enqueueOnNext(data []byte) {
 	dataSize := len(data)
 
 	_, err := acc.circBreaker.Execute(func() (interface{}, error) {
@@ -226,12 +226,12 @@ func (acc *AccumulatorByTimeAndSize) enqueueOnNext(data []byte) {
 	acc.metrics.increaseNextCounter()
 }
 
-func (acc *AccumulatorByTimeAndSize) updateEnqueuedItemsMetric() {
+func (acc *ByTimeAndSize) updateEnqueuedItemsMetric() {
 	itemsCount := len(acc.internalDataChan)
 	acc.metrics.enqueuedItems(itemsCount)
 }
 
-func (acc *AccumulatorByTimeAndSize) shutdown() {
+func (acc *ByTimeAndSize) shutdown() {
 	acc.setShutdown()
 	close(acc.internalDataChan)
 
@@ -248,7 +248,7 @@ func (acc *AccumulatorByTimeAndSize) shutdown() {
 	acc.flush()
 }
 
-func (acc *AccumulatorByTimeAndSize) setShutdown() {
+func (acc *ByTimeAndSize) setShutdown() {
 	acc.shutdownMutex.Lock()
 	defer acc.shutdownMutex.Unlock()
 	acc.shuttingDown = true

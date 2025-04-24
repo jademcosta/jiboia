@@ -21,7 +21,7 @@ const (
 	ComponentName        = "accumulator"
 )
 
-type AccumulatorBySize struct {
+type BySize struct {
 	logg             *slog.Logger
 	limitOfBytes     int
 	separator        []byte
@@ -46,8 +46,8 @@ func NewAccumulatorBySize(
 	next domain.DataFlow,
 	cb circuitbreaker.CircuitBreaker,
 	metricRegistry *prometheus.Registry,
-	currentTimeProvider func() time.Time,
-	forceFlushAfter time.Duration,
+	_ func() time.Time,
+	_ time.Duration,
 ) flow.DataFlowRunnable {
 
 	if limitOfBytes <= 1 {
@@ -69,7 +69,7 @@ func NewAccumulatorBySize(
 	metrics := newMetricCollector(flowName, metricRegistry)
 	metrics.queueCapacity(queueCapacity)
 
-	return &AccumulatorBySize{
+	return &BySize{
 		logg:             logg.With(logger.ComponentKey, ComponentName),
 		limitOfBytes:     limitOfBytes,
 		separator:        separator,
@@ -82,7 +82,7 @@ func NewAccumulatorBySize(
 	}
 }
 
-func (acc *AccumulatorBySize) Enqueue(data []byte) error {
+func (acc *BySize) Enqueue(data []byte) error {
 	acc.shutdownMutex.RLock()
 	defer acc.shutdownMutex.RUnlock()
 	if acc.shuttingDown {
@@ -103,7 +103,7 @@ func (acc *AccumulatorBySize) Enqueue(data []byte) error {
 }
 
 // Run should be called in a new goroutine
-func (acc *AccumulatorBySize) Run(ctx context.Context) {
+func (acc *BySize) Run(ctx context.Context) {
 	acc.doneChanMu.Lock()
 	acc.doneChan = make(chan struct{})
 	defer close(acc.doneChan)
@@ -124,13 +124,13 @@ func (acc *AccumulatorBySize) Run(ctx context.Context) {
 	}
 }
 
-func (acc *AccumulatorBySize) Done() <-chan struct{} {
+func (acc *BySize) Done() <-chan struct{} {
 	acc.doneChanMu.Lock()
 	defer acc.doneChanMu.Unlock()
 	return acc.doneChan
 }
 
-func (acc *AccumulatorBySize) append(data []byte) {
+func (acc *BySize) append(data []byte) {
 
 	dataLen := len(data)
 
@@ -162,7 +162,7 @@ func (acc *AccumulatorBySize) append(data []byte) {
 	}
 }
 
-func (acc *AccumulatorBySize) flush() {
+func (acc *BySize) flush() {
 	chunksCount := len(acc.current)
 	if chunksCount == 0 {
 		return
@@ -187,7 +187,7 @@ func (acc *AccumulatorBySize) flush() {
 
 }
 
-func (acc *AccumulatorBySize) currentBufferLen() int {
+func (acc *BySize) currentBufferLen() int {
 	// TODO: save this result in a variable so we don't call it multiple times?
 	separatorLen := acc.separatorLen
 	var total int
@@ -200,7 +200,7 @@ func (acc *AccumulatorBySize) currentBufferLen() int {
 	return total
 }
 
-func (acc *AccumulatorBySize) enqueueOnNext(data []byte) {
+func (acc *BySize) enqueueOnNext(data []byte) {
 	dataSize := len(data)
 
 	_, err := acc.circBreaker.Execute(func() (interface{}, error) {
@@ -218,12 +218,12 @@ func (acc *AccumulatorBySize) enqueueOnNext(data []byte) {
 	acc.metrics.increaseNextCounter()
 }
 
-func (acc *AccumulatorBySize) updateEnqueuedItemsMetric() {
+func (acc *BySize) updateEnqueuedItemsMetric() {
 	itemsCount := len(acc.internalDataChan)
 	acc.metrics.enqueuedItems(itemsCount)
 }
 
-func (acc *AccumulatorBySize) shutdown() {
+func (acc *BySize) shutdown() {
 	acc.setShutdown()
 	close(acc.internalDataChan)
 
@@ -240,7 +240,7 @@ func (acc *AccumulatorBySize) shutdown() {
 	acc.flush()
 }
 
-func (acc *AccumulatorBySize) setShutdown() {
+func (acc *BySize) setShutdown() {
 	acc.shutdownMutex.Lock()
 	defer acc.shutdownMutex.Unlock()
 	acc.shuttingDown = true
