@@ -192,7 +192,7 @@ func createExternalQueue(
 func createAccumulator(
 	flowName string, logger *slog.Logger, c config.AccumulatorConfig,
 	registry *prometheus.Registry, uploader domain.DataFlow,
-) *accumulator.AccumulatorBySize {
+) flow.DataFlowRunnable {
 	cb := createCircuitBreaker(registry, logger, flowName, c.CircuitBreaker)
 
 	sizeAsBytes, err := c.SizeAsBytes()
@@ -200,17 +200,17 @@ func createAccumulator(
 		panic(fmt.Errorf("error parsing accumulator size: %w", err))
 	}
 
-	return accumulator.NewAccumulatorBySize(
+	return accumulator.From(
+		c,
 		flowName,
 		logger,
 		int(sizeAsBytes),
-		[]byte(c.Separator),
-		c.QueueCapacity,
 		uploader,
 		cb,
 		registry,
 		time.Now,
-		time.Minute) //FIXME wrong duration
+		time.Duration(c.ForceFlushAfterSeconds)*time.Second,
+	)
 }
 
 func createFlows(
