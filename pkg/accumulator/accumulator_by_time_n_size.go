@@ -16,7 +16,10 @@ import (
 )
 
 // The time between each check of the oldest data in the accumulator
-const tickerInterval = 1 * time.Second
+const (
+	tickerInterval     = 1 * time.Second
+	byTimeoutFlushType = "time"
+)
 
 type ByTimeAndSize struct {
 	logg                *slog.Logger
@@ -127,7 +130,7 @@ func (acc *ByTimeAndSize) Run(ctx context.Context) {
 		case currentTime := <-acc.timeCheckTicker.C:
 			if !acc.oldestDataTime.IsZero() && currentTime.Sub(acc.oldestDataTime) >= acc.forceFlushAfter {
 				acc.logg.Debug("flushing data due to timeout")
-				acc.flush()
+				acc.flush(byTimeoutFlushType)
 			}
 		}
 	}
@@ -150,7 +153,7 @@ func (acc *ByTimeAndSize) append(data []byte) {
 	acc.metrics.incDataInBytesBy(dataLen)
 	receivedDataTooBigForBuffer := dataLen >= acc.limitOfBytes
 	if receivedDataTooBigForBuffer {
-		acc.flush()
+		acc.flush(bySizeFlushType)
 		acc.enqueueOnNext(data)
 
 		return
@@ -159,18 +162,18 @@ func (acc *ByTimeAndSize) append(data []byte) {
 	bufferLenAfterAppend := (acc.currentBufferLen() + acc.separatorLen + dataLen)
 	appendingDataWillViolateSizeLimit := bufferLenAfterAppend > acc.limitOfBytes
 	if appendingDataWillViolateSizeLimit {
-		acc.flush()
+		acc.flush(bySizeFlushType)
 	}
 
 	acc.current = append(acc.current, data)
 	acc.oldestDataTime = acc.currentTimeProvider()
 
 	if bufferLenAfterAppend == acc.limitOfBytes {
-		acc.flush()
+		acc.flush(bySizeFlushType)
 	}
 }
 
-func (acc *ByTimeAndSize) flush() {
+func (acc *ByTimeAndSize) flush(typeOfFlush string) {
 	chunksCount := len(acc.current)
 	if chunksCount == 0 {
 		return
@@ -193,6 +196,7 @@ func (acc *ByTimeAndSize) flush() {
 	acc.enqueueOnNext(mergedData)
 	acc.current = acc.current[:0]
 	acc.oldestDataTime = time.Time{}
+	acc.metrics.increaseFlushCounter(typeOfFlush)
 }
 
 func (acc *ByTimeAndSize) currentBufferLen() int {
@@ -245,7 +249,7 @@ func (acc *ByTimeAndSize) shutdown() {
 		acc.updateEnqueuedItemsMetric()
 	}
 
-	acc.flush()
+	acc.flush(byShutdownFlushType)
 }
 
 func (acc *ByTimeAndSize) setShutdown() {

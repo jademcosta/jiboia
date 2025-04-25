@@ -19,6 +19,8 @@ const (
 	MinQueueCapacity     = 2
 	CBRetrySleepDuration = 10 * time.Millisecond // TODO: fine tune this value
 	ComponentName        = "accumulator"
+	bySizeFlushType      = "by_size"
+	byShutdownFlushType  = "shutdown"
 )
 
 type BySize struct {
@@ -142,7 +144,7 @@ func (acc *BySize) append(data []byte) {
 	acc.metrics.incDataInBytesBy(dataLen)
 	receivedDataTooBigForBuffer := dataLen >= acc.limitOfBytes
 	if receivedDataTooBigForBuffer {
-		acc.flush()
+		acc.flush(bySizeFlushType)
 		acc.enqueueOnNext(data)
 
 		return
@@ -152,17 +154,17 @@ func (acc *BySize) append(data []byte) {
 	appendingDataWillViolateSizeLimit := bufferLenAfterAppend > acc.limitOfBytes
 
 	if appendingDataWillViolateSizeLimit {
-		acc.flush()
+		acc.flush(bySizeFlushType)
 	}
 
 	acc.current = append(acc.current, data)
 
 	if bufferLenAfterAppend == acc.limitOfBytes {
-		acc.flush()
+		acc.flush(bySizeFlushType)
 	}
 }
 
-func (acc *BySize) flush() {
+func (acc *BySize) flush(typeOfFlush string) {
 	chunksCount := len(acc.current)
 	if chunksCount == 0 {
 		return
@@ -184,7 +186,7 @@ func (acc *BySize) flush() {
 
 	acc.enqueueOnNext(mergedData)
 	acc.current = acc.current[:0]
-
+	acc.metrics.increaseFlushCounter(typeOfFlush)
 }
 
 func (acc *BySize) currentBufferLen() int {
@@ -237,7 +239,7 @@ func (acc *BySize) shutdown() {
 		acc.updateEnqueuedItemsMetric()
 	}
 
-	acc.flush()
+	acc.flush(byShutdownFlushType)
 }
 
 func (acc *BySize) setShutdown() {

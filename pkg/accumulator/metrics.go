@@ -9,6 +9,7 @@ import (
 const FlowMetricKey string = "flow"
 
 var ensureMetricRegisteringOnce sync.Once
+
 var enqueueCounter *prometheus.CounterVec
 var nextCounter *prometheus.CounterVec
 var capacityGauge *prometheus.GaugeVec
@@ -18,6 +19,7 @@ var dataSizeOutBytesCounter *prometheus.CounterVec
 var dataSizeInKBsCounter *prometheus.CounterVec
 var dataSizeOutKBsCounter *prometheus.CounterVec
 var enqueueFailed *prometheus.CounterVec
+var flushCounter *prometheus.CounterVec
 
 type metricCollector struct {
 	flowName string
@@ -108,6 +110,15 @@ func newMetricCollector(flowName string, metricRegistry *prometheus.Registry) *m
 			},
 			[]string{FlowMetricKey})
 
+		flushCounter = prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Namespace: "jiboia",
+				Subsystem: ComponentName,
+				Name:      "flush_total",
+				Help:      "The total number of times that data was flushed. Not that this number might not be the same as enqueue on next, as not all data sent forward is due to flushing",
+			},
+			[]string{FlowMetricKey, "flush_type"})
+
 		metricRegistry.MustRegister(
 			enqueueCounter,
 			nextCounter,
@@ -117,7 +128,9 @@ func newMetricCollector(flowName string, metricRegistry *prometheus.Registry) *m
 			dataSizeOutBytesCounter,
 			dataSizeInKBsCounter,
 			dataSizeOutKBsCounter,
-			enqueueFailed)
+			enqueueFailed,
+			flushCounter,
+		)
 	})
 
 	return &metricCollector{
@@ -157,4 +170,8 @@ func (m *metricCollector) incDataOutBytesBy(size int) {
 
 func (m *metricCollector) incEnqueueFailed() {
 	enqueueFailed.WithLabelValues(m.flowName).Inc()
+}
+
+func (m *metricCollector) increaseFlushCounter(flushType string) {
+	flushCounter.WithLabelValues(m.flowName, flushType).Inc()
 }
