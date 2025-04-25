@@ -122,6 +122,13 @@ flows:
         # accepting calls), how long it will take to try to accept calls again. If you set it as
         # zero it will be automatically set to the default, which is 100.
         open_interval_in_ms: 100
+        # [Optional] if set, besides accumulating based on the size, it will also
+        # accumulate based on the time. Setting this, means it will flush the data
+        # being accumulated if the oldest item in the queue is older than this time.
+        # This is useful for the cases where the flow receives
+        # data in bursts, then receives small amounts of data for a while, and then bursts again
+        # (in loop). It accepts only seconds as time unit.
+        force_flush_after_seconds: 1
     external_queue:
       # Available values: noop, sqs. `noop` is for when you don't want to use any queue
       # (maybe because you just want to upload data into object storage)

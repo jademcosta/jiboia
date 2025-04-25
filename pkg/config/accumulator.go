@@ -2,15 +2,22 @@ package config
 
 import "fmt"
 
+const dontAccumulateByTime = 0
+
 type AccumulatorConfig struct {
-	Size           string               `yaml:"size"`
-	Separator      string               `yaml:"separator"`
-	QueueCapacity  int                  `yaml:"queue_capacity"` //TODO: validate and test
-	CircuitBreaker CircuitBreakerConfig `yaml:"circuit_breaker"`
+	Size                   string               `yaml:"size"`
+	Separator              string               `yaml:"separator"`
+	QueueCapacity          int                  `yaml:"queue_capacity"` //TODO: validate and test
+	CircuitBreaker         CircuitBreakerConfig `yaml:"circuit_breaker"`
+	ForceFlushAfterSeconds int                  `yaml:"force_flush_after_seconds"`
 }
 
 func (accConf AccumulatorConfig) SizeAsBytes() (int64, error) {
 	return ToBytes(accConf.Size)
+}
+
+func (accConf AccumulatorConfig) HasForceFlushPeriod() bool {
+	return accConf.ForceFlushAfterSeconds > dontAccumulateByTime
 }
 
 func (accConf AccumulatorConfig) fillDefaultValues() AccumulatorConfig {
