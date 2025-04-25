@@ -4,6 +4,8 @@ Jiboia is an HTTP API that is able to move data into object storages for asynchr
 
 An example of usage is if you want to ingest data into object storage but you want to do it using HTTP. You might decide to merge the data into larger chunks, which will increase the time it takes for data to be available but will reduce costs of the storage. Jiboia can do this, it is called accumulator!
 
+It looks like a "pipeline" type of project, and it is! But it has less features, which allow it to be more performant.
+
 You can define multiple "flows" of ingestion, and have a specific config for each one. The simplest config you can have is:
 
 ```yaml
@@ -21,7 +23,9 @@ flow:
 
 With this config you'll have 5 workers uploading data that is being sent. If the internal queues get full, Jiboia will deny more work until it has space again. Jiboia stores the data on memory, but if you configure it correctly it will be always uploading data, and this means data will sit for a very small time (less than a second) on memory.
 
-You can have as many flows as you want. The only limitation is how much memopry you want Jiboia to operate with.
+The data will be able to be ingested on `http://localhost:9199/my-flow/async_ingestion` and will be sent into your bucket (considering that you have AWS keys configured on your machine).
+
+You can have as many flows as you want, the only limitation is how much memopry you want Jiboia to operate with.
 
 Right now it only support AWS S3 but the plan is to support more object storages in the future.
 
