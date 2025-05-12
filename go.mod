@@ -3,11 +3,11 @@ module github.com/jademcosta/jiboia
 go 1.24
 
 require (
-	github.com/aws/aws-sdk-go v1.55.6
+	github.com/aws/aws-sdk-go v1.55.7
 	github.com/go-chi/chi/v5 v5.2.1
 	github.com/klauspost/compress v1.18.0
 	github.com/oklog/run v1.1.0
-	github.com/prometheus/client_golang v1.21.1
+	github.com/prometheus/client_golang v1.22.0
 	github.com/sony/gobreaker v1.0.0
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/otel v1.35.0
