@@ -51,7 +51,7 @@ func NewAPI(
 	registerDefaultMiddlewares(api, sizeLimit, logg, metricRegistry, tracer)
 
 	RegisterIngestingRoutes(api, apiVersion, flws)
-	RegisterOperatinalRoutes(api, appVersion, metricRegistry)
+	RegisterOperatinalRoutes(api, appVersion, metricRegistry, conf.O11y.Profiling.Enabled)
 
 	return api
 }

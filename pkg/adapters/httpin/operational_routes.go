@@ -9,7 +9,12 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func RegisterOperatinalRoutes(api *API, version string, metricRegistry *prometheus.Registry) {
+func RegisterOperatinalRoutes(
+	api *API,
+	version string,
+	metricRegistry *prometheus.Registry,
+	registerPprof bool,
+) {
 	metricHandler := promhttp.HandlerFor(metricRegistry, promhttp.HandlerOpts{Registry: metricRegistry})
 
 	api.mux.Get("/version", versionHandler(version))
@@ -24,7 +29,9 @@ func RegisterOperatinalRoutes(api *API, version string, metricRegistry *promethe
 		//TODO: This can be used to rule the pod out of LB when it is overloaded?
 	})
 
-	api.mux.Mount("/debug", middleware.Profiler())
+	if registerPprof {
+		api.mux.Mount("/debug", middleware.Profiler())
+	}
 }
 
 func versionHandler(version string) http.HandlerFunc {
