@@ -1,7 +1,7 @@
 package config
 
 type ProfilingConfig struct {
-	Enabled bool `yaml:"enable_pprof"`
+	Enabled bool `yaml:"enabled_pprof"`
 }
 
 func (profileConf ProfilingConfig) fillDefaults() ProfilingConfig {
