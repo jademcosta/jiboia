@@ -19,6 +19,12 @@ o11y:
     # [optional] The format of logs. Only JSON is allowed right now, so you can forget about this field :)
     # Default is `json`.
     format: json
+  profiling:
+    # [optional] Set this to `true` if you want to enable the pprof
+    # endpoints. Default is `false` (meaning the pprof endpoint will NOT be available).
+    # This endpoint is useful for debugging and profiling the service.
+    # It is available at /debug/pprof.
+    enable_pprof: false
 
 # [optional] Set this to `true` if you want to disable go max procs "auto set" feature.
 # Default is `false` (meaning the automaxprocs will be turned on). Nonetheless, the lib respect
