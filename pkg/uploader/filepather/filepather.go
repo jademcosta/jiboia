@@ -11,7 +11,7 @@ import (
 
 type DateTimeProvider interface {
 	Date() string
-	Hour() string
+	HourAndMinute() (string, string)
 }
 
 // prefixVariety means how many different prefixes this instance will return
@@ -62,7 +62,8 @@ func (fp *SinglePrefixFilePather) Filename() *string {
 
 // TODO: turn this into an []string so we have space to other file systems separators (other than "/")
 func (fp *SinglePrefixFilePather) Prefix() *string {
-	prefix := fmt.Sprintf("date=%s/hour=%s/%s/", fp.dtProvider.Date(), fp.dtProvider.Hour(), fp.randomPrefix)
+	hour, minute := fp.dtProvider.HourAndMinute()
+	prefix := fmt.Sprintf("date=%s/hour=%s/minute=%s/%s/", fp.dtProvider.Date(), hour, minute, fp.randomPrefix)
 	return &prefix
 }
 
@@ -86,6 +87,8 @@ func (fp *MultiplePrefixesFilePather) Filename() *string {
 // TODO: turn this into an []string so we have space to other file systems separators (other than "/")
 func (fp *MultiplePrefixesFilePather) Prefix() *string {
 	pickedPrefix := fp.randomPrefixes[fp.randomGenerator.Intn(fp.prefixCount)]
-	prefix := fmt.Sprintf("date=%s/hour=%s/%s/", fp.dtProvider.Date(), fp.dtProvider.Hour(), pickedPrefix)
+	hour, minute := fp.dtProvider.HourAndMinute()
+
+	prefix := fmt.Sprintf("date=%s/hour=%s/minute=%s/%s/", fp.dtProvider.Date(), hour, minute, pickedPrefix)
 	return &prefix
 }
