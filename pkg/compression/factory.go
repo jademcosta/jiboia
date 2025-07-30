@@ -13,14 +13,7 @@ import (
 	"github.com/klauspost/compress/zstd"
 
 	"github.com/jademcosta/jiboia/pkg/config"
-)
-
-const (
-	GzipType    = "gzip"
-	ZlibType    = "zlib"
-	DeflateType = "deflate"
-	SnappyType  = "snappy"
-	ZstdType    = "zstd"
+	"github.com/jademcosta/jiboia/pkg/domain"
 )
 
 type closerAdapter struct {
@@ -53,15 +46,15 @@ func NewReader(
 	var decompressor CompressorReader
 	var err error
 	switch strings.ToLower(conf.Type) {
-	case GzipType:
+	case domain.CompressionGzipType:
 		decompressor, err = gzip.NewReader(reader)
-	case ZlibType:
+	case domain.CompressionZlibType:
 		decompressor, err = zlib.NewReader(reader)
-	case DeflateType:
+	case domain.CompressionDeflateType:
 		decompressor = flate.NewReader(reader)
-	case SnappyType:
+	case domain.CompressionSnappyType:
 		decompressor = &closerAdapter{wrapped: snappy.NewReader(reader)}
-	case ZstdType:
+	case domain.CompressionZstdType:
 		d, localErr := zstd.NewReader(reader)
 		err = localErr
 		if localErr == nil {
@@ -99,27 +92,27 @@ func NewWriter(
 	}
 
 	switch strings.ToLower(conf.Type) {
-	case GzipType:
+	case domain.CompressionGzipType:
 		if levelSet {
 			compressor, err = gzip.NewWriterLevel(writer, level)
 		} else {
 			compressor = gzip.NewWriter(writer)
 		}
-	case ZlibType:
+	case domain.CompressionZlibType:
 		if levelSet {
 			compressor, err = zlib.NewWriterLevel(writer, level)
 		} else {
 			compressor = zlib.NewWriter(writer)
 		}
-	case DeflateType:
+	case domain.CompressionDeflateType:
 		if levelSet {
 			compressor, err = flate.NewWriter(writer, level)
 		} else {
 			compressor, err = flate.NewWriter(writer, flate.DefaultCompression)
 		}
-	case SnappyType:
+	case domain.CompressionSnappyType:
 		compressor = snappy.NewBufferedWriter(writer)
-	case ZstdType:
+	case domain.CompressionZstdType:
 		if levelSet {
 			opts := zstd.WithEncoderLevel(zstd.EncoderLevel(level))
 			//TODO: level works differently on this package, we should not allow so many levels

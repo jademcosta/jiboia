@@ -228,3 +228,39 @@ func TestBuildsAContextWithTimeoutAndSendItForward(t *testing.T) {
 	assert.True(t, ok, "context used should have a deadline")
 	assert.InDelta(t, float64(time.Now().Unix()), float64(deadline.Unix()), float64(2), "context should have deadline of now+1sec")
 }
+
+func TestSetsContentEncodingBasedOnFileName(t *testing.T) {
+	c := &Config{Bucket: "some_bucket_name"}
+	sut, err := New(llog, c)
+	assert.NoError(t, err, "should not error on New")
+	mockUploader := &mockedAWSS3Uploader{calledWith: make([]*s3manager.UploadInput, 0)}
+	sut.uploader = mockUploader
+
+	testCases := []struct {
+		filename     string
+		expectedType string
+	}{
+		{"file.gzip", "gzip"},
+		{"file.zstd", "zstd"},
+		{"file.snappy", "snappy"},
+		{"file.deflate", "deflate"},
+		{"file.zlib", "zlib"},
+		{"file.unknown", ""},
+		{"file", ""},
+		{"", ""},
+	}
+
+	for _, tc := range testCases {
+		workU := &domain.WorkUnit{
+			Filename: tc.filename,
+			Prefix:   "some/prefix",
+			Data:     []byte("test data"),
+		}
+		_, err := sut.Upload(workU)
+		assert.NoError(t, err, "should not err on upload for %s", tc.filename)
+		assert.Len(t, mockUploader.calledWith, 1, "should have called the uploader with 1 workUnit")
+		input := mockUploader.calledWith[0]
+		assert.Equal(t, tc.expectedType, *input.ContentEncoding, "should set correct ContentEncoding for %s", tc.filename)
+		mockUploader.calledWith = nil // reset for next case
+	}
+}
