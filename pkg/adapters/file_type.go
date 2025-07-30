@@ -15,13 +15,13 @@ func ContentEncodingFromFileName(fileName string) string {
 	case domain.ZstdType:
 		return "zstd"
 	case domain.SnappyType:
-		return "x-snappy"
+		return "snappy"
 	case domain.DeflateType:
 		return "deflate"
 	case domain.ZlibType:
 		return "zlib"
 	default:
-		return "identity"
+		return ""
 	}
 }
 

@@ -242,10 +242,12 @@ func TestSetsContentEncodingBasedOnFileName(t *testing.T) {
 	}{
 		{"file.gzip", "gzip"},
 		{"file.zstd", "zstd"},
-		{"file.snappy", "x-snappy"},
+		{"file.snappy", "snappy"},
 		{"file.deflate", "deflate"},
 		{"file.zlib", "zlib"},
-		{"file.unknown", "identity"},
+		{"file.unknown", ""},
+		{"file", ""},
+		{"", ""},
 	}
 
 	for _, tc := range testCases {
