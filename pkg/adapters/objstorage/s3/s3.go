@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager/s3manageriface"
+	"github.com/jademcosta/jiboia/pkg/adapters"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"gopkg.in/yaml.v2"
@@ -84,9 +85,10 @@ func (bucket *Bucket) Upload(workU *domain.WorkUnit) (*domain.UploadResult, erro
 	key := mergeParts(bucket.fixedPrefix, workU.Prefix, workU.Filename)
 
 	uploadInput := &s3manager.UploadInput{
-		Bucket: &bucket.name,
-		Key:    &key,
-		Body:   bytes.NewReader(workU.Data),
+		Bucket:      &bucket.name,
+		Key:         &key,
+		Body:        bytes.NewReader(workU.Data),
+		ContentType: aws.String(adapters.ContentTypeFromFileName(workU.Filename)),
 	}
 
 	uploadInfo, err := bucket.doUpload(uploadInput)
