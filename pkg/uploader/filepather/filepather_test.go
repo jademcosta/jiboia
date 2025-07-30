@@ -16,16 +16,17 @@ import (
 const noFileExtension = ""
 
 type mockDateTimeProvider struct {
-	date string
-	hour string
+	date   string
+	hour   string
+	minute string
 }
 
 func (mock *mockDateTimeProvider) Date() string {
 	return mock.date
 }
 
-func (mock *mockDateTimeProvider) Hour() string {
-	return mock.hour
+func (mock *mockDateTimeProvider) HourAndMinute() (string, string) {
+	return mock.hour, mock.minute
 }
 
 func TestRandomFilename(t *testing.T) {
@@ -104,8 +105,8 @@ func TestContainsFileTypeIfProvided(t *testing.T) {
 
 func TestPrefixContainsDateAndHour(t *testing.T) {
 
-	sutSinglePrefix := filepather.New(&mockDateTimeProvider{date: "2022-02-20", hour: "23"}, 1, noFileExtension)
-	sutMultiPrefix := filepather.New(&mockDateTimeProvider{date: "2022-02-20", hour: "23"},
+	sutSinglePrefix := filepather.New(&mockDateTimeProvider{date: "2022-02-20", hour: "23", minute: "13"}, 1, noFileExtension)
+	sutMultiPrefix := filepather.New(&mockDateTimeProvider{date: "2022-02-20", hour: "23", minute: "13"},
 		randomIntForPrefixCount(), noFileExtension)
 
 	suts := []domain.FilePathProvider{sutSinglePrefix, sutMultiPrefix}
@@ -114,14 +115,14 @@ func TestPrefixContainsDateAndHour(t *testing.T) {
 		pathPrefix := *sut.Prefix()
 
 		// Last chunck format is f1f9ef42-324b-40c2-bb1e-eddadfeef330
-		assert.Regexp(t, regexp.MustCompile("date=2022-02-20/hour=23/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}"),
+		assert.Regexp(t, regexp.MustCompile("date=2022-02-20/hour=23/minute=13/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}"),
 			pathPrefix, "prefix should contain datime information")
 	}
 }
 
 func TestSingleFilePatherPrefixLastChunkIsFixed(t *testing.T) {
 
-	sut := filepather.New(&mockDateTimeProvider{date: "2022-02-20", hour: "23"}, 1, noFileExtension)
+	sut := filepather.New(&mockDateTimeProvider{date: "2022-02-20", hour: "23", minute: "17"}, 1, noFileExtension)
 
 	pathPrefixes := make([]string, 10)
 
@@ -134,7 +135,7 @@ func TestSingleFilePatherPrefixLastChunkIsFixed(t *testing.T) {
 	// Last chunck format is f1f9ef42-324b-40c2-bb1e-eddadfeef330
 
 	for _, prefix := range pathPrefixes {
-		assert.Equal(t, fmt.Sprintf("date=2022-02-20/hour=23/%s/", lastChunk),
+		assert.Equal(t, fmt.Sprintf("date=2022-02-20/hour=23/minute=17/%s/", lastChunk),
 			prefix, "prefix should contain always the same random UUID as last chunk")
 	}
 }
@@ -142,7 +143,7 @@ func TestSingleFilePatherPrefixLastChunkIsFixed(t *testing.T) {
 func TestMultiPrefixesAreGenerated(t *testing.T) {
 	prefixCount := randomIntForPrefixCount()
 	sutMultiPrefix :=
-		filepather.New(&mockDateTimeProvider{date: "2022-02-20", hour: "23"}, prefixCount, noFileExtension)
+		filepather.New(&mockDateTimeProvider{date: "2022-02-20", hour: "23", minute: "07"}, prefixCount, noFileExtension)
 
 	prefixPossibilities := make(map[string]bool)
 

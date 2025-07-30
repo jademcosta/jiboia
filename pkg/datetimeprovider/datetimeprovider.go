@@ -16,7 +16,7 @@ func (provider *Provider) Date() string {
 	return currentTime.Format(time.DateOnly)
 }
 
-func (provider *Provider) Hour() string {
+func (provider *Provider) HourAndMinute() (string, string) {
 	currentTime := time.Now()
-	return strconv.Itoa(currentTime.Hour())
+	return strconv.Itoa(currentTime.Hour()), strconv.Itoa(currentTime.Minute())
 }
