@@ -8,24 +8,30 @@ import (
 
 	"github.com/jademcosta/jiboia/pkg/datetimeprovider"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestHourIsCurrentHour(t *testing.T) {
+// There's a chance that this test will fail if the test is run at the exact second that the
+// minute changes. The same might happen with the hour.
+func TestHourAndMinuteAreCurrentHourAndMinute(t *testing.T) {
+	expected := time.Now()
+	expectedHour := expected.Hour()
+	expectedMinute := expected.Minute()
+
 	sut := datetimeprovider.New()
+	hour, minute := sut.HourAndMinute()
 
-	result, err := strconv.Atoi(sut.Hour())
-	assert.Nil(t, err, "should return an integer as string")
+	hourResult, err := strconv.Atoi(hour)
+	require.Nil(t, err, "should return an integer as hour string")
 
-	assert.GreaterOrEqual(t, result, 0, "should always be greater or equal to 0")
-	assert.LessOrEqual(t, result, 23, "should always be smaller or equal to 23")
+	minuteResult, err := strconv.Atoi(minute)
+	require.Nil(t, err, "should return an integer as minute string")
 
-	expected := time.Now().Hour()
+	assert.GreaterOrEqual(t, hourResult, 0, "should always be greater or equal to 0")
+	assert.LessOrEqual(t, hourResult, 23, "should always be smaller or equal to 23")
 
-	if expected == 0 { // There's a chance the resul;t is at the 23 hour
-		assert.Condition(t, func() bool { return result == 0 || result == 23 }, "hour should be the current hour")
-	} else {
-		assert.Equal(t, expected, result, "hour should be the current hour")
-	}
+	assert.Equal(t, expectedHour, hourResult, "hour should be the current hour")
+	assert.Equal(t, expectedMinute, minuteResult, "minute should be the current minute")
 }
 
 func TestDateIsCurrentDate(t *testing.T) {
