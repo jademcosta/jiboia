@@ -10,15 +10,15 @@ func ContentEncodingFromFileName(fileName string) string {
 	extension := getExtension(fileName)
 
 	switch extension {
-	case domain.GzipType:
+	case domain.CompressionGzipType:
 		return "gzip"
-	case domain.ZstdType:
+	case domain.CompressionZstdType:
 		return "zstd"
-	case domain.SnappyType:
+	case domain.CompressionSnappyType:
 		return "snappy"
-	case domain.DeflateType:
+	case domain.CompressionDeflateType:
 		return "deflate"
-	case domain.ZlibType:
+	case domain.CompressionZlibType:
 		return "zlib"
 	default:
 		return ""
