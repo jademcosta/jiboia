@@ -114,13 +114,21 @@ func (bucket *Bucket) Name() string {
 }
 
 func mergeParts(fixedPrefix string, dynamicPrefix string, key string) string {
-	//TODO: this is probably not very perf. Explore other ideas.
-	result := strings.Trim(fixedPrefix, "/") + "/" + strings.Trim(dynamicPrefix, "/")
-	result = strings.Trim(result, "/")
+	sBuilder := strings.Builder{}
 
-	result = "/" + result + "/" + strings.Trim(key, "/")
+	if fixedPrefix != "" {
+		sBuilder.WriteString(strings.Trim(fixedPrefix, "/"))
+		sBuilder.WriteString("/")
+	}
 
-	return strings.Trim(result, "/")
+	if dynamicPrefix != "" {
+		sBuilder.WriteString(strings.Trim(dynamicPrefix, "/"))
+		sBuilder.WriteString("/")
+	}
+
+	sBuilder.WriteString(strings.Trim(key, "/"))
+
+	return sBuilder.String()
 }
 
 func (bucket *Bucket) doUpload(input *s3manager.UploadInput) (*s3manager.UploadOutput, error) {
