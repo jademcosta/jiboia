@@ -85,10 +85,10 @@ func (bucket *Bucket) Upload(workU *domain.WorkUnit) (*domain.UploadResult, erro
 	key := mergeParts(bucket.fixedPrefix, workU.Prefix, workU.Filename)
 
 	uploadInput := &s3manager.UploadInput{
-		Bucket:      &bucket.name,
-		Key:         &key,
-		Body:        bytes.NewReader(workU.Data),
-		ContentType: aws.String(adapters.ContentTypeFromFileName(workU.Filename)),
+		Bucket:          &bucket.name,
+		Key:             &key,
+		Body:            bytes.NewReader(workU.Data),
+		ContentEncoding: aws.String(adapters.ContentEncodingFromFileName(workU.Filename)),
 	}
 
 	uploadInfo, err := bucket.doUpload(uploadInput)

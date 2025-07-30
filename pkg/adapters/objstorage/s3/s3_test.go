@@ -229,7 +229,7 @@ func TestBuildsAContextWithTimeoutAndSendItForward(t *testing.T) {
 	assert.InDelta(t, float64(time.Now().Unix()), float64(deadline.Unix()), float64(2), "context should have deadline of now+1sec")
 }
 
-func TestSetsContentTypeBasedOnFileName(t *testing.T) {
+func TestSetsContentEncodingBasedOnFileName(t *testing.T) {
 	c := &Config{Bucket: "some_bucket_name"}
 	sut, err := New(llog, c)
 	assert.NoError(t, err, "should not error on New")
@@ -240,12 +240,12 @@ func TestSetsContentTypeBasedOnFileName(t *testing.T) {
 		filename     string
 		expectedType string
 	}{
-		{"file.gzip", "application/gzip"},
-		{"file.zstd", "application/zstd"},
-		{"file.snappy", "application/x-snappy"},
-		{"file.deflate", "application/zlib"},
-		{"file.zlib", "application/zlib"},
-		{"file.unknown", "application/octet-stream"},
+		{"file.gzip", "gzip"},
+		{"file.zstd", "zstd"},
+		{"file.snappy", "x-snappy"},
+		{"file.deflate", "deflate"},
+		{"file.zlib", "zlib"},
+		{"file.unknown", "identity"},
 	}
 
 	for _, tc := range testCases {
@@ -258,7 +258,7 @@ func TestSetsContentTypeBasedOnFileName(t *testing.T) {
 		assert.NoError(t, err, "should not err on upload for %s", tc.filename)
 		assert.Len(t, mockUploader.calledWith, 1, "should have called the uploader with 1 workUnit")
 		input := mockUploader.calledWith[0]
-		assert.Equal(t, tc.expectedType, *input.ContentType, "should set correct ContentType for %s", tc.filename)
+		assert.Equal(t, tc.expectedType, *input.ContentEncoding, "should set correct ContentEncoding for %s", tc.filename)
 		mockUploader.calledWith = nil // reset for next case
 	}
 }

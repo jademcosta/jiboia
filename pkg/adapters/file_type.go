@@ -6,22 +6,22 @@ import (
 	"github.com/jademcosta/jiboia/pkg/domain"
 )
 
-func ContentTypeFromFileName(fileName string) string {
+func ContentEncodingFromFileName(fileName string) string {
 	extension := getExtension(fileName)
 
 	switch extension {
 	case domain.GzipType:
-		return "application/gzip"
+		return "gzip"
 	case domain.ZstdType:
-		return "application/zstd"
+		return "zstd"
 	case domain.SnappyType:
-		return "application/x-snappy"
+		return "x-snappy"
 	case domain.DeflateType:
-		return "application/zlib"
+		return "deflate"
 	case domain.ZlibType:
-		return "application/zlib"
+		return "zlib"
 	default:
-		return "application/octet-stream"
+		return "identity"
 	}
 }
 
