@@ -36,7 +36,7 @@ func TestDefaultValues(t *testing.T) {
 		"default flows.ingestion.decompress.active is empty")
 	assert.Equal(t, 0, conf.Flows[0].Ingestion.Decompression.MaxConcurrency,
 		"default flows.ingestion.decompress.max_concurrency is zero")
-	assert.Equal(t, false, conf.Flows[0].Ingestion.CircuitBreaker.Disable,
+	assert.False(t, conf.Flows[0].Ingestion.CircuitBreaker.Disable,
 		"default flows.ingestion.circuit_breaker.disable is false")
 	assert.Equal(t, int64(100), conf.Flows[0].Ingestion.CircuitBreaker.OpenInterval,
 		"default flows.ingestion.circuit_breaker.open_iterval is 100")
@@ -47,7 +47,7 @@ func TestDefaultValues(t *testing.T) {
 
 	sizeInBytes, err := conf.API.PayloadSizeLimitInBytes()
 	assert.Equal(t, int64(0), sizeInBytes, "default for api.payload_size_limit config doesn't match")
-	assert.NoError(t, err, "api.payload_size_limit should yield no error")
+	require.NoError(t, err, "api.payload_size_limit should yield no error")
 }
 
 func TestConfigParsing(t *testing.T) {
@@ -147,7 +147,7 @@ flows:
 
 	sizeInBytes, err := conf.API.PayloadSizeLimitInBytes()
 	assert.Equal(t, int64(2097152), sizeInBytes, "should have parsed the correct api.payload_size_limit")
-	assert.NoError(t, err, "api.payload_size_limit should yield no error")
+	require.NoError(t, err, "api.payload_size_limit should yield no error")
 
 	assert.Equal(t, "my-flow", conf.Flows[0].Name, "should have parsed the correct flow.name")
 	assert.Equal(t, 1000, conf.Flows[0].QueueMaxSize, "should have parsed the correct flow.in_memory_queue_max_size")
@@ -163,19 +163,19 @@ flows:
 		"should have parsed the correct flow.ingestion.decompress.max_concurrency")
 	assert.Equal(t, int64(100), conf.Flows[0].Ingestion.CircuitBreaker.OpenInterval,
 		"should have set the default flow.ingestion.circuit_breaker.open_interval_in_ms")
-	assert.Equal(t, false, conf.Flows[0].Ingestion.CircuitBreaker.Disable,
+	assert.False(t, conf.Flows[0].Ingestion.CircuitBreaker.Disable,
 		"should have set the default flow.ingestion.circuit_breaker.disable")
 
 	assert.Equal(t, "573MB", conf.Flows[0].Accumulator.Size,
 		"should have parsed the correct flow.accumulator.size")
 	sizeAsBytes, err := conf.Flows[0].Accumulator.SizeAsBytes()
-	assert.NoError(t, err, "should return no error")
+	require.NoError(t, err, "should return no error")
 	assert.Equal(t, int64(600834048), sizeAsBytes, "should know how to conver the size of accumulator")
 	assert.Equal(t, "_a_", conf.Flows[0].Accumulator.Separator,
 		"should have parsed the correct flow.accumulator.separator")
 	assert.Equal(t, 123, conf.Flows[0].Accumulator.QueueCapacity,
 		"should have parsed the correct flow.accumulator.queue_capacity")
-	assert.Equal(t, true, conf.Flows[0].Accumulator.CircuitBreaker.Disable,
+	assert.True(t, conf.Flows[0].Accumulator.CircuitBreaker.Disable,
 		"should have parsed the correct flow.accumulator.circuit_breaker.disable")
 	assert.Equal(t, int64(100), conf.Flows[0].Accumulator.CircuitBreaker.OpenInterval,
 		"should have set the default flow.accumulator.circuit_breaker.open_interval_in_ms")
@@ -198,20 +198,20 @@ flows:
 		"should have parsed the correct flow.ingestion.decompress.active (which is empty)")
 	assert.Equal(t, 0, conf.Flows[1].Ingestion.Decompression.MaxConcurrency,
 		"should have parsed the correct flow.ingestion.decompress.max_concurrency")
-	assert.Equal(t, false, conf.Flows[1].Ingestion.CircuitBreaker.Disable,
+	assert.False(t, conf.Flows[1].Ingestion.CircuitBreaker.Disable,
 		"should have parsed the correct flow.accumulator.circuit_breaker.disable")
 	assert.Equal(t, int64(1234), conf.Flows[1].Ingestion.CircuitBreaker.OpenInterval,
 		"should have set the default flow.accumulator.circuit_breaker.open_interval_in_ms")
 
 	assert.Equal(t, "20", conf.Flows[1].Accumulator.Size, "should have parsed the correct flow.accumulator.size")
 	sizeAsBytes, err = conf.Flows[1].Accumulator.SizeAsBytes()
-	assert.NoError(t, err, "should not error")
+	require.NoError(t, err, "should not error")
 	assert.Equal(t, int64(20), sizeAsBytes, "should know how to conver the size of accumulator")
 	assert.Equal(t, "", conf.Flows[1].Accumulator.Separator, "should have parsed the correct flow.accumulator.separator")
 	assert.Equal(t, 13, conf.Flows[1].Accumulator.QueueCapacity, "should have parsed the correct flow.accumulator.queue_capacity")
 	assert.Equal(t, int64(12345), conf.Flows[1].Accumulator.CircuitBreaker.OpenInterval,
 		"should have parsed the correct flow.accumulator.circuit_breaker.open_interval_in_ms")
-	assert.Equal(t, false, conf.Flows[1].Accumulator.CircuitBreaker.Disable,
+	assert.False(t, conf.Flows[1].Accumulator.CircuitBreaker.Disable,
 		"should have parsed the correct flow.accumulator.circuit_breaker.disable")
 
 	assert.Equal(t, "noop", conf.Flows[1].ExternalQueue.Type, "should have parsed the correct flow.external_queue.type")
@@ -263,9 +263,9 @@ flows:
 	for _, tc := range testCases {
 		_, err := config.New([]byte(tc.conf))
 		if tc.shouldError {
-			assert.Errorf(t, err, "errors when log level is %s", tc.conf)
+			require.Errorf(t, err, "errors when log level is %s", tc.conf)
 		} else {
-			assert.NoErrorf(t, err, "doesn't error when log level is %s", tc.conf)
+			require.NoErrorf(t, err, "doesn't error when log level is %s", tc.conf)
 		}
 	}
 }
@@ -277,7 +277,7 @@ log:
 `
 
 	_, err := config.New([]byte(configYaml))
-	assert.Errorf(t, err, "return error when no flows is declared")
+	require.Errorf(t, err, "return error when no flows is declared")
 	assert.Equal(t, "at least one flow should be declared", err.Error(), "error string should make the error explicit")
 
 	configEmptyFlowYaml := `
@@ -287,7 +287,7 @@ log:
 flows:
 `
 	_, err = config.New([]byte(configEmptyFlowYaml))
-	assert.Errorf(t, err, "return error when flows are empty")
+	require.Errorf(t, err, "return error when flows are empty")
 	assert.Equal(t, "at least one flow should be declared", err.Error(), "error string should make the error explicit")
 }
 
@@ -346,7 +346,7 @@ flows:
         secret_key: "secret 2"
 `
 	_, err := config.New([]byte(configFlowWithNoNameYaml))
-	assert.Errorf(t, err, "return error when at least one flow has no name")
+	require.Errorf(t, err, "return error when at least one flow has no name")
 	assert.Equal(t, "all flows must have a name", err.Error(), "error string should make the error explicit")
 }
 
@@ -361,7 +361,7 @@ flows:
   - name: my_flow_3
 `
 	_, err := config.New([]byte(configFlowWithNoNameYaml))
-	assert.Errorf(t, err, "return error when flows have repeated names")
+	require.Errorf(t, err, "return error when flows have repeated names")
 	assert.Equal(t, "flow name must not have spaces", err.Error(),
 		"error string should make the error explicit")
 }
@@ -379,7 +379,7 @@ flows:
   - name: myflow123
 `
 	_, err := config.New([]byte(configFlowWithNoNameYaml))
-	assert.Errorf(t, err, "return error when flows have repeated names")
+	require.Errorf(t, err, "return error when flows have repeated names")
 	assert.Equal(t, "flow names must be unique", err.Error(), "error string should make the error explicit")
 }
 
@@ -409,7 +409,7 @@ func TestApiPayloadSizeLimitParsingErrors(t *testing.T) {
 	for _, tc := range testCases {
 		configYaml := strings.Replace(configYamlTemplate, "{{PAYLOAD_SIZE}}", tc.size, 1)
 		_, err := config.New([]byte(configYaml))
-		assert.Errorf(t, err, "should return error on config creation when api size limit is %s", tc.size)
+		require.Errorf(t, err, "should return error on config creation when api size limit is %s", tc.size)
 	}
 }
 
@@ -451,9 +451,9 @@ func TestApiPayloadSizeLimitValidation(t *testing.T) {
 
 		_, err := conf.PayloadSizeLimitInBytes()
 		if tc.shouldError {
-			assert.Errorf(t, err, "size %s should result in error", tc.size)
+			require.Errorf(t, err, "size %s should result in error", tc.size)
 		} else {
-			assert.NoErrorf(t, err, "size %s should NOT result in error", tc.size)
+			require.NoErrorf(t, err, "size %s should NOT result in error", tc.size)
 		}
 	}
 }

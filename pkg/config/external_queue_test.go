@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestExternalQueueConfigFillDefaultValues(t *testing.T) {
@@ -16,11 +17,11 @@ func TestExternalQueueConfigValidate(t *testing.T) {
 	sut := ExternalQueueConfig{}
 
 	err := sut.validate()
-	assert.Error(t, err, "empty type is invalid")
+	require.Error(t, err, "empty type is invalid")
 
 	sut.Type = "anything"
 	err = sut.validate()
-	assert.Error(t, err, "random type type is invalid")
+	require.Error(t, err, "random type type is invalid")
 
 	for _, queueType := range []string{"noop", "sqs"} {
 		sut.Type = queueType

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestApiFillDefaults(t *testing.T) {
@@ -16,33 +17,33 @@ func TestApiFillDefaults(t *testing.T) {
 func TestApiValidate(t *testing.T) {
 	sut := APIConfig{}
 	err := sut.validate()
-	assert.Error(t, err, "port cannot be zero")
+	require.Error(t, err, "port cannot be zero")
 
 	sut.Port = 1234
 	err = sut.validate()
-	assert.NoError(t, err, "should not error")
+	require.NoError(t, err, "should not error")
 
 	sut.PayloadSizeLimit = "abc"
 	err = sut.validate()
-	assert.Error(t, err, "payload size limit needs to be data unit")
+	require.Error(t, err, "payload size limit needs to be data unit")
 
 	sut.PayloadSizeLimit = "123abc"
 	err = sut.validate()
-	assert.Error(t, err, "payload size limit needs to be data unit")
+	require.Error(t, err, "payload size limit needs to be data unit")
 
 	sut.PayloadSizeLimit = "123"
 	err = sut.validate()
-	assert.NoError(t, err, "should not error")
+	require.NoError(t, err, "should not error")
 
 	sut.PayloadSizeLimit = "123mb"
 	err = sut.validate()
-	assert.NoError(t, err, "should not error")
+	require.NoError(t, err, "should not error")
 
 	sut.PayloadSizeLimit = "123kb"
 	err = sut.validate()
-	assert.NoError(t, err, "should not error")
+	require.NoError(t, err, "should not error")
 
 	sut.PayloadSizeLimit = "123gb"
 	err = sut.validate()
-	assert.NoError(t, err, "should not error")
+	require.NoError(t, err, "should not error")
 }

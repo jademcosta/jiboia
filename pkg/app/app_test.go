@@ -20,6 +20,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var testingPathNoAcc = "/tmp/int_test2"
@@ -42,7 +43,7 @@ func TestAccumulatorCircuitBreaker(t *testing.T) {
 		fmt.Sprintf("%s/%s", storageServer.URL, "whatever"), 1)
 
 	conf, err := config.New([]byte(confFull))
-	assert.NoError(t, err, "should initialize config")
+	require.NoError(t, err, "should initialize config")
 	logg = logger.New(&conf.O11y.Log)
 
 	app := New(conf, logg)
@@ -55,7 +56,7 @@ func TestAccumulatorCircuitBreaker(t *testing.T) {
 		//why 11? 3 payload on workers, 3 on queue from uploader to workers, 2 on uploader queue,
 		// 2 on accumulator queue, 1 on accumulator "current"
 		response, err := http.Post("http://localhost:9098/cb_flow/async_ingestion", "application/json", strings.NewReader(payload))
-		assert.NoError(t, err, "ingesting items should not return error on cb_flow")
+		require.NoError(t, err, "ingesting items should not return error on cb_flow")
 		// The status might not be 2XX here, as it is dependant on the order at which parallel
 		// components are running
 		response.Body.Close()
@@ -64,7 +65,7 @@ func TestAccumulatorCircuitBreaker(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	response, err := http.Post("http://localhost:9098/cb_flow/async_ingestion", "application/json", strings.NewReader(payload))
-	assert.NoError(t, err, "ingesting items should not return error on cb_flow")
+	require.NoError(t, err, "ingesting items should not return error on cb_flow")
 	assert.Equal(t, 500, response.StatusCode,
 		"data ingestion should have errored on cb_flow, as the CB is open and queues should be full")
 	response.Body.Close()
@@ -100,7 +101,7 @@ func TestPayloadSizeLimit(t *testing.T) {
 		fmt.Sprintf("%s/%s", storageServer.URL, "%s"), 1)
 
 	conf, err := config.New([]byte(confFull))
-	assert.NoError(t, err, "should initialize config")
+	require.NoError(t, err, "should initialize config")
 	logg = logger.New(&conf.O11y.Log)
 
 	app := New(conf, logg)
@@ -115,11 +116,11 @@ func TestPayloadSizeLimit(t *testing.T) {
 		"http://localhost:9099/int_flow3/async_ingestion",
 		strings.NewReader(validPayload),
 	)
-	assert.NoError(t, err, "error creating request")
+	require.NoError(t, err, "error creating request")
 
 	req.Header.Set("Authorization", "Bearer some secure token")
 	resp, err := http.DefaultClient.Do(req)
-	assert.NoError(t, err, "error on posting data")
+	require.NoError(t, err, "error on posting data")
 	resp.Body.Close()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200)")
@@ -129,11 +130,11 @@ func TestPayloadSizeLimit(t *testing.T) {
 		"http://localhost:9099/int_flow3/async_ingestion",
 		strings.NewReader(invalidPayload),
 	)
-	assert.NoError(t, err, "error creating request")
+	require.NoError(t, err, "error creating request")
 
 	req.Header.Set("Authorization", "Bearer some secure token")
 	resp, err = http.DefaultClient.Do(req)
-	assert.NoError(t, err, "ingesting items should not return error on int_flow3")
+	require.NoError(t, err, "ingesting items should not return error on int_flow3")
 	resp.Body.Close()
 
 	assert.Equal(t, http.StatusRequestEntityTooLarge, resp.StatusCode, "status should be Request entity too large(413)")
@@ -175,7 +176,7 @@ func TestApiToken(t *testing.T) {
 		fmt.Sprintf("%s/%s", storageServer.URL, "%s"), 1)
 
 	conf, err := config.New([]byte(confFull))
-	assert.NoError(t, err, "should initialize config")
+	require.NoError(t, err, "should initialize config")
 	logg = logger.New(&conf.O11y.Log)
 
 	app := New(conf, logg)
@@ -190,11 +191,11 @@ func TestApiToken(t *testing.T) {
 		"http://localhost:9099/int_flow3/async_ingestion",
 		strings.NewReader(nonIngestedPayload),
 	)
-	assert.NoError(t, err, "error creating request")
+	require.NoError(t, err, "error creating request")
 
 	resp, err := http.DefaultClient.Do(req)
 	resp.Body.Close()
-	assert.NoError(t, err, "error posting data")
+	require.NoError(t, err, "error posting data")
 
 	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode, "status should be Unauthorized(401)")
 
@@ -203,12 +204,12 @@ func TestApiToken(t *testing.T) {
 		"http://localhost:9099/int_flow3/async_ingestion",
 		strings.NewReader(ingestedPayload),
 	)
-	assert.NoError(t, err, "error creating request")
+	require.NoError(t, err, "error creating request")
 
 	req.Header.Set("Authorization", "Bearer some secure token")
 	resp, err = http.DefaultClient.Do(req)
 	resp.Body.Close()
-	assert.NoError(t, err, "error posting data")
+	require.NoError(t, err, "error posting data")
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200)")
 
@@ -249,7 +250,7 @@ func TestIngestionDecompression(t *testing.T) {
 		fmt.Sprintf("%s/%s", storageServer.URL, "%s"), 1)
 
 	conf, err := config.New([]byte(confFull))
-	assert.NoError(t, err, "should initialize config")
+	require.NoError(t, err, "should initialize config")
 	logg = logger.New(&conf.O11y.Log)
 
 	app := New(conf, logg)
@@ -259,20 +260,20 @@ func TestIngestionDecompression(t *testing.T) {
 	payload := randSeq(100)
 	buf1 := &bytes.Buffer{}
 	writer, err := compression.NewWriter(&config.CompressionConfig{Type: "snappy"}, buf1)
-	assert.NoError(t, err, "error on compressor writer creation", err)
+	require.NoError(t, err, "error on compressor writer creation", err)
 	_, err = writer.Write([]byte(payload))
-	assert.NoError(t, err, "error compressing data")
+	require.NoError(t, err, "error compressing data")
 	err = writer.Close()
-	assert.NoError(t, err, "error closing compressor")
+	require.NoError(t, err, "error closing compressor")
 
 	highlyCompressRatioPayload := strings.Repeat("ab", 50)
 	buf2 := &bytes.Buffer{}
 	writer, err = compression.NewWriter(&config.CompressionConfig{Type: "gzip"}, buf2)
-	assert.NoError(t, err, "error on compressor writer creation", err)
+	require.NoError(t, err, "error on compressor writer creation", err)
 	_, err = writer.Write([]byte(highlyCompressRatioPayload))
-	assert.NoError(t, err, "error compressing data")
+	require.NoError(t, err, "error compressing data")
 	err = writer.Close()
-	assert.NoError(t, err, "error closing compressor")
+	require.NoError(t, err, "error closing compressor")
 
 	nonCompressedPayload := randSeq(120)
 
@@ -281,12 +282,12 @@ func TestIngestionDecompression(t *testing.T) {
 		"http://localhost:9099/int_flow4/async_ingestion",
 		buf1,
 	)
-	assert.NoError(t, err, "error creating request")
+	require.NoError(t, err, "error creating request")
 
 	req.Header.Add("Content-Encoding", "snappy")
 	resp, err := http.DefaultClient.Do(req)
 	resp.Body.Close()
-	assert.NoError(t, err, "error posting data")
+	require.NoError(t, err, "error posting data")
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be Ok(200)")
 
@@ -297,12 +298,12 @@ func TestIngestionDecompression(t *testing.T) {
 		"http://localhost:9099/int_flow4/async_ingestion",
 		buf2,
 	)
-	assert.NoError(t, err, "error creating request")
+	require.NoError(t, err, "error creating request")
 
 	req.Header.Add("Content-Encoding", "gzip")
 	resp, err = http.DefaultClient.Do(req)
 	resp.Body.Close()
-	assert.NoError(t, err, "error posting data")
+	require.NoError(t, err, "error posting data")
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200)")
 
@@ -313,11 +314,11 @@ func TestIngestionDecompression(t *testing.T) {
 		"http://localhost:9099/int_flow4/async_ingestion",
 		strings.NewReader(nonCompressedPayload),
 	)
-	assert.NoError(t, err, "error creating request")
+	require.NoError(t, err, "error creating request")
 
 	resp, err = http.DefaultClient.Do(req)
 	resp.Body.Close()
-	assert.NoError(t, err, "error posting data")
+	require.NoError(t, err, "error posting data")
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200)")
 
@@ -361,7 +362,7 @@ func TestCompression(t *testing.T) {
 		fmt.Sprintf("%s/%s", storageServer.URL, "%s"), 1)
 
 	conf, err := config.New([]byte(confFull))
-	assert.NoError(t, err, "should initialize config")
+	require.NoError(t, err, "should initialize config")
 	logg = logger.New(&conf.O11y.Log)
 
 	app := New(conf, logg)
@@ -375,7 +376,7 @@ func TestCompression(t *testing.T) {
 		"application/json",
 		strings.NewReader(ingestedPayload),
 	)
-	assert.NoError(t, err, "POSTing should not error")
+	require.NoError(t, err, "POSTing should not error")
 	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be OK(200)")
 	resp.Body.Close()
 
@@ -387,10 +388,10 @@ func TestCompression(t *testing.T) {
 		"the data should have been compressed")
 
 	compressorReader, err := compression.NewReader(&conf.Flows[1].Compression, bytes.NewReader(objStorageReceived[0]))
-	assert.NoError(t, err, "compression reader creation should return no error")
+	require.NoError(t, err, "compression reader creation should return no error")
 
 	decompressed, err := io.ReadAll(compressorReader)
-	assert.NoError(t, err, "compression reader Read should return no error")
+	require.NoError(t, err, "compression reader Read should return no error")
 
 	assert.Equal(t, len(ingestedPayload), len(decompressed), "the decompression result should have the same size as the original")
 	assert.Equal(t, ingestedPayload, string(decompressed), "the decompression result be the same as the original")
@@ -465,7 +466,7 @@ func testWithBatchSize(t *testing.T, confYaml string, stringExemplarSizes ...int
 		fmt.Sprintf("%s/%s", storageServer1.URL, "%s"), 1)
 
 	conf, err := config.New([]byte(confFull))
-	assert.NoError(t, err, "should initialize config")
+	require.NoError(t, err, "should initialize config")
 	logg = logger.New(&conf.O11y.Log)
 
 	deleteDir(t, testingPathNoAcc)
@@ -483,14 +484,14 @@ func testWithBatchSize(t *testing.T, confYaml string, stringExemplarSizes ...int
 		generatedValuesWithAcc = append(generatedValuesWithAcc, expected)
 
 		response, err := http.Post("http://localhost:9099/int_flow/async_ingestion", "application/json", strings.NewReader(expected))
-		assert.NoError(t, err, "enqueueing items should not return error on int_flow")
+		require.NoError(t, err, "enqueueing items should not return error on int_flow")
 		assert.Equal(t, 200, response.StatusCode, "data enqueueing should have been successful on int_flow2")
 		response.Body.Close()
 
 		generatedValuesWithoutAcc = append(generatedValuesWithoutAcc, expected)
 
 		response, err = http.Post("http://localhost:9099/v1/int_flow2/async_ingestion", "application/json", strings.NewReader(expected))
-		assert.NoError(t, err, "enqueueing items should not return error on int_flow2")
+		require.NoError(t, err, "enqueueing items should not return error on int_flow2")
 		assert.Equal(t, 200, response.StatusCode, "data enqueueing should have been successful on int_flow2")
 		response.Body.Close()
 
@@ -533,7 +534,7 @@ func randSeq(n int) string {
 
 func deleteDir(t *testing.T, dir string) {
 	err := os.RemoveAll(dir)
-	assert.NoError(t, err, "should clear the subdir where we will store data")
+	require.NoError(t, err, "should clear the subdir where we will store data")
 	if err != nil {
 		panic(fmt.Sprintf("error deleting the dir where stored data is: %v", err))
 	}
@@ -541,7 +542,7 @@ func deleteDir(t *testing.T, dir string) {
 
 func createDir(t *testing.T, dir string) {
 	err := os.MkdirAll(dir, os.ModePerm)
-	assert.NoError(t, err, "should create subdir to store data")
+	require.NoError(t, err, "should create subdir to store data")
 	if err != nil {
 		panic(fmt.Sprintf("error creating the dir to store the data: %v", err))
 	}
@@ -555,12 +556,12 @@ func readFilesFromDir(t *testing.T, dir string) []string {
 		}
 
 		data, err := os.ReadFile(path)
-		assert.NoError(t, err, "reading files with sent data should not return error")
+		require.NoError(t, err, "reading files with sent data should not return error")
 		resultingValues = append(resultingValues, string(data))
 
 		return err
 	})
-	assert.NoError(t, err, "reading files with sent data should not return error")
+	require.NoError(t, err, "reading files with sent data should not return error")
 	return resultingValues
 }
 

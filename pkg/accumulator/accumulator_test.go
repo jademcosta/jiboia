@@ -18,6 +18,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/sony/gobreaker"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const queueCapacity int = 30
@@ -178,11 +179,11 @@ func TestItDoesNotPassDataIfLimitNotReached(t *testing.T) {
 
 				go sut.Run(ctx)
 				err := sut.Enqueue(tc.data)
-				assert.NoError(t, err, "should not err on enqueue")
+				require.NoError(t, err, "should not err on enqueue")
 				time.Sleep(5 * time.Millisecond)
 
 				next.mu.Lock()
-				assert.Lenf(t, next.dataWritten, 0,
+				assert.Emptyf(t, next.dataWritten,
 					"should not write to next writter if limit is not reached. Separator: %s, data: %s.",
 					tc.separator, tc.data)
 				assert.Equalf(t, 0, next.callCount,
@@ -246,7 +247,7 @@ func TestWritesTheDataIfSizeEqualOrBiggerThanCapacity(t *testing.T) {
 
 				go sut.Run(ctx)
 				err := sut.Enqueue(tc.data)
-				assert.NoError(t, err, "should not err on enqueue")
+				require.NoError(t, err, "should not err on enqueue")
 				time.Sleep(5 * time.Millisecond)
 
 				next.mu.Lock()
@@ -348,13 +349,13 @@ func TestWritesTheDataWhenLimitIsHitAfterMultipleCalls(t *testing.T) {
 				go sut.Run(ctx)
 				for _, data := range tc.data {
 					err := sut.Enqueue(data)
-					assert.NoError(t, err, "should not err on enqueue")
+					require.NoError(t, err, "should not err on enqueue")
 					time.Sleep(1 * time.Millisecond)
 				}
 				time.Sleep(5 * time.Millisecond)
 
 				next.mu.Lock()
-				assert.Equalf(t, next.callCount, len(tc.want),
+				assert.Lenf(t, tc.want, next.callCount,
 					"should produce the correct amount of data messages. Separator: %s Data: %v.",
 					tc.separator, tc.data)
 				assert.Equalf(t, tc.want, next.dataWritten,
@@ -396,11 +397,11 @@ func TestRejectsDataIfAtFullCapacity(t *testing.T) {
 				}
 
 				err := sut.Enqueue([]byte("1"))
-				assert.Error(t, err, "should return error")
+				require.Error(t, err, "should return error")
 
 				next.mu.Lock()
 				assert.Equalf(
-					t, next.callCount, 0,
+					t, 0, next.callCount,
 					"should not produce any message. Queue cap: %d dataCount: %d.",
 					tc.queueCapacity, tc.dataEnqueueCount,
 				)
@@ -427,19 +428,19 @@ func TestTheCapacityIsFixed(t *testing.T) {
 
 			for i := 0; i < dataEnqueueCount; i++ {
 				err := sut.Enqueue([]byte(fmt.Sprint(i)))
-				assert.NoError(t, err, "should not err on enqueue")
+				require.NoError(t, err, "should not err on enqueue")
 			}
 
 			next.mu.Lock()
-			assert.Equalf(t, next.callCount, 0,
+			assert.Equalf(t, 0, next.callCount,
 				"should not produce any message. Queue cap: %d dataCount: %d.",
 				queueCapacity, dataEnqueueCount)
 			next.mu.Unlock()
 
 			err := sut.Enqueue([]byte("a"))
-			assert.Error(t, err, "should err on enqueue")
+			require.Error(t, err, "should err on enqueue")
 			err = sut.Enqueue([]byte("b"))
-			assert.Error(t, err, "should err on enqueue")
+			require.Error(t, err, "should err on enqueue")
 		})
 	}
 }
@@ -486,11 +487,11 @@ func TestSendsPendingDataWhenContextIsCancelled(t *testing.T) {
 
 				for _, data := range tc.data {
 					err := sut.Enqueue(data)
-					assert.NoError(t, err, "should not err on enqueue")
+					require.NoError(t, err, "should not err on enqueue")
 				}
 
 				next.mu.Lock()
-				assert.Equalf(t, next.callCount, 0,
+				assert.Equalf(t, 0, next.callCount,
 					"(before shutdown) should not produce any message. Data: %v.",
 					tc.data)
 				next.mu.Unlock()
@@ -499,7 +500,7 @@ func TestSendsPendingDataWhenContextIsCancelled(t *testing.T) {
 				time.Sleep(10 * time.Millisecond)
 
 				next.mu.Lock()
-				assert.Equalf(t, next.callCount, len(tc.want),
+				assert.Lenf(t, tc.want, next.callCount,
 					"(after shutdown) should have sent all data. Data: %v.",
 					tc.data)
 				next.mu.Unlock()
@@ -528,12 +529,12 @@ func TestEnqueuesErrorsAfterContextCancelled(t *testing.T) {
 			time.Sleep(10 * time.Millisecond)
 
 			next.mu.Lock()
-			assert.Equalf(t, next.callCount, 0,
+			assert.Equalf(t, 0, next.callCount,
 				"should not produce any message.")
 			next.mu.Unlock()
 
 			err := sut.Enqueue([]byte("hi"))
-			assert.Error(t, err, "should return error if enqueue is called after a shutdown has started")
+			require.Error(t, err, "should return error if enqueue is called after a shutdown has started")
 		})
 	}
 }
@@ -567,7 +568,7 @@ func TestCallindEnqueueUsesACircuitBreakerAndRetriesOnFailure(t *testing.T) {
 
 			payload := []byte("333")
 			err := sut.Enqueue(payload)
-			assert.NoError(t, err, "should not err on enqueue")
+			require.NoError(t, err, "should not err on enqueue")
 			time.Sleep(5 * time.Millisecond)
 
 			next.mu.Lock()
@@ -628,7 +629,7 @@ func TestItStopsRetryingOnceItSendsTheData(t *testing.T) {
 
 			payload := []byte("333")
 			err := sut.Enqueue(payload)
-			assert.NoError(t, err, "should not err on enqueue")
+			require.NoError(t, err, "should not err on enqueue")
 			time.Sleep(1 * time.Millisecond)
 
 			next.mu.Lock()
@@ -649,7 +650,7 @@ func TestItStopsRetryingOnceItSendsTheData(t *testing.T) {
 			next.SetFail(true)
 			payload2 := []byte("4444")
 			err = sut.Enqueue(payload2)
-			assert.NoError(t, err, "should not err on enqueue")
+			require.NoError(t, err, "should not err on enqueue")
 			time.Sleep(1 * time.Millisecond)
 
 			next.SetFail(false)

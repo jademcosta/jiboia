@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDescompressionConfigFillDefaults(t *testing.T) {
@@ -14,27 +15,27 @@ func TestDescompressionConfigFillDefaults(t *testing.T) {
 
 func TestDescompressionConfigValidate(t *testing.T) {
 	sut := DescompressionConfig{}
-	assert.NoError(t, sut.validate(), "should be valid if active decompressions is nil")
+	require.NoError(t, sut.validate(), "should be valid if active decompressions is nil")
 
 	sut.ActiveDecompressions = []string{"gzip"}
-	assert.Error(t, sut.validate(), "should not be valid if initial buffer size is empty")
+	require.Error(t, sut.validate(), "should not be valid if initial buffer size is empty")
 
 	sut.InitialBufferSize = "2kb"
-	assert.NoError(t, sut.validate(), "should be valid")
+	require.NoError(t, sut.validate(), "should be valid")
 
 	sut.MaxConcurrency = -1
-	assert.Error(t, sut.validate(), "max concurrency cannot be < 0")
+	require.Error(t, sut.validate(), "max concurrency cannot be < 0")
 
 	sut.MaxConcurrency = 3
 	sut.ActiveDecompressions = []string{"gzip", "non-existent"}
-	assert.Error(t, sut.validate(), "active decompression should be one from the allowed list")
+	require.Error(t, sut.validate(), "active decompression should be one from the allowed list")
 
 	sut.ActiveDecompressions = []string{"gzip", "zstd"}
-	assert.NoError(t, sut.validate(), "should be valid")
+	require.NoError(t, sut.validate(), "should be valid")
 
 	for _, decompType := range []string{"gzip", "zlib", "deflate", "zstd", "snappy"} {
 		sut.ActiveDecompressions = []string{decompType}
-		assert.NoError(t, sut.validate(),
+		require.NoError(t, sut.validate(),
 			"%s should be a valid decompression type", decompType)
 	}
 }
@@ -53,7 +54,7 @@ func TestDescompressionConfigInitialBufferSizeAsBytes(t *testing.T) {
 
 		sut := DescompressionConfig{InitialBufferSize: tc.input}
 		result, err := sut.InitialBufferSizeAsBytes()
-		assert.NoError(t, err, "should return no error")
+		require.NoError(t, err, "should return no error")
 		assert.Equal(t, tc.expected, result,
 			"should have returned %d for input %s", tc.expected, tc.input)
 	}

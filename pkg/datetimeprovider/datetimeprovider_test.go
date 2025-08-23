@@ -1,7 +1,6 @@
 package datetimeprovider_test
 
 import (
-	"regexp"
 	"strconv"
 	"testing"
 	"time"
@@ -22,10 +21,10 @@ func TestHourAndMinuteAreCurrentHourAndMinute(t *testing.T) {
 	hour, minute := sut.HourAndMinute()
 
 	hourResult, err := strconv.Atoi(hour)
-	require.Nil(t, err, "should return an integer as hour string")
+	require.NoError(t, err, "should return an integer as hour string")
 
 	minuteResult, err := strconv.Atoi(minute)
-	require.Nil(t, err, "should return an integer as minute string")
+	require.NoError(t, err, "should return an integer as minute string")
 
 	assert.GreaterOrEqual(t, hourResult, 0, "should always be greater or equal to 0")
 	assert.LessOrEqual(t, hourResult, 23, "should always be smaller or equal to 23")
@@ -39,7 +38,7 @@ func TestDateIsCurrentDate(t *testing.T) {
 
 	result := sut.Date()
 
-	assert.Regexp(t, regexp.MustCompile("[0-9]{4}-([10]{1}[0-9]{1})-([0123]{1}[0-9]{1})"), result, "should return a date in the format YYYY-MM-DD")
+	assert.Regexp(t, "[0-9]{4}-([10]{1}[0-9]{1})-([0123]{1}[0-9]{1})", result, "should return a date in the format YYYY-MM-DD")
 	assert.Equal(t, time.Now().Format(time.DateOnly), result, "should be the current day")
 	assert.Equal(t, "2006-01-02", time.DateOnly, "should obey the specific time format of YYY-MM-DD that Go requires")
 }

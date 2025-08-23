@@ -29,7 +29,7 @@ linters:
     - spancheck
     - stylecheck
     - tagalign
-    # - testifylint
+    - testifylint
     # - testpackage
     - unconvert
     - usestdlibvars

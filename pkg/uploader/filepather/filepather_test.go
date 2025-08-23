@@ -3,7 +3,6 @@ package filepather_test
 import (
 	"fmt"
 	"math/rand"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -51,14 +50,14 @@ func TestRandomFilename(t *testing.T) {
 		}
 
 		for _, current := range results {
-			assert.Equal(t, 36, len(current), "should always generate the same length of strings")
+			assert.Len(t, current, 36, "should always generate the same length of strings")
 		}
 
 		// String format is f1f9ef42-324b-40c2-bb1e-eddadfeef330
 		for _, current := range results {
 			assert.Regexp(
 				t,
-				regexp.MustCompile("[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}"),
+				"[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}",
 				current,
 				"should return a string with a UUID format",
 			)
@@ -115,7 +114,7 @@ func TestPrefixContainsDateAndHour(t *testing.T) {
 		pathPrefix := *sut.Prefix()
 
 		// Last chunck format is f1f9ef42-324b-40c2-bb1e-eddadfeef330
-		assert.Regexp(t, regexp.MustCompile("date=2022-02-20/hour=23/minute=13/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}"),
+		assert.Regexp(t, "date=2022-02-20/hour=23/minute=13/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}",
 			pathPrefix, "prefix should contain datime information")
 	}
 }
