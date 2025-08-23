@@ -14,7 +14,7 @@ type Runnable interface {
 }
 
 type DataFlowRunnable interface {
-	domain.DataFlow
+	domain.DataEnqueuer
 	Runnable
 }
 
@@ -22,7 +22,7 @@ type Flow struct {
 	Name                                string
 	ObjStorage                          worker.ObjStorage
 	ExternalQueue                       worker.ExternalQueue
-	Entrypoint                          domain.DataFlow
+	Entrypoint                          domain.DataEnqueuer
 	Uploader                            DataFlowRunnable
 	Accumulator                         DataFlowRunnable
 	UploadWorkers                       []Runnable

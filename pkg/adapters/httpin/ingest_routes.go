@@ -13,6 +13,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/circuitbreaker"
 	"github.com/jademcosta/jiboia/pkg/compression"
 	"github.com/jademcosta/jiboia/pkg/config"
+	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/domain/flow"
 )
 
@@ -108,7 +109,8 @@ func (handler *ingestionRoute) ServeHTTP(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
-	err = handler.flw.Entrypoint.Enqueue(data)
+	payload := &domain.WorkUnit{Data: data}
+	err = handler.flw.Entrypoint.Enqueue(payload)
 	if err != nil {
 		handler.l.Warn("failed while enqueueing data from http request", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)

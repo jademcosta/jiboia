@@ -92,7 +92,7 @@ func TestWorkSentDownstreamHasTheCorrectDataInIt(t *testing.T) {
 
 	go sut.Run(ctx)
 
-	err := sut.Enqueue([]byte("1"))
+	err := sut.Enqueue(&domain.WorkUnit{Data: []byte("1")})
 	require.NoError(t, err, "should not err on enqueue")
 
 	select {
@@ -126,7 +126,7 @@ func TestItDeniesWorkAfterContextIsCanceled(t *testing.T) {
 
 	go sut.Run(ctx)
 
-	err := sut.Enqueue([]byte("1"))
+	err := sut.Enqueue(&domain.WorkUnit{Data: []byte("1")})
 	require.NoError(t, err, "should not err on enqueue")
 
 	select {
@@ -138,7 +138,7 @@ func TestItDeniesWorkAfterContextIsCanceled(t *testing.T) {
 
 	cancel()
 	<-sut.Done()
-	err = sut.Enqueue([]byte("2"))
+	err = sut.Enqueue(&domain.WorkUnit{Data: []byte("2")})
 	assert.Error(t, err, "enqueue should return error when context has been canceled")
 }
 
@@ -159,10 +159,12 @@ func TestItFlushesAllPendingDataWhenContextIsCancelled(t *testing.T) {
 	)
 
 	go sut.Run(ctx)
-	err := sut.Enqueue([]byte("1"))
+
+	err := sut.Enqueue(&domain.WorkUnit{Data: []byte("1")})
 	require.NoError(t, err, "should not err on enqueue")
-	err = sut.Enqueue([]byte("2"))
+	err = sut.Enqueue(&domain.WorkUnit{Data: []byte("2")})
 	require.NoError(t, err, "should not err on enqueue")
+
 	time.Sleep(10 * time.Millisecond)
 
 	cancel()
@@ -182,7 +184,7 @@ func TestItFlushesAllPendingDataWhenContextIsCancelled(t *testing.T) {
 		assert.Fail(t, "uploader should have distributed work")
 	}
 
-	err = sut.Enqueue([]byte("3"))
+	err = sut.Enqueue(&domain.WorkUnit{Data: []byte("3")})
 	require.Error(t, err, "should err on enqueue")
 
 	select {
@@ -262,7 +264,7 @@ func testUploader(
 	go sut.Run(ctx)
 
 	for i := 0; i < objectsToEnqueueCount; i++ {
-		err := sut.Enqueue([]byte(fmt.Sprint(i)))
+		err := sut.Enqueue(&domain.WorkUnit{Data: []byte(fmt.Sprint(i))})
 		require.NoError(t, err, "should not err on enqueue")
 		if sleepTimeBeforeProducing != 0 {
 			time.Sleep(sleepTimeBeforeProducing)
@@ -321,7 +323,7 @@ func testUploaderEnsuringEnqueuedItems(
 	go sut.Run(ctx)
 
 	for i := 0; i < objectsToEnqueueCount; i++ {
-		err := sut.Enqueue([]byte(fmt.Sprint(i)))
+		err := sut.Enqueue(&domain.WorkUnit{Data: []byte(fmt.Sprint(i))})
 		require.NoError(t, err, "should not err on enqueue")
 		expected[i] = fmt.Sprint(i)
 	}

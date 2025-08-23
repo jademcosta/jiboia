@@ -191,7 +191,7 @@ func createExternalQueue(
 
 func createAccumulator(
 	flowName string, logger *slog.Logger, c config.AccumulatorConfig,
-	registry *prometheus.Registry, uploader domain.DataFlow,
+	registry *prometheus.Registry, uploader domain.DataEnqueuer,
 ) flow.DataFlowRunnable {
 	cb := createCircuitBreaker(registry, logger, flowName, c.CircuitBreaker)
 
