@@ -1,4 +1,4 @@
-package uploader
+package uploader_test
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
+	"github.com/jademcosta/jiboia/pkg/uploader"
 	"github.com/jademcosta/jiboia/pkg/worker"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
@@ -79,7 +80,7 @@ func TestWorkSentDownstreamHasTheCorrectDataInIt(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	sut := New(
+	sut := uploader.New(
 		"someflow",
 		llog,
 		workersCount,
@@ -113,7 +114,7 @@ func TestItDeniesWorkAfterContextIsCanceled(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	sut := New(
+	sut := uploader.New(
 		"someflow",
 		llog,
 		workersCount,
@@ -147,7 +148,7 @@ func TestItFlushesAllPendingDataWhenContextIsCancelled(t *testing.T) {
 	nextQueue := make(chan *domain.WorkUnit, 10)
 	ctx, cancel := context.WithCancel(context.Background())
 
-	sut := New(
+	sut := uploader.New(
 		"someflow",
 		llog,
 		workersCount,
@@ -195,13 +196,13 @@ func TestItFlushesAllPendingDataWhenContextIsCancelled(t *testing.T) {
 func TestUploadersSendAllEnqueuedItems(t *testing.T) {
 	// TODO: use t.Run? Parallel?
 	// workersCount, objectsCount, capacity
-	testUploaderEnsuringEnqueuedItems(t, 10, 60, 60, New)
-	testUploaderEnsuringEnqueuedItems(t, 10, 300, 300, New)
-	testUploaderEnsuringEnqueuedItems(t, 1, 60, 60, New)
-	testUploaderEnsuringEnqueuedItems(t, 10, 2, 2, New)
-	testUploaderEnsuringEnqueuedItems(t, 10, 1, 1, New)
-	testUploaderEnsuringEnqueuedItems(t, 90, 60, 60, New)
-	testUploaderEnsuringEnqueuedItems(t, 90, 2, 2, New)
+	testUploaderEnsuringEnqueuedItems(t, 10, 60, 60, uploader.New)
+	testUploaderEnsuringEnqueuedItems(t, 10, 300, 300, uploader.New)
+	testUploaderEnsuringEnqueuedItems(t, 1, 60, 60, uploader.New)
+	testUploaderEnsuringEnqueuedItems(t, 10, 2, 2, uploader.New)
+	testUploaderEnsuringEnqueuedItems(t, 10, 1, 1, uploader.New)
+	testUploaderEnsuringEnqueuedItems(t, 90, 60, 60, uploader.New)
+	testUploaderEnsuringEnqueuedItems(t, 90, 2, 2, uploader.New)
 }
 
 func TestUploadersSendAllEnqueueItemsIntegration(t *testing.T) {
@@ -211,19 +212,19 @@ func TestUploadersSendAllEnqueueItemsIntegration(t *testing.T) {
 
 	//TODO: (jademcosta) remove the New necessity here. It exists from a time were it had multiple uploader implementations
 	// time to proccess an upload, workersCount, objectsCount, capacity, factoryFn, sleepBetweenProduction
-	testUploader(t, 50*time.Millisecond, 10, 60, 60, New, 0)
-	testUploader(t, 50*time.Millisecond, 1, 30, 30, New, 0)
-	testUploader(t, 50*time.Millisecond, 60, 1, 1, New, 0)
-	testUploader(t, 50*time.Millisecond, 90, 60, 60, New, 0)
-	testUploader(t, 100*time.Millisecond, 10, 60, 60, New, 0)
-	testUploader(t, 10*time.Millisecond, 30, 600, 600, New, 0)
-	testUploader(t, 10*time.Millisecond, 300, 100, 100, New, 0)
+	testUploader(t, 50*time.Millisecond, 10, 60, 60, uploader.New, 0)
+	testUploader(t, 50*time.Millisecond, 1, 30, 30, uploader.New, 0)
+	testUploader(t, 50*time.Millisecond, 60, 1, 1, uploader.New, 0)
+	testUploader(t, 50*time.Millisecond, 90, 60, 60, uploader.New, 0)
+	testUploader(t, 100*time.Millisecond, 10, 60, 60, uploader.New, 0)
+	testUploader(t, 10*time.Millisecond, 30, 600, 600, uploader.New, 0)
+	testUploader(t, 10*time.Millisecond, 300, 100, 100, uploader.New, 0)
 
-	testUploader(t, 10*time.Millisecond, 10, 60, 60, New, 1*time.Millisecond)
-	testUploader(t, 10*time.Millisecond, 300, 60, 60, New, 1*time.Millisecond)
-	testUploader(t, 10*time.Millisecond, 1, 30, 30, New, 1*time.Millisecond)
-	testUploader(t, 10*time.Millisecond, 30, 2, 2, New, 1*time.Millisecond)
-	testUploader(t, 10*time.Millisecond, 10, 45, 40, New, 1*time.Millisecond)
+	testUploader(t, 10*time.Millisecond, 10, 60, 60, uploader.New, 1*time.Millisecond)
+	testUploader(t, 10*time.Millisecond, 300, 60, 60, uploader.New, 1*time.Millisecond)
+	testUploader(t, 10*time.Millisecond, 1, 30, 30, uploader.New, 1*time.Millisecond)
+	testUploader(t, 10*time.Millisecond, 30, 2, 2, uploader.New, 1*time.Millisecond)
+	testUploader(t, 10*time.Millisecond, 10, 45, 40, uploader.New, 1*time.Millisecond)
 }
 
 func testUploader(
@@ -232,7 +233,7 @@ func testUploader(
 	workersCount int,
 	objectsToEnqueueCount int,
 	capacity int,
-	uploaderFactory func(string, *slog.Logger, int, int, domain.FilePathProvider, *prometheus.Registry, chan *domain.WorkUnit) *NonBlockingUploader,
+	uploaderFactory func(string, *slog.Logger, int, int, domain.FilePathProvider, *prometheus.Registry, chan *domain.WorkUnit) *uploader.NonBlockingUploader,
 	sleepTimeBeforeProducing time.Duration) {
 
 	resultCounter := int64(0)
@@ -286,7 +287,7 @@ func testUploaderEnsuringEnqueuedItems(
 	workersCount int,
 	objectsToEnqueueCount int,
 	capacity int,
-	uploaderFactory func(string, *slog.Logger, int, int, domain.FilePathProvider, *prometheus.Registry, chan *domain.WorkUnit) *NonBlockingUploader,
+	uploaderFactory func(string, *slog.Logger, int, int, domain.FilePathProvider, *prometheus.Registry, chan *domain.WorkUnit) *uploader.NonBlockingUploader,
 ) {
 
 	var waitG sync.WaitGroup
