@@ -11,6 +11,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var llog = logger.NewDummy()
@@ -45,7 +46,7 @@ func TestURLFormat(t *testing.T) {
 			assert.Errorf(t, err,
 				"should return error when URL %s is used", tc.url)
 		} else {
-			assert.NoErrorf(t, err,
+			require.NoErrorf(t, err,
 				"should NOT return error when URL %s is used", tc.url)
 		}
 	}
@@ -73,7 +74,7 @@ func TestURLFormatWhenUploading(t *testing.T) {
 	//server url is like http://127.0.0.1:57439
 	sut, err := httpstorage.NewHTTPStorage(llog, &httpstorage.Config{
 		URL: fmt.Sprintf("%s/something-to-upload", externalServer.URL)})
-	assert.NoError(t, err, "should not error on storage creation")
+	require.NoError(t, err, "should not error on storage creation")
 
 	_, err = sut.Upload(&domain.WorkUnit{
 		Filename: "some-filename",
@@ -83,15 +84,15 @@ func TestURLFormatWhenUploading(t *testing.T) {
 	assert.Equalf(t, []byte("some-data"), uploadedData[0],
 		"the data should be sent to the external server")
 	assert.Equalf(t, "/something-to-upload", paths[0],
-		"the path should NOT have any variation when the URL doesn't have %s")
+		"the path should NOT have any variation when the URL doesn't have")
 	assert.Equalf(t, http.MethodPost, methods[0],
 		"the method used to send should be POST")
-	assert.NoError(t, err, "the upload should return no error")
+	require.NoError(t, err, "the upload should return no error")
 
 	//server url is like http://127.0.0.1:57439
 	sut, err = httpstorage.NewHTTPStorage(llog, &httpstorage.Config{
 		URL: fmt.Sprintf("%s/something-to-upload/%s", externalServer.URL, "%s")})
-	assert.NoError(t, err, "should not error on storage creation")
+	require.NoError(t, err, "should not error on storage creation")
 
 	_, err = sut.Upload(&domain.WorkUnit{
 		Filename: "some-filename2",
@@ -101,10 +102,10 @@ func TestURLFormatWhenUploading(t *testing.T) {
 	assert.Equalf(t, []byte("some-data2"), uploadedData[1],
 		"the data should be sent to the external server")
 	assert.Equalf(t, "/something-to-upload/some-prefix2/some-filename2", paths[1],
-		"the path should have the prefix and filaname when URL have %s")
+		"the path should have the prefix and filaname when URL have")
 	assert.Equalf(t, http.MethodPost, methods[1],
 		"the method used to send should be POST")
-	assert.NoError(t, err, "the upload should return no error")
+	require.NoError(t, err, "the upload should return no error")
 }
 
 func TestUploadSuccess(t *testing.T) {
@@ -117,14 +118,14 @@ func TestUploadSuccess(t *testing.T) {
 	//server url is like http://127.0.0.1:57439
 	sut, err := httpstorage.NewHTTPStorage(llog, &httpstorage.Config{
 		URL: fmt.Sprintf("%s/something-to-upload/%%s", externalServer.URL)})
-	assert.NoError(t, err, "should not error on storage creation")
+	require.NoError(t, err, "should not error on storage creation")
 
 	uploadResult, err := sut.Upload(&domain.WorkUnit{
 		Filename: "some-filename",
 		Prefix:   "some-prefix",
 		Data:     []byte("some-data")})
 
-	assert.NoError(t, err, "the upload should return no error")
+	require.NoError(t, err, "the upload should return no error")
 	assert.Equal(t, "some-prefix/some-filename",
 		uploadResult.Path, "the upload result should contain the path of the data")
 	assert.Equal(t, fmt.Sprintf("%s/something-to-upload/some-prefix/some-filename", externalServer.URL),
@@ -167,7 +168,7 @@ func TestUploadErrors(t *testing.T) {
 
 		sut, err := httpstorage.NewHTTPStorage(llog, &httpstorage.Config{
 			URL: fmt.Sprintf("%s/something-to-upload/%%s", externalServer.URL)})
-		assert.NoError(t, err, "should not error on storage creation")
+		require.NoError(t, err, "should not error on storage creation")
 
 		_, err = sut.Upload(&domain.WorkUnit{
 			Filename: "some-filename",
@@ -175,10 +176,10 @@ func TestUploadErrors(t *testing.T) {
 			Data:     []byte("some-data")})
 
 		if tc.shouldError {
-			assert.Errorf(t, err,
+			require.Errorf(t, err,
 				"upload should return error when status code from external server is %d", tc.statusCode)
 		} else {
-			assert.NoErrorf(t, err,
+			require.NoErrorf(t, err,
 				"upload should NOT return error when status code from external server is %d", tc.statusCode)
 		}
 

@@ -17,6 +17,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/worker"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var noCompressionConf config.CompressionConfig = config.CompressionConfig{}
@@ -91,7 +92,7 @@ func TestWorkSentDownstreamHasTheCorrectDataInIt(t *testing.T) {
 	go sut.Run(ctx)
 
 	err := sut.Enqueue([]byte("1"))
-	assert.NoError(t, err, "should not err on enqueue")
+	require.NoError(t, err, "should not err on enqueue")
 
 	select {
 	case work := <-nextQueue:
@@ -125,7 +126,7 @@ func TestItDeniesWorkAfterContextIsCanceled(t *testing.T) {
 	go sut.Run(ctx)
 
 	err := sut.Enqueue([]byte("1"))
-	assert.NoError(t, err, "should not err on enqueue")
+	require.NoError(t, err, "should not err on enqueue")
 
 	select {
 	case <-nextQueue:
@@ -158,9 +159,9 @@ func TestItFlushesAllPendingDataWhenContextIsCancelled(t *testing.T) {
 
 	go sut.Run(ctx)
 	err := sut.Enqueue([]byte("1"))
-	assert.NoError(t, err, "should not err on enqueue")
+	require.NoError(t, err, "should not err on enqueue")
 	err = sut.Enqueue([]byte("2"))
-	assert.NoError(t, err, "should not err on enqueue")
+	require.NoError(t, err, "should not err on enqueue")
 	time.Sleep(10 * time.Millisecond)
 
 	cancel()
@@ -181,7 +182,7 @@ func TestItFlushesAllPendingDataWhenContextIsCancelled(t *testing.T) {
 	}
 
 	err = sut.Enqueue([]byte("3"))
-	assert.Error(t, err, "should err on enqueue")
+	require.Error(t, err, "should err on enqueue")
 
 	select {
 	case work := <-nextQueue:
@@ -261,7 +262,7 @@ func testUploader(
 
 	for i := 0; i < objectsToEnqueueCount; i++ {
 		err := sut.Enqueue([]byte(fmt.Sprint(i)))
-		assert.NoError(t, err, "should not err on enqueue")
+		require.NoError(t, err, "should not err on enqueue")
 		if sleepTimeBeforeProducing != 0 {
 			time.Sleep(sleepTimeBeforeProducing)
 		}
@@ -320,7 +321,7 @@ func testUploaderEnsuringEnqueuedItems(
 
 	for i := 0; i < objectsToEnqueueCount; i++ {
 		err := sut.Enqueue([]byte(fmt.Sprint(i)))
-		assert.NoError(t, err, "should not err on enqueue")
+		require.NoError(t, err, "should not err on enqueue")
 		expected[i] = fmt.Sprint(i)
 	}
 

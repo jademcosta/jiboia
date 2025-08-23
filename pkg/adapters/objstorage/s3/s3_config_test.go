@@ -5,6 +5,7 @@ import (
 
 	"github.com/jademcosta/jiboia/pkg/adapters/objstorage/s3"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const configYaml = `
@@ -18,7 +19,7 @@ secret_key: "secret s3!"
 
 func TestParseConfig(t *testing.T) {
 	s3Config, err := s3.ParseConfig([]byte(configYaml))
-	assert.NoError(t, err, "should not return error when parsing s3 config")
+	require.NoError(t, err, "should not return error when parsing s3 config")
 
 	assert.Equal(t, int64(1234), s3Config.TimeoutInMillis, "bucket timeout_milliseconds doesn't match")
 	assert.Equal(t, "some-s3-bucket-name", s3Config.Bucket, "bucket name doesn't match")

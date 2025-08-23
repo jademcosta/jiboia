@@ -17,6 +17,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/worker"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func constantTimeProvider(fixedTime time.Time) func() time.Time {
@@ -293,7 +294,7 @@ func TestDoesNotCallEnqueueWhenObjUploadFails(t *testing.T) {
 	objStorage.mu.Lock()
 	defer objStorage.mu.Unlock()
 	assert.Len(t, objStorage.calledWith, 1, "should have called upload")
-	assert.Len(t, queue.calledWith, 0, "should not have called enqueuer")
+	assert.Empty(t, queue.calledWith, "should not have called enqueuer")
 
 	close(workChan)
 	cancel()
@@ -365,10 +366,10 @@ func TestUsesCompressionConfig(t *testing.T) {
 		assert.NotEqualf(t, len(data), len(compressedData), "the compressed data should have different sizes")
 
 		compressorReader, err := compression.NewReader(&tc.compressConf, bytes.NewReader(compressedData))
-		assert.NoError(t, err, "compression reader creation should return no error")
+		require.NoError(t, err, "compression reader creation should return no error")
 
 		result, err := io.ReadAll(compressorReader)
-		assert.NoError(t, err, "compression reader Read should return no error")
+		require.NoError(t, err, "compression reader Read should return no error")
 
 		assert.Equal(t, len(data), len(result), "the decompression result should have the same size as the original")
 		assert.Equal(t, data, string(result), "the decompression result be the same as the original")

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestFlowConfigFillDefaults(t *testing.T) {
@@ -21,15 +22,15 @@ func TestFlowConfigValidate(t *testing.T) {
 	}
 
 	sut = sut.fillDefaultValues()
-	assert.NoError(t, sut.validate(), "should be valid")
+	require.NoError(t, sut.validate(), "should be valid")
 
 	sut.Name = "some naa mee"
-	assert.Error(t, sut.validate(), "name should not have spaces")
+	require.Error(t, sut.validate(), "name should not have spaces")
 
 	sut.Name = ""
-	assert.Error(t, sut.validate(), "name cannot be empty")
+	require.Error(t, sut.validate(), "name cannot be empty")
 
 	sut.Name = "some"
 	sut.PathPrefixCount = 0
-	assert.Error(t, sut.validate(), "path prefix count cannot be zero")
+	require.Error(t, sut.validate(), "path prefix count cannot be zero")
 }

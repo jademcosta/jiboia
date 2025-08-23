@@ -13,6 +13,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var llog = logger.NewDummy()
@@ -58,7 +59,7 @@ func TestItParsesWorkUnitIntoUploadInput(t *testing.T) {
 	c := &Config{Bucket: "some_bucket_name"}
 
 	sut, err := New(llog, c)
-	assert.NoError(t, err, "should not error on New")
+	require.NoError(t, err, "should not error on New")
 	mockUploader := &mockedAWSS3Uploader{calledWith: make([]*s3manager.UploadInput, 0)}
 	sut.uploader = mockUploader
 
@@ -69,13 +70,13 @@ func TestItParsesWorkUnitIntoUploadInput(t *testing.T) {
 	}
 
 	_, err = sut.Upload(workU)
-	assert.NoError(t, err, "should not err on upload")
+	require.NoError(t, err, "should not err on upload")
 
 	assert.Len(t, mockUploader.calledWith, 1, "should have called the uploader with 1 workUnit")
 	input := mockUploader.calledWith[0]
 
 	buf, err := io.ReadAll(input.Body)
-	assert.NoError(t, err, "reading the sent body should not error")
+	require.NoError(t, err, "reading the sent body should not error")
 	assert.Equal(t, workU.Data, buf, "the data sent to S3 should be equals to the one in workUnit")
 
 	assert.Equal(t, workU.Prefix+"/"+workU.Filename, *input.Key, "the file key should be built using prefixes and filename from work unit")
@@ -110,7 +111,7 @@ func TestItWorksWithDifferentPrefixConfigs(t *testing.T) {
 		}
 
 		sut, err := New(llog, c)
-		assert.NoError(t, err, "should not error on New")
+		require.NoError(t, err, "should not error on New")
 		mockUploader := &mockedAWSS3Uploader{calledWith: make([]*s3manager.UploadInput, 0)}
 		sut.uploader = mockUploader
 
@@ -121,7 +122,7 @@ func TestItWorksWithDifferentPrefixConfigs(t *testing.T) {
 		}
 
 		_, err = sut.Upload(workU)
-		assert.NoError(t, err, "should not err on upload")
+		require.NoError(t, err, "should not err on upload")
 
 		assert.Len(t, mockUploader.calledWith, 1, "should have called the uploader with 1 workUnit")
 		input := mockUploader.calledWith[0]
@@ -147,7 +148,7 @@ func TestReturnsTheUploadError(t *testing.T) {
 	mockUploader := &mockedAWSS3Uploader{calledWith: make([]*s3manager.UploadInput, 0), err: uploadErr}
 
 	sut, err := New(llog, c)
-	assert.NoError(t, err, "should not error on New")
+	require.NoError(t, err, "should not error on New")
 
 	sut.uploader = mockUploader
 
@@ -160,8 +161,8 @@ func TestReturnsTheUploadError(t *testing.T) {
 	_, err = sut.Upload(workU)
 
 	assert.Len(t, mockUploader.calledWith, 1, "should have called the uploader with 1 workUnit")
-	assert.Error(t, err, "should return an error")
-	assert.ErrorIs(t, err, uploadErr, "should return the error the S3 dependency returned, wrapped")
+	require.Error(t, err, "should return an error")
+	require.ErrorIs(t, err, uploadErr, "should return the error the S3 dependency returned, wrapped")
 	assert.ErrorContains(t, err, "some random error", "should return the error the S3 dependency returned, wrapped")
 }
 
@@ -175,7 +176,7 @@ func TestReturnsDataBasedOnUploadReturn(t *testing.T) {
 	}
 
 	sut, err := New(llog, c)
-	assert.NoError(t, err, "should not error on New")
+	require.NoError(t, err, "should not error on New")
 
 	sut.uploader = mockUploader
 
@@ -188,7 +189,7 @@ func TestReturnsDataBasedOnUploadReturn(t *testing.T) {
 	upResult, err := sut.Upload(workU)
 
 	assert.Len(t, mockUploader.calledWith, 1, "should have called the uploader with 1 workUnit")
-	assert.NoError(t, err, "should not return an error")
+	require.NoError(t, err, "should not return an error")
 
 	assert.Equal(t, "some_location", upResult.URL, "should have the uploadOutput Location field as URL field")
 	assert.Equal(t, "my_region", upResult.Region, "should have the region we provide in config as upload output region")
@@ -208,7 +209,7 @@ func TestBuildsAContextWithTimeoutAndSendItForward(t *testing.T) {
 	}
 
 	sut, err := New(llog, c)
-	assert.NoError(t, err, "should not error on New")
+	require.NoError(t, err, "should not error on New")
 
 	sut.uploader = mockUploader
 
@@ -232,7 +233,7 @@ func TestBuildsAContextWithTimeoutAndSendItForward(t *testing.T) {
 func TestSetsContentEncodingBasedOnFileName(t *testing.T) {
 	c := &Config{Bucket: "some_bucket_name"}
 	sut, err := New(llog, c)
-	assert.NoError(t, err, "should not error on New")
+	require.NoError(t, err, "should not error on New")
 	mockUploader := &mockedAWSS3Uploader{calledWith: make([]*s3manager.UploadInput, 0)}
 	sut.uploader = mockUploader
 
@@ -257,7 +258,7 @@ func TestSetsContentEncodingBasedOnFileName(t *testing.T) {
 			Data:     []byte("test data"),
 		}
 		_, err := sut.Upload(workU)
-		assert.NoError(t, err, "should not err on upload for %s", tc.filename)
+		require.NoError(t, err, "should not err on upload for %s", tc.filename)
 		assert.Len(t, mockUploader.calledWith, 1, "should have called the uploader with 1 workUnit")
 		input := mockUploader.calledWith[0]
 		assert.Equal(t, tc.expectedType, *input.ContentEncoding, "should set correct ContentEncoding for %s", tc.filename)

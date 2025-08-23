@@ -9,6 +9,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const configYaml = `
@@ -64,7 +65,7 @@ func TestMessageContainsTheData(t *testing.T) {
 		URL:             "some_url",
 		SizeInBytes:     1111,
 		CompressionType: "some-compression"})
-	assert.NoError(t, err, "should not err on enqueue")
+	require.NoError(t, err, "should not err on enqueue")
 
 	jsonMsg := "{\"schema_version\":\"0.0.1\",\"flow_name\":\"this-flow-name\",\"bucket\":{\"name\":\"my-bucket1\",\"region\":\"region-a\"},\"object\":{\"path\":\"filepath\",\"full_url\":\"some_url\",\"size_in_bytes\":1111,\"compression_algorithm\":\"some-compression\"}}"
 
@@ -103,7 +104,7 @@ func TestReturnsTheErrorOnEnqueueingError(t *testing.T) {
 			SizeInBytes:     1111,
 			CompressionType: "some-compression"},
 	)
-	assert.Error(t, err, "should have error on enqueue")
+	require.Error(t, err, "should have error on enqueue")
 
 	assert.Lenf(t, mockSQS.msgs, 1, "1 message should have been sent to SQS client")
 	assert.Same(t, mockErr, err, "the underlying SQS error should have been sent as return")
@@ -112,7 +113,7 @@ func TestReturnsTheErrorOnEnqueueingError(t *testing.T) {
 func TestParseConfig(t *testing.T) {
 	confResult, err := ParseConfig([]byte(configYaml))
 
-	assert.NoError(t, err, "should not return error from config parsing")
+	require.NoError(t, err, "should not return error from config parsing")
 	assert.Equal(t, "sqs-queue-url-here", confResult.URL, "queue URL doesn't match")
 	assert.Equal(t, "aws-sqs-region-here", confResult.Region, "queue region doesn't match")
 	assert.Equal(t, "access sqs!", confResult.AccessKey, "queue access_key doesn't match")

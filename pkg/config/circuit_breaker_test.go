@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCBFillDefaults(t *testing.T) {
@@ -23,7 +24,7 @@ func TestCBOpenIntervalAsDuration(t *testing.T) {
 func TestCBValidate(t *testing.T) {
 	sut := CircuitBreakerConfig{}
 
-	assert.Error(t, sut.validate(), "open interval cannot be zero")
+	require.Error(t, sut.validate(), "open interval cannot be zero")
 
 	sut.OpenInterval = 1
 	assert.NoError(t, sut.validate(), "should not error")

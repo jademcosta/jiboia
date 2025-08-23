@@ -9,6 +9,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/compression"
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDecompressionAfterCompressionKeepsDataUnchanged(t *testing.T) {
@@ -40,24 +41,24 @@ func TestDecompressionAfterCompressionKeepsDataUnchanged(t *testing.T) {
 		buf := &bytes.Buffer{}
 
 		compressorWriter, err := compression.NewWriter(&tc.conf, buf)
-		assert.NoError(t, err, "compression writer creation should return no error")
+		require.NoError(t, err, "compression writer creation should return no error")
 
 		_, err = compressorWriter.Write([]byte(data))
-		assert.NoError(t, err, "compression writer Write call should return no error")
+		require.NoError(t, err, "compression writer Write call should return no error")
 		err = compressorWriter.Close()
-		assert.NoError(t, err, "compression writer Close call should return no error")
+		require.NoError(t, err, "compression writer Close call should return no error")
 
 		compressedData := buf.Bytes()
 		assert.NotEqual(t, []byte(data), compressedData,
 			"the compressed data should be different from the original")
 
 		compressorReader, err := compression.NewReader(&tc.conf, buf)
-		assert.NoError(t, err, "compression reader creation should return no error")
+		require.NoError(t, err, "compression reader creation should return no error")
 
 		result, err := io.ReadAll(compressorReader)
-		assert.NoError(t, err, "compression reader Read should return no error")
+		require.NoError(t, err, "compression reader Read should return no error")
 
-		assert.Equal(t, dataSize, len(result), "the decompression result should have the same size as the original")
+		assert.Len(t, result, dataSize, "the decompression result should have the same size as the original")
 		assert.Equal(t, data, string(result), "the decompression result be the same as the original")
 	}
 }
@@ -71,25 +72,25 @@ func TestEmptyConfigDoesNotApplyCompression(t *testing.T) {
 	buf := &bytes.Buffer{}
 
 	compressorWriter, err := compression.NewWriter(&conf, buf)
-	assert.NoError(t, err, "compression writer creation should return no error")
+	require.NoError(t, err, "compression writer creation should return no error")
 
 	_, err = compressorWriter.Write([]byte(data))
-	assert.NoError(t, err, "compression writer Write call should return no error")
+	require.NoError(t, err, "compression writer Write call should return no error")
 	err = compressorWriter.Close()
-	assert.NoError(t, err, "compression writer Close call should return no error")
+	require.NoError(t, err, "compression writer Close call should return no error")
 
 	compressedData := buf.Bytes()
 	assert.Equal(t, []byte(data), compressedData,
 		"the compressed data should be equal to the original")
-	assert.Equal(t, dataSize, len(compressedData), "the compressed data should have the same size as the original")
+	assert.Len(t, compressedData, dataSize, "the compressed data should have the same size as the original")
 
 	compressorReader, err := compression.NewReader(&conf, buf)
-	assert.NoError(t, err, "compression reader creation should return no error")
+	require.NoError(t, err, "compression reader creation should return no error")
 
 	result, err := io.ReadAll(compressorReader)
-	assert.NoError(t, err, "compression reader Read should return no error")
+	require.NoError(t, err, "compression reader Read should return no error")
 
-	assert.Equal(t, dataSize, len(result), "the decompression result should have the same size as the original")
+	assert.Len(t, result, dataSize, "the decompression result should have the same size as the original")
 	assert.Equal(t, data, string(result), "the decompression result be the same as the original")
 }
 

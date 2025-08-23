@@ -10,6 +10,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/config"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDefaultConfig(t *testing.T) {
@@ -18,11 +19,11 @@ func TestDefaultConfig(t *testing.T) {
 	}
 
 	confYaml, err := os.ReadFile("../../config_example.yaml")
-	assert.NoError(t, err, "should not return error when reading config file")
+	require.NoError(t, err, "should not return error when reading config file")
 	assert.NotEmpty(t, confYaml, "config content should not be empty")
 
 	conf, err := config.New(confYaml)
-	assert.NoError(t, err, "should not return error when creating config")
+	require.NoError(t, err, "should not return error when creating config")
 
 	l := logger.New(&conf.O11y.Log)
 	myApp := app.New(conf, l)
@@ -30,7 +31,7 @@ func TestDefaultConfig(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	response, err := http.Get("http://localhost:9099/ready")
-	assert.NoError(t, err, "should return no error when calling GET on API")
+	require.NoError(t, err, "should return no error when calling GET on API")
 	assert.Equal(t, 200, response.StatusCode, "the API return should be success")
 	response.Body.Close()
 

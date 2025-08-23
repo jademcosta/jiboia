@@ -12,6 +12,7 @@ import (
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const configYaml = `
@@ -22,7 +23,7 @@ var llog = logger.NewDummy()
 
 func TestParseConfig(t *testing.T) {
 	localStorageConfig, err := localstorage.ParseConfig([]byte(configYaml))
-	assert.NoError(t, err, "should not return error when parsing localstorage config")
+	require.NoError(t, err, "should not return error when parsing localstorage config")
 
 	assert.Equal(t, "/tmp/", localStorageConfig.Path, "path doesn't match")
 }
@@ -37,7 +38,7 @@ func TestNewErrorsWhenPathIsNotADirectory(t *testing.T) {
 	randomNumber := strconv.Itoa(int(time.Now().Unix()))
 	filePath := "/tmp/" + randomNumber
 	err := os.WriteFile(filePath, []byte("content!"), os.ModePerm)
-	assert.NoError(t, err, "writing file should not err")
+	require.NoError(t, err, "writing file should not err")
 
 	conf := &localstorage.Config{Path: filePath}
 	_, err = localstorage.New(llog, conf)
@@ -49,10 +50,10 @@ func TestUploadFailsIfDirectoryPathHasAFileInIt(t *testing.T) {
 
 	conf := &localstorage.Config{Path: "/tmp"}
 	sut, err := localstorage.New(llog, conf)
-	assert.NoError(t, err, "should not return an error")
+	require.NoError(t, err, "should not return an error")
 
 	err = os.WriteFile(filepath.Join("/tmp", randomNumber), []byte("content!"), os.ModePerm)
-	assert.NoError(t, err, "should not error on file writing")
+	require.NoError(t, err, "should not error on file writing")
 
 	work := &domain.WorkUnit{
 		Filename: "some_filename_here",
@@ -69,7 +70,7 @@ func TestUploadPutsTheContentOnFile(t *testing.T) {
 	conf := &localstorage.Config{Path: fixedPath}
 	sut, err := localstorage.New(llog, conf)
 
-	assert.NoError(t, err, "shouldn't return an error")
+	require.NoError(t, err, "shouldn't return an error")
 
 	fileContent := "content of the file!"
 	work := &domain.WorkUnit{
@@ -79,7 +80,7 @@ func TestUploadPutsTheContentOnFile(t *testing.T) {
 	}
 
 	uploadResult, err := sut.Upload(work)
-	assert.NoError(t, err, "shouldn't return an error")
+	require.NoError(t, err, "shouldn't return an error")
 
 	expectedFullPath := filepath.Join(fixedPath, work.Prefix, work.Filename)
 
@@ -91,7 +92,7 @@ func TestUploadPutsTheContentOnFile(t *testing.T) {
 	assert.Equal(t, uploadResult.Path, uploadResult.URL, "path should be equal to URL")
 
 	content, err := os.ReadFile(expectedFullPath)
-	assert.NoError(t, err, "shouldn't return an error")
+	require.NoError(t, err, "shouldn't return an error")
 
 	assert.Equal(t, fileContent, string(content), "the file content should be the one we sent to the storage")
 }
