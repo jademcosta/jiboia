@@ -12,7 +12,7 @@ import (
 )
 
 type NonBlockingUploader struct {
-	internalDataChan chan []byte
+	internalDataChan chan *domain.WorkUnit
 	next             chan *domain.WorkUnit
 	searchForWork    chan struct{}
 	log              *slog.Logger
@@ -42,7 +42,7 @@ func New(
 	metrics.workersCount(workersCount)
 
 	uploader := &NonBlockingUploader{
-		internalDataChan: make(chan []byte, queueCapacity),
+		internalDataChan: make(chan *domain.WorkUnit, queueCapacity),
 		next:             next,
 		searchForWork:    make(chan struct{}, 1),
 		log:              l.With(logger.ComponentKey, "uploader"),
@@ -53,7 +53,7 @@ func New(
 	return uploader
 }
 
-func (s *NonBlockingUploader) Enqueue(data []byte) error {
+func (s *NonBlockingUploader) Enqueue(payload *domain.WorkUnit) error {
 	s.shutdownMutex.RLock()
 	defer s.shutdownMutex.RUnlock()
 	if s.shuttingDown {
@@ -63,7 +63,7 @@ func (s *NonBlockingUploader) Enqueue(data []byte) error {
 	s.metrics.increaseEnqueueCounter()
 
 	select {
-	case s.internalDataChan <- data:
+	case s.internalDataChan <- payload:
 		s.updateEnqueuedItemsMetric()
 	default:
 		s.metrics.incEnqueueFailed()
@@ -101,14 +101,11 @@ func (s *NonBlockingUploader) Done() <-chan struct{} {
 	return s.doneChan
 }
 
-func (s *NonBlockingUploader) sendWorkToNext(data []byte) {
-	workU := &domain.WorkUnit{
-		Filename: *s.filePathProvider.Filename(),
-		Prefix:   *s.filePathProvider.Prefix(),
-		Data:     data,
-	}
+func (s *NonBlockingUploader) sendWorkToNext(payload *domain.WorkUnit) {
+	payload.Filename = *s.filePathProvider.Filename()
+	payload.Prefix = *s.filePathProvider.Prefix()
 
-	s.next <- workU
+	s.next <- payload
 	s.updateEnqueuedItemsMetric()
 }
 

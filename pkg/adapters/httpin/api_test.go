@@ -14,6 +14,7 @@ import (
 
 	"github.com/jademcosta/jiboia/pkg/compression"
 	"github.com/jademcosta/jiboia/pkg/config"
+	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/domain/flow"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/jademcosta/jiboia/pkg/o11y/tracing"
@@ -50,26 +51,26 @@ type mockDataFlow struct {
 	enqueueFunc func([]byte) error
 }
 
-func (mockDF *mockDataFlow) Enqueue(data []byte) error {
+func (mockDF *mockDataFlow) Enqueue(payload *domain.WorkUnit) error {
 	mockDF.mu.Lock()
-	mockDF.calledWith = append(mockDF.calledWith, data)
+	mockDF.calledWith = append(mockDF.calledWith, payload.Data)
 	mockDF.mu.Unlock()
 
 	if mockDF.enqueueFunc != nil {
-		return mockDF.enqueueFunc(data)
+		return mockDF.enqueueFunc(payload.Data)
 	}
 	return nil
 }
 
 type dummyAlwaysFailDataFlow struct{}
 
-func (mockDF *dummyAlwaysFailDataFlow) Enqueue(_ []byte) error {
+func (mockDF *dummyAlwaysFailDataFlow) Enqueue(_ *domain.WorkUnit) error {
 	return fmt.Errorf("dummy error")
 }
 
 type brokenDataFlow struct{}
 
-func (brokenDF *brokenDataFlow) Enqueue(_ []byte) error {
+func (brokenDF *brokenDataFlow) Enqueue(_ *domain.WorkUnit) error {
 	panic("I always panic")
 }
 

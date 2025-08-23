@@ -1,5 +1,7 @@
 package domain
 
+import "context"
+
 const MsgSchemaVersion string = "0.0.1"
 
 type UploadResult struct {
@@ -20,15 +22,24 @@ type MessageContext struct {
 	SavedAt         int64
 }
 
-type DataFlow interface {
-	// TODO: change this to Send, and the interface name to something related, like data receiver, or something like that
-	Enqueue([]byte) error
+type DataEnqueuer interface {
+	Enqueue(*WorkUnit) error
 }
 
+// It is the internal representation of data flowing through the flows
 type WorkUnit struct {
 	Filename string
 	Prefix   string
 	Data     []byte
+	Context  context.Context
+}
+
+// FIXME: add tests
+func (w *WorkUnit) DataLen() int {
+	if w == nil || w.Data == nil {
+		return 0
+	}
+	return len(w.Data)
 }
 
 type FilePathProvider interface {

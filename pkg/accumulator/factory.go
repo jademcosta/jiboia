@@ -17,7 +17,7 @@ func From(
 	flowName string,
 	logg *slog.Logger,
 	limitOfBytes int,
-	next domain.DataFlow,
+	next domain.DataEnqueuer,
 	cb circuitbreaker.CircuitBreaker,
 	metricRegistry *prometheus.Registry,
 	currentTimeProvider func() time.Time,

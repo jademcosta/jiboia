@@ -34,7 +34,7 @@ var implementations = []struct {
 		limitOfBytes int,
 		separator []byte,
 		queueCapacity int,
-		next domain.DataFlow,
+		next domain.DataEnqueuer,
 		cb circuitbreaker.CircuitBreaker,
 		metricRegistry *prometheus.Registry,
 		currentTimeProvider func() time.Time,
@@ -51,12 +51,12 @@ type dataEnqueuerMock struct {
 	mu          sync.Mutex
 }
 
-func (w *dataEnqueuerMock) Enqueue(data []byte) error {
+func (w *dataEnqueuerMock) Enqueue(payload *domain.WorkUnit) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
 	w.callCount++
-	w.dataWritten = append(w.dataWritten, data)
+	w.dataWritten = append(w.dataWritten, payload.Data)
 	return nil
 }
 
@@ -67,12 +67,12 @@ type failingDataEnqueuerMock struct {
 	fail        bool
 }
 
-func (denq *failingDataEnqueuerMock) Enqueue(data []byte) error {
+func (denq *failingDataEnqueuerMock) Enqueue(payload *domain.WorkUnit) error {
 	denq.mu.Lock()
 	defer denq.mu.Unlock()
 
 	denq.callCount++
-	denq.dataWritten = append(denq.dataWritten, data)
+	denq.dataWritten = append(denq.dataWritten, payload.Data)
 	if denq.fail {
 		return errors.New("i always fail")
 	}
@@ -178,7 +178,8 @@ func TestItDoesNotPassDataIfLimitNotReached(t *testing.T) {
 				sut := impl.newFunc("someflow", l, tc.limitBytes, tc.separator, queueCapacity, next, dummyCB, prometheus.NewRegistry(), time.Now, dummyDuration)
 
 				go sut.Run(ctx)
-				err := sut.Enqueue(tc.data)
+				workU := &domain.WorkUnit{Data: tc.data}
+				err := sut.Enqueue(workU)
 				require.NoError(t, err, "should not err on enqueue")
 				time.Sleep(5 * time.Millisecond)
 
@@ -246,7 +247,8 @@ func TestWritesTheDataIfSizeEqualOrBiggerThanCapacity(t *testing.T) {
 				sut := impl.newFunc("someflow", l, tc.limitBytes, tc.separator, queueCapacity, next, dummyCB, prometheus.NewRegistry(), time.Now, dummyDuration)
 
 				go sut.Run(ctx)
-				err := sut.Enqueue(tc.data)
+				workU := &domain.WorkUnit{Data: tc.data}
+				err := sut.Enqueue(workU)
 				require.NoError(t, err, "should not err on enqueue")
 				time.Sleep(5 * time.Millisecond)
 
@@ -348,7 +350,8 @@ func TestWritesTheDataWhenLimitIsHitAfterMultipleCalls(t *testing.T) {
 
 				go sut.Run(ctx)
 				for _, data := range tc.data {
-					err := sut.Enqueue(data)
+					workU := &domain.WorkUnit{Data: data}
+					err := sut.Enqueue(workU)
 					require.NoError(t, err, "should not err on enqueue")
 					time.Sleep(1 * time.Millisecond)
 				}
@@ -393,10 +396,10 @@ func TestRejectsDataIfAtFullCapacity(t *testing.T) {
 				sut := impl.newFunc("someflow", l, limitBytes, tc.separator, tc.queueCapacity, next, dummyCB, prometheus.NewRegistry(), time.Now, dummyDuration)
 
 				for i := 0; i < tc.dataEnqueueCount; i++ {
-					_ = sut.Enqueue([]byte(fmt.Sprint(i)))
+					_ = sut.Enqueue(&domain.WorkUnit{Data: []byte(fmt.Sprint(i))})
 				}
 
-				err := sut.Enqueue([]byte("1"))
+				err := sut.Enqueue(&domain.WorkUnit{Data: []byte("1")})
 				require.Error(t, err, "should return error")
 
 				next.mu.Lock()
@@ -427,7 +430,7 @@ func TestTheCapacityIsFixed(t *testing.T) {
 			sut := impl.newFunc("someflow", l, limitBytes, separator, queueCapacity, next, dummyCB, prometheus.NewRegistry(), time.Now, dummyDuration)
 
 			for i := 0; i < dataEnqueueCount; i++ {
-				err := sut.Enqueue([]byte(fmt.Sprint(i)))
+				err := sut.Enqueue(&domain.WorkUnit{Data: []byte(fmt.Sprint(i))})
 				require.NoError(t, err, "should not err on enqueue")
 			}
 
@@ -437,9 +440,9 @@ func TestTheCapacityIsFixed(t *testing.T) {
 				queueCapacity, dataEnqueueCount)
 			next.mu.Unlock()
 
-			err := sut.Enqueue([]byte("a"))
+			err := sut.Enqueue(&domain.WorkUnit{Data: []byte("a")})
 			require.Error(t, err, "should err on enqueue")
-			err = sut.Enqueue([]byte("b"))
+			err = sut.Enqueue(&domain.WorkUnit{Data: []byte("b")})
 			require.Error(t, err, "should err on enqueue")
 		})
 	}
@@ -486,7 +489,7 @@ func TestSendsPendingDataWhenContextIsCancelled(t *testing.T) {
 				go sut.Run(ctx)
 
 				for _, data := range tc.data {
-					err := sut.Enqueue(data)
+					err := sut.Enqueue(&domain.WorkUnit{Data: data})
 					require.NoError(t, err, "should not err on enqueue")
 				}
 
@@ -533,7 +536,7 @@ func TestEnqueuesErrorsAfterContextCancelled(t *testing.T) {
 				"should not produce any message.")
 			next.mu.Unlock()
 
-			err := sut.Enqueue([]byte("hi"))
+			err := sut.Enqueue(&domain.WorkUnit{Data: []byte("hi")})
 			require.Error(t, err, "should return error if enqueue is called after a shutdown has started")
 		})
 	}
@@ -567,7 +570,7 @@ func TestCallindEnqueueUsesACircuitBreakerAndRetriesOnFailure(t *testing.T) {
 			go sut.Run(ctx)
 
 			payload := []byte("333")
-			err := sut.Enqueue(payload)
+			err := sut.Enqueue(&domain.WorkUnit{Data: payload})
 			require.NoError(t, err, "should not err on enqueue")
 			time.Sleep(5 * time.Millisecond)
 
@@ -628,7 +631,7 @@ func TestItStopsRetryingOnceItSendsTheData(t *testing.T) {
 			go sut.Run(ctx)
 
 			payload := []byte("333")
-			err := sut.Enqueue(payload)
+			err := sut.Enqueue(&domain.WorkUnit{Data: payload})
 			require.NoError(t, err, "should not err on enqueue")
 			time.Sleep(1 * time.Millisecond)
 
@@ -649,7 +652,7 @@ func TestItStopsRetryingOnceItSendsTheData(t *testing.T) {
 
 			next.SetFail(true)
 			payload2 := []byte("4444")
-			err = sut.Enqueue(payload2)
+			err = sut.Enqueue(&domain.WorkUnit{Data: payload2})
 			require.NoError(t, err, "should not err on enqueue")
 			time.Sleep(1 * time.Millisecond)
 

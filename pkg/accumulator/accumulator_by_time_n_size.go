@@ -26,9 +26,9 @@ type ByTimeAndSize struct {
 	limitOfBytes        int
 	separator           []byte
 	separatorLen        int
-	internalDataChan    chan []byte //TODO: should we expose this for a distributor to be able to run a select on multiple channels?
-	current             [][]byte
-	next                domain.DataFlow
+	internalDataChan    chan *domain.WorkUnit
+	currentAccumulation []*domain.WorkUnit
+	next                domain.DataEnqueuer
 	metrics             *metricCollector
 	shutdownMutex       sync.RWMutex
 	circBreaker         circuitbreaker.CircuitBreaker
@@ -47,7 +47,7 @@ func NewAccumulatorByTimeAndSize(
 	limitOfBytes int,
 	separator []byte,
 	queueCapacity int,
-	next domain.DataFlow,
+	next domain.DataEnqueuer,
 	cb circuitbreaker.CircuitBreaker,
 	metricRegistry *prometheus.Registry,
 	currentTimeProvider func() time.Time,
@@ -78,8 +78,8 @@ func NewAccumulatorByTimeAndSize(
 		limitOfBytes:        limitOfBytes,
 		separator:           separator,
 		separatorLen:        len(separator),
-		internalDataChan:    make(chan []byte, queueCapacity),
-		current:             make([][]byte, 0, 1024), //TODO: create the initial size based on the capacity
+		internalDataChan:    make(chan *domain.WorkUnit, queueCapacity),
+		currentAccumulation: make([]*domain.WorkUnit, 0, 1024), //TODO: create the initial size based on the capacity
 		next:                next,
 		metrics:             metrics,
 		circBreaker:         cb,
@@ -89,7 +89,7 @@ func NewAccumulatorByTimeAndSize(
 	}
 }
 
-func (acc *ByTimeAndSize) Enqueue(data []byte) error {
+func (acc *ByTimeAndSize) Enqueue(payload *domain.WorkUnit) error {
 	acc.shutdownMutex.RLock()
 	defer acc.shutdownMutex.RUnlock()
 	if acc.shuttingDown {
@@ -99,7 +99,7 @@ func (acc *ByTimeAndSize) Enqueue(data []byte) error {
 	acc.metrics.increaseEnqueueCounter()
 
 	select {
-	case acc.internalDataChan <- data:
+	case acc.internalDataChan <- payload:
 		acc.updateEnqueuedItemsMetric()
 	default:
 		acc.metrics.incEnqueueFailed()
@@ -142,9 +142,9 @@ func (acc *ByTimeAndSize) Done() <-chan struct{} {
 	return acc.doneChan
 }
 
-func (acc *ByTimeAndSize) append(data []byte) {
+func (acc *ByTimeAndSize) append(payload *domain.WorkUnit) {
 
-	dataLen := len(data)
+	dataLen := payload.DataLen()
 	noData := dataLen == 0
 	if noData {
 		return
@@ -154,7 +154,7 @@ func (acc *ByTimeAndSize) append(data []byte) {
 	receivedDataTooBigForBuffer := dataLen >= acc.limitOfBytes
 	if receivedDataTooBigForBuffer {
 		acc.flush(bySizeFlushType)
-		acc.enqueueOnNext(data)
+		acc.enqueueOnNext(payload)
 
 		return
 	}
@@ -165,7 +165,7 @@ func (acc *ByTimeAndSize) append(data []byte) {
 		acc.flush(bySizeFlushType)
 	}
 
-	acc.current = append(acc.current, data)
+	acc.currentAccumulation = append(acc.currentAccumulation, payload)
 	acc.oldestDataTime = acc.currentTimeProvider()
 
 	if bufferLenAfterAppend == acc.limitOfBytes {
@@ -174,7 +174,7 @@ func (acc *ByTimeAndSize) append(data []byte) {
 }
 
 func (acc *ByTimeAndSize) flush(typeOfFlush string) {
-	chunksCount := len(acc.current)
+	chunksCount := len(acc.currentAccumulation)
 	if chunksCount == 0 {
 		return
 	}
@@ -185,7 +185,7 @@ func (acc *ByTimeAndSize) flush(typeOfFlush string) {
 	var position int
 	var isLastChunk bool
 	for i := 0; i < chunksCount; i++ {
-		position += copy(mergedData[position:], acc.current[i])
+		position += copy(mergedData[position:], acc.currentAccumulation[i].Data)
 
 		isLastChunk = i >= (chunksCount - 1)
 		if !isLastChunk {
@@ -193,8 +193,10 @@ func (acc *ByTimeAndSize) flush(typeOfFlush string) {
 		}
 	}
 
-	acc.enqueueOnNext(mergedData)
-	acc.current = acc.current[:0]
+	sendToNextPayload := &domain.WorkUnit{Data: mergedData}
+
+	acc.enqueueOnNext(sendToNextPayload)
+	acc.currentAccumulation = acc.currentAccumulation[:0]
 	acc.oldestDataTime = time.Time{}
 	acc.metrics.increaseFlushCounter(typeOfFlush)
 }
@@ -204,25 +206,25 @@ func (acc *ByTimeAndSize) currentBufferLen() int {
 	separatorLen := acc.separatorLen
 	var total int
 
-	for _, data := range acc.current {
-		total += len(data)
+	for _, payload := range acc.currentAccumulation {
+		total += payload.DataLen()
 		total += separatorLen
 	}
 	total -= separatorLen
 	return total
 }
 
-func (acc *ByTimeAndSize) enqueueOnNext(data []byte) {
-	dataSize := len(data)
+func (acc *ByTimeAndSize) enqueueOnNext(payload *domain.WorkUnit) {
+	dataSize := payload.DataLen()
 
 	_, err := acc.circBreaker.Execute(func() (interface{}, error) {
-		return nil, acc.next.Enqueue(data)
+		return nil, acc.next.Enqueue(payload)
 	})
 
 	for err != nil {
 		time.Sleep(CBRetrySleepDuration)
 		_, err = acc.circBreaker.Execute(func() (interface{}, error) {
-			return nil, acc.next.Enqueue(data)
+			return nil, acc.next.Enqueue(payload)
 		})
 	}
 
