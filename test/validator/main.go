@@ -2,19 +2,21 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"math/rand"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 )
 
 type Message struct {
@@ -50,6 +52,9 @@ func main() {
 		os.Exit(1)
 	}
 
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 1*time.Minute)
+	defer cancelFunc()
+
 	expected1 := randSeq(20)
 	expected2 := randSeq(25)
 
@@ -80,19 +85,22 @@ func main() {
 	fmt.Println("Starting validator...")
 	fmt.Println("Important: This test does not works well if running it in parallel other instance of itself. It expects a single message on SQS!")
 
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		Config: aws.Config{
-			Region: aws.String("us-east-1"),
-		},
-	}))
+	sdkConfig, err := config.LoadDefaultConfig(ctx, config.WithRegion("us-east-1"))
+	if err != nil {
+		fmt.Println("couldn't load default AWS configuration")
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
-	svc := sqs.New(sess)
+	queueReader := sqs.NewFromConfig(sdkConfig)
+	downloader := s3.NewFromConfig(sdkConfig)
 
-	msgResult, err := svc.ReceiveMessage(
+	msgResult, err := queueReader.ReceiveMessage(
+		ctx,
 		&sqs.ReceiveMessageInput{
 			QueueUrl:            queueURL,
-			MaxNumberOfMessages: aws.Int64(1),
-			WaitTimeSeconds:     aws.Int64(20),
+			MaxNumberOfMessages: 1,
+			WaitTimeSeconds:     30,
 		},
 	)
 
@@ -106,15 +114,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Get %d messages from SQS\n", len(msgResult.Messages))
+	fmt.Printf("Get %d message(s) from SQS\n", len(msgResult.Messages))
 
 	message := msgResult.Messages[0]
 	fmt.Println("The first message from SQS is: ", message)
 
-	_, err = svc.DeleteMessage(&sqs.DeleteMessageInput{
-		QueueUrl:      queueURL,
-		ReceiptHandle: message.ReceiptHandle,
-	})
+	_, err = queueReader.DeleteMessage(
+		ctx,
+		&sqs.DeleteMessageInput{
+			QueueUrl:      queueURL,
+			ReceiptHandle: message.ReceiptHandle,
+		})
 
 	if err != nil {
 		fmt.Println("Error deleting the message from queue. This might generate future runs of this test to fail. Err:  ", err)
@@ -135,25 +145,28 @@ func main() {
 		os.Exit(1)
 	}
 
-	downloader := s3manager.NewDownloader(sess)
-	buf := aws.NewWriteAtBuffer([]byte{})
-	_, err = downloader.Download(buf,
+	result, err := downloader.GetObject(
+		ctx,
 		&s3.GetObjectInput{
 			Bucket: aws.String(content.Bucket.Name),
 			Key:    aws.String(content.Object.Path),
 		})
-
 	if err != nil {
 		fmt.Println("Failed to download the S3 file, err: ", err)
 		os.Exit(1)
 	}
+	defer result.Body.Close()
 
-	fmt.Println("Downloaded file content: ", string(buf.Bytes()))
+	downloadedContent, err := io.ReadAll(result.Body)
+	if err != nil {
+		fmt.Println("Failed to read the S3 file content, err: ", err)
+		os.Exit(1)
+	}
 
 	expected := fmt.Sprint(expected1, "__n__", expected2)
 
-	if string(buf.Bytes()) != expected {
-		fmt.Printf("String inside S3 file is not the expected one. Expected: %s\nGot: %s\n", expected, string(buf.Bytes()))
+	if string(downloadedContent) != expected {
+		fmt.Printf("String inside S3 file is not the expected one. Expected: %s\nGot: %s\n", expected, string(downloadedContent))
 		os.Exit(1)
 	}
 	fmt.Println("Expected content is correct!")

@@ -1,11 +1,11 @@
 package sqs
 
 import (
+	"context"
 	"errors"
 	"testing"
 
-	"github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/stretchr/testify/assert"
@@ -21,13 +21,16 @@ secret_key: "secret sqs!"
 const fakeFlowName = "some-flow-name"
 
 type mockedSendMsgs struct {
-	sqsiface.SQSAPI
 	msgs      []*sqs.SendMessageInput
 	returnFor func(*sqs.SendMessageInput) *sqs.SendMessageOutput
 	err       error
 }
 
-func (mock *mockedSendMsgs) SendMessage(input *sqs.SendMessageInput) (*sqs.SendMessageOutput, error) {
+func (mock *mockedSendMsgs) SendMessage(
+	_ context.Context,
+	input *sqs.SendMessageInput,
+	_ ...func(*sqs.Options),
+) (*sqs.SendMessageOutput, error) {
 	mock.msgs = append(mock.msgs, input)
 
 	if mock.err != nil {

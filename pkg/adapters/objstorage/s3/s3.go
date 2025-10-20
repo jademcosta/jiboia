@@ -8,16 +8,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager/s3manageriface"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"gopkg.in/yaml.v2"
 )
 
 const TYPE string = "s3"
+const startupTimeout = 20 * time.Second
+
+type s3UploaderAPI interface {
+	Upload(context.Context, *s3.PutObjectInput, ...func(*manager.Uploader)) (*manager.UploadOutput, error)
+}
 
 type Config struct {
 	TimeoutInMillis int64  `yaml:"timeout_milliseconds"`
@@ -35,29 +39,29 @@ type Bucket struct {
 	region          string
 	fixedPrefix     string
 	timeoutInMillis int64
-	uploader        s3manageriface.UploaderAPI
+	uploader        s3UploaderAPI
 	log             *slog.Logger
 }
 
 func New(l *slog.Logger, c *Config) (*Bucket, error) {
-	//TODO: the session is safe to be read concurrently, can we use a single one?
+	ctx, cancelFunc := context.WithTimeout(context.Background(), startupTimeout)
+	defer cancelFunc()
 
-	// TODO: expore the configs:
-	// HTTPClient *http.Client
-	// LogLevel *LogLevelType
-	// Logger Logger
-	session, err := session.NewSession(&aws.Config{
-		Region:           aws.String(c.Region),
-		Endpoint:         aws.String(c.Endpoint),
-		S3ForcePathStyle: aws.Bool(c.ForcePathStyle),
-	})
-
+	//TODO: adapt logger
+	sdkConfig, err := config.LoadDefaultConfig(
+		ctx, config.WithRegion(c.Region), config.WithBaseEndpoint(c.Endpoint),
+	)
 	if err != nil {
-		return nil, fmt.Errorf("error creating S3 session: %w", err)
+		return nil, fmt.Errorf("couldn't load default AWS configuration: %w", err)
 	}
 
-	// TODO: configure concurrency on the uploader
-	uploader := s3manager.NewUploader(session)
+	s3Cli := s3.NewFromConfig(sdkConfig, func(o *s3.Options) {
+		o.UsePathStyle = c.ForcePathStyle
+		if c.Endpoint != "" {
+			o.BaseEndpoint = &c.Endpoint
+		}
+	})
+	uploader := manager.NewUploader(s3Cli)
 
 	return &Bucket{
 		uploader:        uploader,
@@ -83,7 +87,7 @@ func ParseConfig(confData []byte) (*Config, error) {
 func (bucket *Bucket) Upload(workU *domain.WorkUnit) (*domain.UploadResult, error) {
 	key := mergeParts(bucket.fixedPrefix, workU.Prefix, workU.Filename)
 
-	uploadInput := &s3manager.UploadInput{
+	uploadInput := &s3.PutObjectInput{
 		Bucket: &bucket.name,
 		Key:    &key,
 		Body:   bytes.NewReader(workU.Data),
@@ -123,14 +127,15 @@ func mergeParts(fixedPrefix string, dynamicPrefix string, key string) string {
 	return strings.Trim(result, "/")
 }
 
-func (bucket *Bucket) doUpload(input *s3manager.UploadInput) (*s3manager.UploadOutput, error) {
-	// TODO: uploader claims to be concurrency-safe
+func (bucket *Bucket) doUpload(input *s3.PutObjectInput) (*manager.UploadOutput, error) {
 	hasTimeout := bucket.timeoutInMillis != 0
 
+	ctx := context.Background()
 	if hasTimeout {
-		ctx, cancelFunc := context.WithTimeout(context.Background(), time.Duration(bucket.timeoutInMillis)*time.Millisecond)
+		ctx2, cancelFunc := context.WithTimeout(ctx, time.Duration(bucket.timeoutInMillis)*time.Millisecond)
 		defer cancelFunc()
-		return bucket.uploader.UploadWithContext(ctx, input)
+		ctx = ctx2
 	}
-	return bucket.uploader.Upload(input)
+
+	return bucket.uploader.Upload(ctx, input)
 }
