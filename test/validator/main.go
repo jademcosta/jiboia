@@ -2,9 +2,11 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"math/rand"
 	"net/http"
 	"os"
@@ -15,6 +17,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/aws/aws-sdk-go/service/sqs"
+	"github.com/jademcosta/jiboia/pkg/compression"
+	"github.com/jademcosta/jiboia/pkg/config"
 )
 
 type Message struct {
@@ -148,12 +152,25 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Println("Downloaded file content: ", string(buf.Bytes()))
+	decompressor, err := compression.NewReader(&config.CompressionConfig{Type: compression.GzipType}, bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		fmt.Println("Failed to create decompressor: ", err)
+		os.Exit(1)
+	}
+
+	contentDownloaded, err := io.ReadAll(decompressor)
+	if err != nil {
+		fmt.Println("Failed to decompress the content: ", err)
+		os.Exit(1)
+	}
+
+	fmt.Println("Downloaded file content: ", string(contentDownloaded))
 
 	expected := fmt.Sprint(expected1, "__n__", expected2)
 
 	if string(buf.Bytes()) != expected {
-		fmt.Printf("String inside S3 file is not the expected one. Expected: %s\nGot: %s\n", expected, string(buf.Bytes()))
+		fmt.Printf("String inside S3 file is not the expected one. Expected: %s\nGot: %s\n",
+			expected, string(contentDownloaded))
 		os.Exit(1)
 	}
 	fmt.Println("Expected content is correct!")
