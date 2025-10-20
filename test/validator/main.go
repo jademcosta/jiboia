@@ -2,6 +2,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"flag"
@@ -14,9 +15,11 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
+	awsConfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/jademcosta/jiboia/pkg/compression"
+	"github.com/jademcosta/jiboia/pkg/config"
 )
 
 type Message struct {
@@ -85,7 +88,7 @@ func main() {
 	fmt.Println("Starting validator...")
 	fmt.Println("Important: This test does not works well if running it in parallel other instance of itself. It expects a single message on SQS!")
 
-	sdkConfig, err := config.LoadDefaultConfig(ctx, config.WithRegion("us-east-1"))
+	sdkConfig, err := awsConfig.LoadDefaultConfig(ctx, awsConfig.WithRegion("us-east-1"))
 	if err != nil {
 		fmt.Println("couldn't load default AWS configuration")
 		fmt.Println(err)
@@ -133,7 +136,6 @@ func main() {
 
 	content := &Message{}
 	err = json.Unmarshal([]byte(*message.Body), content)
-
 	if err != nil {
 		fmt.Println("Failed to parse the SQS body JSON: ", err)
 		os.Exit(1)
@@ -163,10 +165,23 @@ func main() {
 		os.Exit(1)
 	}
 
+	decompressor, err := compression.NewReader(&config.CompressionConfig{Type: compression.GzipType}, bytes.NewReader(downloadedContent))
+	if err != nil {
+		fmt.Println("Failed to create decompressor: ", err)
+		os.Exit(1)
+	}
+
+	decompressedContent, err := io.ReadAll(decompressor)
+	if err != nil {
+		fmt.Println("Failed to decompress the content: ", err)
+		os.Exit(1)
+	}
+
 	expected := fmt.Sprint(expected1, "__n__", expected2)
 
-	if string(downloadedContent) != expected {
-		fmt.Printf("String inside S3 file is not the expected one. Expected: %s\nGot: %s\n", expected, string(downloadedContent))
+	if string(decompressedContent) != expected {
+		fmt.Printf("String inside S3 file is not the expected one. Expected: %s\nGot: %s\n",
+			expected, string(downloadedContent))
 		os.Exit(1)
 	}
 	fmt.Println("Expected content is correct!")
