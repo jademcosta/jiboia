@@ -46,8 +46,25 @@ func (tMidd *tracingMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request
 	chi.NewRouteContext()
 
 	spanName := r.Method + route
-	attribs := make([]attribute.KeyValue, 0, 1)
-	attribs = append(attribs, semconv.HTTPRoute(route))
+	scheme := r.Header.Get("X-Forwarded-Proto")
+	if scheme == "" {
+		if r.TLS != nil {
+			scheme = "https"
+		} else {
+			scheme = "http"
+		}
+	}
+
+	attribs := make([]attribute.KeyValue, 0, 8)
+	attribs = append(attribs,
+		attribute.String("http.method", r.Method),
+		attribute.String("http.target", r.URL.RequestURI()),
+		attribute.String("http.host", r.Host),
+		attribute.String("http.scheme", scheme),
+		attribute.String("http.user_agent", r.UserAgent()),
+		attribute.String("http.flavor", r.Proto),
+		attribute.String("http.route", route),
+	)
 	ctx, span := tMidd.tracer.Start(ctx, spanName, trace.WithAttributes(attribs...))
 	defer span.End()
 
