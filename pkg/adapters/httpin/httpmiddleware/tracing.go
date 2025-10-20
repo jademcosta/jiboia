@@ -6,9 +6,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/semconv/v1.20.0/httpconv"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -45,9 +46,25 @@ func (tMidd *tracingMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request
 	chi.NewRouteContext()
 
 	spanName := r.Method + route
+	scheme := r.Header.Get("X-Forwarded-Proto")
+	if scheme == "" {
+		if r.TLS != nil {
+			scheme = "https"
+		} else {
+			scheme = "http"
+		}
+	}
 
-	attribs := httpconv.ServerRequest("jiboia", r)
-	attribs = append(attribs, semconv.HTTPRoute(route))
+	attribs := make([]attribute.KeyValue, 0, 8)
+	attribs = append(attribs,
+		attribute.String("http.method", r.Method),
+		attribute.String("http.target", r.URL.RequestURI()),
+		attribute.String("http.host", r.Host),
+		attribute.String("http.scheme", scheme),
+		attribute.String("http.user_agent", r.UserAgent()),
+		attribute.String("http.flavor", r.Proto),
+		attribute.String("http.route", route),
+	)
 	ctx, span := tMidd.tracer.Start(ctx, spanName, trace.WithAttributes(attribs...))
 	defer span.End()
 
@@ -55,7 +72,12 @@ func (tMidd *tracingMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request
 	tMidd.next.ServeHTTP(writerWrapper, r)
 
 	span.SetAttributes(semconv.HTTPResponseStatusCode(writerWrapper.statusCode))
-	span.SetStatus(httpconv.ServerStatus(writerWrapper.statusCode))
+	// Map HTTP status code to OpenTelemetry span status.
+	if writerWrapper.statusCode >= 100 && writerWrapper.statusCode < 400 {
+		span.SetStatus(codes.Ok, "")
+	} else {
+		span.SetStatus(codes.Error, http.StatusText(writerWrapper.statusCode))
+	}
 }
 
 func skipRoute(chiRoute string, r *http.Request) bool {

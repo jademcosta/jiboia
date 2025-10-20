@@ -1,20 +1,25 @@
 package sqs
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	awsSqs "github.com/aws/aws-sdk-go/service/sqs"
-	"github.com/aws/aws-sdk-go/service/sqs/sqsiface"
+	"github.com/aws/aws-sdk-go-v2/config"
+	awsSqs "github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"gopkg.in/yaml.v2"
 )
 
 const TYPE string = "sqs"
+const startupTimeout = 20 * time.Second
+
+type sqsSendMessageAPI interface {
+	SendMessage(context.Context, *awsSqs.SendMessageInput, ...func(*awsSqs.Options)) (*awsSqs.SendMessageOutput, error)
+}
 
 type Message struct {
 	SchemaVersion string `json:"schema_version"`
@@ -45,24 +50,21 @@ type Config struct {
 
 type Queue struct {
 	log      *slog.Logger
-	client   sqsiface.SQSAPI
+	client   sqsSendMessageAPI
 	queueURL string
 	flowName string
 }
 
 func New(l *slog.Logger, c *Config, flowName string) (*Queue, error) {
-	//TODO: session claims to be safe to read concurrently. Can I use a single one?
-	sess, err := session.NewSession(&aws.Config{
-		Region:   aws.String(c.Region),
-		Endpoint: aws.String(c.Endpoint),
-		LogLevel: aws.LogLevel(aws.LogDebug),
-		Logger: aws.LoggerFunc(func(args ...interface{}) {
-			l.Debug("AWS sdk log", "aws-msg", fmt.Sprint(args))
-		}),
-	})
+	ctx, cancelFunc := context.WithTimeout(context.Background(), startupTimeout)
+	defer cancelFunc()
 
+	//TODO: adapt logger
+	sdkConfig, err := config.LoadDefaultConfig(
+		ctx, config.WithRegion(c.Region), config.WithBaseEndpoint(c.Endpoint),
+	)
 	if err != nil {
-		return nil, fmt.Errorf("error creating creating SQS session: %w", err)
+		return nil, fmt.Errorf("couldn't load default AWS configuration: %w", err)
 	}
 
 	queueURL := c.URL
@@ -70,7 +72,7 @@ func New(l *slog.Logger, c *Config, flowName string) (*Queue, error) {
 		return nil, fmt.Errorf("invalid url for SQS %s", queueURL)
 	}
 
-	sqsClient := awsSqs.New(sess)
+	sqsClient := awsSqs.NewFromConfig(sdkConfig)
 
 	return &Queue{
 		log:      l.With(logger.ExternalQueueTypeKey, "sqs"),
@@ -92,6 +94,9 @@ func ParseConfig(confData []byte) (*Config, error) {
 }
 
 func (internalSqs *Queue) Enqueue(msg *domain.MessageContext) error {
+	//TODO: allow to config timeout
+	ctx := context.Background()
+
 	message := Message{
 		SchemaVersion: domain.MsgSchemaVersion,
 		FlowName:      internalSqs.Name(),
@@ -119,13 +124,8 @@ func (internalSqs *Queue) Enqueue(msg *domain.MessageContext) error {
 		QueueUrl:    &internalSqs.queueURL,
 	}
 
-	err = messageInput.Validate()
-	if err != nil {
-		return fmt.Errorf("error on SQS message validation: %w", err)
-	}
-
 	internalSqs.log.Debug("sending SQS message", "queue_url", internalSqs.queueURL)
-	enqueueOutput, err := internalSqs.client.SendMessage(messageInput)
+	enqueueOutput, err := internalSqs.client.SendMessage(ctx, messageInput)
 	if err == nil {
 		internalSqs.log.Debug("enqueued message on SQS", "message_id", enqueueOutput.MessageId)
 	}

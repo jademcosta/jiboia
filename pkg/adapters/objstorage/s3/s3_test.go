@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/stretchr/testify/assert"
@@ -18,15 +18,16 @@ import (
 var llog = logger.NewDummy()
 
 type mockedAWSS3Uploader struct {
-	calledWith        []*s3manager.UploadInput
+	calledWith        []*s3.PutObjectInput
 	calledWithContext []context.Context
 	location          string
 	err               error
-	answer            *s3manager.UploadOutput
+	answer            *manager.UploadOutput
 }
 
-func (mock *mockedAWSS3Uploader) Upload(input *s3manager.UploadInput, _ ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error) {
+func (mock *mockedAWSS3Uploader) Upload(ctx context.Context, input *s3.PutObjectInput, _ ...func(*manager.Uploader)) (*manager.UploadOutput, error) {
 	mock.calledWith = append(mock.calledWith, input)
+	mock.calledWithContext = append(mock.calledWithContext, ctx)
 	if mock.err != nil {
 		return nil, mock.err
 	}
@@ -34,23 +35,7 @@ func (mock *mockedAWSS3Uploader) Upload(input *s3manager.UploadInput, _ ...func(
 	if mock.answer != nil {
 		return mock.answer, nil
 	}
-	return &s3manager.UploadOutput{Location: mock.location}, nil
-}
-
-func (mock *mockedAWSS3Uploader) UploadWithContext(ctx aws.Context, input *s3manager.UploadInput, _ ...func(*s3manager.Uploader)) (*s3manager.UploadOutput, error) {
-	mock.calledWith = append(mock.calledWith, input)
-	if ctx != nil {
-		mock.calledWithContext = append(mock.calledWithContext, ctx)
-	}
-
-	if mock.err != nil {
-		return nil, mock.err
-	}
-
-	if mock.answer != nil {
-		return mock.answer, nil
-	}
-	return &s3manager.UploadOutput{Location: mock.location}, nil
+	return &manager.UploadOutput{Location: mock.location}, nil
 }
 
 func TestItParsesWorkUnitIntoUploadInput(t *testing.T) {
@@ -59,7 +44,7 @@ func TestItParsesWorkUnitIntoUploadInput(t *testing.T) {
 
 	sut, err := New(llog, c)
 	assert.NoError(t, err, "should not error on New")
-	mockUploader := &mockedAWSS3Uploader{calledWith: make([]*s3manager.UploadInput, 0)}
+	mockUploader := &mockedAWSS3Uploader{calledWith: make([]*s3.PutObjectInput, 0)}
 	sut.uploader = mockUploader
 
 	workU := &domain.WorkUnit{
@@ -111,7 +96,7 @@ func TestItWorksWithDifferentPrefixConfigs(t *testing.T) {
 
 		sut, err := New(llog, c)
 		assert.NoError(t, err, "should not error on New")
-		mockUploader := &mockedAWSS3Uploader{calledWith: make([]*s3manager.UploadInput, 0)}
+		mockUploader := &mockedAWSS3Uploader{calledWith: make([]*s3.PutObjectInput, 0)}
 		sut.uploader = mockUploader
 
 		workU := &domain.WorkUnit{
@@ -144,7 +129,7 @@ func TestReturnsTheUploadError(t *testing.T) {
 	c := &Config{Bucket: "some_bucket_name"}
 
 	uploadErr := errors.New("some random error")
-	mockUploader := &mockedAWSS3Uploader{calledWith: make([]*s3manager.UploadInput, 0), err: uploadErr}
+	mockUploader := &mockedAWSS3Uploader{calledWith: make([]*s3.PutObjectInput, 0), err: uploadErr}
 
 	sut, err := New(llog, c)
 	assert.NoError(t, err, "should not error on New")
@@ -170,8 +155,8 @@ func TestReturnsDataBasedOnUploadReturn(t *testing.T) {
 	c := &Config{Bucket: "some_bucket_name", Region: "my_region", Prefix: "mypref"}
 
 	mockUploader := &mockedAWSS3Uploader{
-		calledWith: make([]*s3manager.UploadInput, 0),
-		answer:     &s3manager.UploadOutput{Location: "some_location"},
+		calledWith: make([]*s3.PutObjectInput, 0),
+		answer:     &manager.UploadOutput{Location: "some_location"},
 	}
 
 	sut, err := New(llog, c)
@@ -202,9 +187,9 @@ func TestBuildsAContextWithTimeoutAndSendItForward(t *testing.T) {
 	c := &Config{Bucket: "some_bucket_name", Region: "my_region", Prefix: "mypref", TimeoutInMillis: 1000}
 
 	mockUploader := &mockedAWSS3Uploader{
-		calledWith:        make([]*s3manager.UploadInput, 0),
+		calledWith:        make([]*s3.PutObjectInput, 0),
 		calledWithContext: make([]context.Context, 0),
-		answer:            &s3manager.UploadOutput{Location: "some_location"},
+		answer:            &manager.UploadOutput{Location: "some_location"},
 	}
 
 	sut, err := New(llog, c)

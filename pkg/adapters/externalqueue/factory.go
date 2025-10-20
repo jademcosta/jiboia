@@ -18,7 +18,9 @@ type ExtQueueWithMetadata interface {
 	Name() string
 }
 
-func New(l *slog.Logger, metricRegistry *prometheus.Registry, flowName string, conf *config.ExternalQueueConfig) (ExtQueueWithMetadata, error) {
+func New(
+	l *slog.Logger, metricRegistry *prometheus.Registry, flowName string, conf *config.ExternalQueueConfig,
+) (ExtQueueWithMetadata, error) {
 
 	var externalQueue ExtQueueWithMetadata
 	specificConf, err := yaml.Marshal(conf.Config)
