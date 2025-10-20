@@ -100,7 +100,7 @@ func main() {
 		&sqs.ReceiveMessageInput{
 			QueueUrl:            queueURL,
 			MaxNumberOfMessages: 1,
-			WaitTimeSeconds:     30,
+			WaitTimeSeconds:     20,
 		},
 	)
 
