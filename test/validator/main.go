@@ -106,7 +106,6 @@ func main() {
 			WaitTimeSeconds:     20,
 		},
 	)
-
 	if err != nil {
 		fmt.Println("Error getting message from SQS: ", err)
 		os.Exit(1)
@@ -118,9 +117,7 @@ func main() {
 	}
 
 	fmt.Printf("Get %d message(s) from SQS\n", len(msgResult.Messages))
-
 	message := msgResult.Messages[0]
-	fmt.Println("The first message from SQS is: ", message)
 
 	_, err = queueReader.DeleteMessage(
 		ctx,
@@ -141,6 +138,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	fmt.Printf("The content of the message: %+v\n", content)
 	expectedBucketName := os.Getenv("JIBOIA_S3_BUCKET")
 	if content.Bucket.Name != expectedBucketName {
 		fmt.Println("Expected bucket name to be ", expectedBucketName, " but was ", content.Bucket.Name)
