@@ -18,11 +18,11 @@ flows:
       queue_capacity: 30
     compression:
       type: "gzip"
-    external_queue:
-      type: sqs
-      config:
-        url: "$JIBOIA_SQS_URL"
-        region: us-east-1
+    external_queues:
+      - type: sqs
+        config:
+          url: "$JIBOIA_SQS_URL"
+          region: us-east-1
     object_storage:
       type: s3
       config:
@@ -39,11 +39,11 @@ flows:
       size: 50
       separator: "__n__"
       queue_capacity: 30
-    external_queue:
-      type: sqs
-      config:
-        url: "$JIBOIA_SQS_URL"
-        region: us-east-1
+    external_queues:
+      - type: sqs
+        config:
+          url: "$JIBOIA_SQS_URL"
+          region: us-east-1
     object_storage:
       type: s3
       config:

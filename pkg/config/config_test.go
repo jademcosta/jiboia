@@ -82,13 +82,13 @@ flows:
       queue_capacity: 123
       circuit_breaker:
         disable: true
-    external_queue:
-      type: sqs
-      config:
-        url: some-url-here
-        region: aws-region-here
-        access_key: "access 1"
-        secret_key: "secret 1"
+    external_queues:
+      - type: sqs
+        config:
+          url: some-url-here
+          region: aws-region-here
+          access_key: "access 1"
+          secret_key: "secret 1"
     object_storage:
       type: s3
       config:
@@ -113,8 +113,8 @@ flows:
       queue_capacity: 13
       circuit_breaker:
         open_interval_in_ms: 12345
-    external_queue:
-      type: noop
+    external_queues:
+      - type: noop
     object_storage:
       type: localstorage
       config:
@@ -126,8 +126,8 @@ flows:
     ingestion:
       circuit_breaker:
         open_interval_in_ms: 12
-    external_queue:
-      type: noop
+    external_queues:
+      - type: noop
     object_storage:
       type: localstorage
       config:
@@ -180,8 +180,8 @@ flows:
 	assert.Equal(t, int64(100), conf.Flows[0].Accumulator.CircuitBreaker.OpenInterval,
 		"should have set the default flow.accumulator.circuit_breaker.open_interval_in_ms")
 
-	assert.Equal(t, "sqs", conf.Flows[0].ExternalQueue.Type, "should have parsed the correct flow.external_queue.type")
-	assert.NotNil(t, conf.Flows[0].ExternalQueue.Config, "should maintain the value of flow.external_queue.config")
+	assert.Equal(t, "sqs", conf.Flows[0].ExternalQueues[0].Type, "should have parsed the correct flow.external_queue.type")
+	assert.NotNil(t, conf.Flows[0].ExternalQueues[0].Config, "should maintain the value of flow.external_queue.config")
 
 	assert.Equal(t, "s3", conf.Flows[0].ObjectStorage.Type, "should have parsed the correct flow.object_storage.type")
 	assert.NotNil(t, conf.Flows[0].ObjectStorage.Config, "should maintain the value of flow.object_storage.config")
@@ -214,8 +214,8 @@ flows:
 	assert.Equal(t, false, conf.Flows[1].Accumulator.CircuitBreaker.Disable,
 		"should have parsed the correct flow.accumulator.circuit_breaker.disable")
 
-	assert.Equal(t, "noop", conf.Flows[1].ExternalQueue.Type, "should have parsed the correct flow.external_queue.type")
-	assert.Nil(t, conf.Flows[1].ExternalQueue.Config, "should maintain the value of flow.external_queue.config")
+	assert.Equal(t, "noop", conf.Flows[1].ExternalQueues[0].Type, "should have parsed the correct flow.external_queue.type")
+	assert.Nil(t, conf.Flows[1].ExternalQueues[0].Config, "should maintain the value of flow.external_queue.config")
 
 	assert.Equal(t, "localstorage", conf.Flows[1].ObjectStorage.Type, "should have parsed the correct flow.object_storage.type")
 	assert.NotNil(t, conf.Flows[1].ObjectStorage.Config, "should maintain the value of flow.object_storage.config")
@@ -305,13 +305,13 @@ flows:
     accumulator:
       size_in_bytes: 2097152 # 2MB
       queue_capacity: 123
-    external_queue:
-      type: sqs
-      config:
-        url: some-url-here
-        region: aws-region-here
-        access_key: "access 1"
-        secret_key: "secret 1"
+    external_queues:
+      - type: sqs
+        config:
+          url: some-url-here
+          region: aws-region-here
+          access_key: "access 1"
+          secret_key: "secret 1"
     object_storage:
       type: s3
       config:
@@ -329,13 +329,13 @@ flows:
     accumulator:
       size_in_bytes: 2097152 # 2MB
       queue_capacity: 123
-    external_queue:
-      type: sqs
-      config:
-        url: some-url-here
-        region: aws-region-here
-        access_key: "access 1"
-        secret_key: "secret 1"
+    external_queues:
+      - type: sqs
+        config:
+          url: some-url-here
+          region: aws-region-here
+          access_key: "access 1"
+          secret_key: "secret 1"
     object_storage:
       type: s3
       config:

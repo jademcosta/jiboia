@@ -28,7 +28,7 @@ type ExternalQueue interface {
 type Worker struct {
 	l                   *slog.Logger
 	storage             ObjStorage
-	queue               ExternalQueue
+	queues              []ExternalQueue
 	incomingWorkChan    <-chan *domain.WorkUnit
 	flowName            string
 	compressionConf     config.CompressionConfig
@@ -38,9 +38,14 @@ type Worker struct {
 }
 
 func NewWorker(
-	flowName string, l *slog.Logger, storage ObjStorage, extQueue ExternalQueue,
-	incomingWorkChan <-chan *domain.WorkUnit, metricRegistry *prometheus.Registry,
-	compressionConf config.CompressionConfig, currentTimeProvider func() time.Time,
+	flowName string,
+	l *slog.Logger,
+	storage ObjStorage,
+	extQueues []ExternalQueue,
+	incomingWorkChan <-chan *domain.WorkUnit,
+	metricRegistry *prometheus.Registry,
+	compressionConf config.CompressionConfig,
+	currentTimeProvider func() time.Time,
 ) *Worker {
 
 	initializeMetrics(metricRegistry)
@@ -48,7 +53,7 @@ func NewWorker(
 	return &Worker{
 		l:                   l.With(logger.ComponentKey, "worker"),
 		storage:             storage,
-		queue:               extQueue,
+		queues:              extQueues,
 		incomingWorkChan:    incomingWorkChan,
 		flowName:            flowName,
 		compressionConf:     compressionConf,
@@ -101,8 +106,7 @@ func (w *Worker) work(workU *domain.WorkUnit) {
 	w.l.Debug("finished uploading object", "prefix", workU.Prefix, "filename", workU.Filename)
 
 	uploadedAt := w.currentTimeProvider()
-
-	msgContext := &domain.MessageContext{
+	msgToQueue := &domain.MessageContext{
 		Bucket:          uploadResult.Bucket,
 		Region:          uploadResult.Region,
 		Path:            uploadResult.Path,
@@ -111,12 +115,18 @@ func (w *Worker) work(workU *domain.WorkUnit) {
 		CompressionType: w.compressionConf.Type,
 		SavedAt:         uploadedAt.Unix(),
 	}
-	err = w.queue.Enqueue(msgContext)
 
-	if err != nil {
-		w.l.Error("failed to enqueue data", "object_path", uploadResult.Path, "error", err)
-	} else {
-		w.l.Debug("finished enqueueing data", "object_path", uploadResult.Path)
+	w.EnqueueInQueues(msgToQueue)
+}
+
+func (w *Worker) EnqueueInQueues(msgToQueue *domain.MessageContext) {
+	for _, queue := range w.queues {
+		err := queue.Enqueue(msgToQueue)
+		if err != nil {
+			w.l.Error("failed to enqueue data", "object_path", msgToQueue.Path, "error", err)
+		} else {
+			w.l.Debug("finished enqueueing data", "object_path", msgToQueue.Path)
+		}
 	}
 }
 

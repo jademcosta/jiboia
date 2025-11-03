@@ -7,15 +7,15 @@ import (
 )
 
 type FlowConfig struct {
-	Name                 string              `yaml:"name"`
-	QueueMaxSize         int                 `yaml:"in_memory_queue_max_size"`
-	MaxConcurrentUploads int                 `yaml:"max_concurrent_uploads"`
-	PathPrefixCount      int                 `yaml:"path_prefix_count"`
-	Ingestion            IngestionConfig     `yaml:"ingestion"`
-	Accumulator          AccumulatorConfig   `yaml:"accumulator"`
-	ExternalQueue        ExternalQueueConfig `yaml:"external_queue"`
-	ObjectStorage        ObjectStorageConfig `yaml:"object_storage"`
-	Compression          CompressionConfig   `yaml:"compression"`
+	Name                 string                `yaml:"name"`
+	QueueMaxSize         int                   `yaml:"in_memory_queue_max_size"`
+	MaxConcurrentUploads int                   `yaml:"max_concurrent_uploads"`
+	PathPrefixCount      int                   `yaml:"path_prefix_count"`
+	Ingestion            IngestionConfig       `yaml:"ingestion"`
+	Accumulator          AccumulatorConfig     `yaml:"accumulator"`
+	ExternalQueues       []ExternalQueueConfig `yaml:"external_queues"`
+	ObjectStorage        ObjectStorageConfig   `yaml:"object_storage"`
+	Compression          CompressionConfig     `yaml:"compression"`
 }
 
 func (flwConf FlowConfig) fillDefaultValues() FlowConfig {
@@ -29,9 +29,12 @@ func (flwConf FlowConfig) fillDefaultValues() FlowConfig {
 
 	flwConf.Ingestion = flwConf.Ingestion.fillDefaultValues()
 	flwConf.Accumulator = flwConf.Accumulator.fillDefaultValues()
-	flwConf.ExternalQueue = flwConf.ExternalQueue.fillDefaultValues()
 	flwConf.ObjectStorage = flwConf.ObjectStorage.fillDefaultValues()
 	flwConf.Compression = flwConf.Compression.fillDefaultValues()
+	for idx, extQueue := range flwConf.ExternalQueues {
+		flwConf.ExternalQueues[idx] = extQueue.fillDefaultValues()
+	}
+
 	return flwConf
 }
 
@@ -57,10 +60,6 @@ func (flwConf FlowConfig) validate() error {
 	if err != nil {
 		return err
 	}
-	err = flwConf.ExternalQueue.validate()
-	if err != nil {
-		return err
-	}
 	err = flwConf.ObjectStorage.validate()
 	if err != nil {
 		return err
@@ -69,5 +68,13 @@ func (flwConf FlowConfig) validate() error {
 	if err != nil {
 		return err
 	}
+
+	for _, extQueue := range flwConf.ExternalQueues {
+		err = extQueue.validate()
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
