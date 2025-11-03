@@ -135,16 +135,16 @@ flows:
         # data in bursts, then receives small amounts of data for a while, and then bursts again
         # (in loop). It accepts only seconds as time unit.
         force_flush_after_seconds: 1
-    external_queue:
+    external_queues:
       # Available values: noop, sqs. `noop` is for when you don't want to use any queue
       # (maybe because you just want to upload data into object storage)
       # Default value is `noop`.
-      type: sqs
-      config:
-        url: "queue-url"
-        region: aws-region-here
-        access_key: ""
-        secret_key: ""
+      - type: sqs
+        config:
+          url: "queue-url"
+          region: aws-region-here
+          access_key: ""
+          secret_key: ""
     object_storage:
       # Available values: s3, localstorage.
       type: s3

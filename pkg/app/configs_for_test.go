@@ -19,9 +19,9 @@ flows:
       size: 20
       separator: "_n_"
       queue_capacity: 10
-    external_queue:
-      type: noop
-      config: ""
+    external_queues:
+      - type: noop
+        config: ""
     object_storage:
       type: httpstorage
       config:
@@ -30,9 +30,9 @@ flows:
     in_memory_queue_max_size: 4
     max_concurrent_uploads: 3
     timeout: 120
-    external_queue:
-      type: noop
-      config: ""
+    external_queues:
+      - type: noop
+        config: ""
     object_storage:
       type: localstorage
       config:
@@ -43,9 +43,9 @@ flows:
     timeout: 120
     ingestion:
       token: "some secure token"
-    external_queue:
-      type: noop
-      config: ""
+    external_queues:
+      - type: noop
+        config: ""
     object_storage:
       type: httpstorage
       config:
@@ -61,9 +61,9 @@ flows:
       size: 20
       separator: ""
       queue_capacity: 10
-    external_queue:
-      type: noop
-      config: ""
+    external_queues:
+      - type: noop
+        config: ""
     object_storage:
       type: httpstorage
       config:
@@ -86,9 +86,9 @@ flows:
     timeout: 120
     ingestion:
       token: "some secure token"
-    external_queue:
-      type: noop
-      config: ""
+    external_queues:
+      - type: noop
+        config: ""
     object_storage:
       type: httpstorage
       config:
@@ -100,9 +100,9 @@ flows:
     compression:
       type: gzip
       level: "5"
-    external_queue:
-      type: noop
-      config: ""
+    external_queues:
+      - type: noop
+        config: ""
     object_storage:
       type: httpstorage
       config:
@@ -127,9 +127,9 @@ flows:
       size: 5
       separator: "_n_"
       queue_capacity: 2
-    external_queue:
-      type: noop
-      config: ""
+    external_queues:
+      - type: noop
+        config: ""
     object_storage:
       type: httpstorage
       config:
