@@ -3,6 +3,7 @@ package worker
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -27,7 +28,7 @@ type ExternalQueue interface {
 
 type Worker struct {
 	l                   *slog.Logger
-	storage             ObjStorage
+	storages            []ObjStorage
 	queues              []ExternalQueue
 	incomingWorkChan    <-chan *domain.WorkUnit
 	flowName            string
@@ -40,7 +41,7 @@ type Worker struct {
 func NewWorker(
 	flowName string,
 	l *slog.Logger,
-	storage ObjStorage,
+	storages []ObjStorage,
 	extQueues []ExternalQueue,
 	incomingWorkChan <-chan *domain.WorkUnit,
 	metricRegistry *prometheus.Registry,
@@ -48,11 +49,16 @@ func NewWorker(
 	currentTimeProvider func() time.Time,
 ) *Worker {
 
+	if len(storages) != len(extQueues) {
+		panic(fmt.Sprintf("number of storages must be equal to number of external queues at flow %s",
+			flowName))
+	}
+
 	initializeMetrics(metricRegistry)
 
 	return &Worker{
 		l:                   l.With(logger.ComponentKey, "worker"),
-		storage:             storage,
+		storages:            storages,
 		queues:              extQueues,
 		incomingWorkChan:    incomingWorkChan,
 		flowName:            flowName,
@@ -98,36 +104,62 @@ func (w *Worker) work(workU *domain.WorkUnit) {
 	}
 
 	workU.Data = compressedData
-	uploadResult, err := w.storage.Upload(workU)
+	err = w.sendDataAndNotify(workU)
 	if err != nil {
-		w.l.Error("failed to upload object", "prefix", workU.Prefix, "filename", workU.Filename, "error", err)
-		return
+		w.l.Error(
+			"failed to work on object, in one or more storages or queues",
+			"prefix", workU.Prefix, "filename", workU.Filename, "error", err,
+		)
 	}
-	w.l.Debug("finished uploading object", "prefix", workU.Prefix, "filename", workU.Filename)
-
-	uploadedAt := w.currentTimeProvider()
-	msgToQueue := &domain.MessageContext{
-		Bucket:          uploadResult.Bucket,
-		Region:          uploadResult.Region,
-		Path:            uploadResult.Path,
-		URL:             uploadResult.URL,
-		SizeInBytes:     uploadResult.SizeInBytes,
-		CompressionType: w.compressionConf.Type,
-		SavedAt:         uploadedAt.Unix(),
-	}
-
-	w.EnqueueInQueues(msgToQueue)
 }
 
-func (w *Worker) EnqueueInQueues(msgToQueue *domain.MessageContext) {
-	for _, queue := range w.queues {
-		err := queue.Enqueue(msgToQueue)
-		if err != nil {
-			w.l.Error("failed to enqueue data", "object_path", msgToQueue.Path, "error", err)
-		} else {
+func (w *Worker) sendDataAndNotify(workU *domain.WorkUnit) error {
+	errorChan := make(chan error, len(w.storages))
+	wg := sync.WaitGroup{}
+
+	for idx, storage := range w.storages {
+		wg.Add(1)
+		go func(storage ObjStorage, queue ExternalQueue) {
+			defer wg.Done()
+
+			uploadResult, err := storage.Upload(workU)
+			if err != nil {
+				errorChan <- fmt.Errorf("failed to upload object to storage: %w", err)
+				return
+			}
+			w.l.Debug("finished uploading object", "prefix", workU.Prefix, "filename", workU.Filename)
+
+			uploadedAt := w.currentTimeProvider()
+			msgToQueue := &domain.MessageContext{
+				Bucket:          uploadResult.Bucket,
+				Region:          uploadResult.Region,
+				Path:            uploadResult.Path,
+				URL:             uploadResult.URL,
+				SizeInBytes:     uploadResult.SizeInBytes,
+				CompressionType: w.compressionConf.Type,
+				SavedAt:         uploadedAt.Unix(),
+			}
+
+			err = queue.Enqueue(msgToQueue)
+			if err != nil {
+				errorChan <- fmt.Errorf("failed to enqueue data %w", err)
+				return
+			}
 			w.l.Debug("finished enqueueing data", "object_path", msgToQueue.Path)
+		}(storage, w.queues[idx])
+	}
+
+	wg.Wait()
+	close(errorChan)
+
+	var err error
+	for newErr := range errorChan {
+		if newErr != nil {
+			err = errors.Join(err, newErr)
 		}
 	}
+
+	return err
 }
 
 func (w *Worker) drainWorkChan() {

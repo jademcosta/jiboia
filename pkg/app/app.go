@@ -163,17 +163,25 @@ func registerDefaultMetrics(registry *prometheus.Registry) {
 	)
 }
 
-func createObjStorage(
-	l *slog.Logger, c config.ObjectStorageConfig, metricRegistry *prometheus.Registry,
+func createObjStorages(
+	l *slog.Logger,
+	c []config.ObjectStorageConfig,
+	metricRegistry *prometheus.Registry,
 	flowName string,
-) worker.ObjStorage {
-	objStorage, err := objstorage.New(l, metricRegistry, flowName, &c)
-	if err != nil {
-		l.Error("error creating object storage", "error", err)
-		panic("error creating object storage")
+) []worker.ObjStorage {
+
+	objStorages := make([]worker.ObjStorage, 0, len(c))
+	for _, storageConf := range c {
+		storageConfCopy := storageConf
+		objStorage, err := objstorage.New(l, metricRegistry, flowName, &storageConfCopy)
+		if err != nil {
+			l.Error("error creating object storage", "error", err, "flow_name", flowName)
+			panic("error creating object storage")
+		}
+		objStorages = append(objStorages, objStorage)
 	}
 
-	return objStorage
+	return objStorages
 }
 
 func createExternalQueues(
@@ -230,7 +238,7 @@ func createFlows(
 		flowConf := conf
 		localLogger := llog.With(logger.FlowKey, flowConf.Name)
 		externalQueues := createExternalQueues(localLogger, flowConf.ExternalQueues, metricRegistry, flowConf.Name)
-		objStorage := createObjStorage(localLogger, flowConf.ObjectStorage, metricRegistry, flowConf.Name)
+		objStorages := createObjStorages(localLogger, flowConf.ObjectStorages, metricRegistry, flowConf.Name)
 		workersIngestionQueue := make(chan *domain.WorkUnit, flowConf.MaxConcurrentUploads)
 
 		uploader := uploader.New(
@@ -250,7 +258,7 @@ func createFlows(
 
 		f := flow.Flow{
 			Name:                                flowConf.Name,
-			ObjStorage:                          objStorage,
+			ObjStorages:                         objStorages,
 			ExternalQueues:                      externalQueues,
 			Uploader:                            uploader,
 			UploadWorkers:                       make([]flow.Runnable, 0, flowConf.MaxConcurrentUploads),
@@ -273,7 +281,7 @@ func createFlows(
 
 		for i := 0; i < flowConf.MaxConcurrentUploads; i++ {
 			worker := worker.NewWorker(
-				flowConf.Name, localLogger, objStorage, externalQueues, workersIngestionQueue,
+				flowConf.Name, localLogger, objStorages, externalQueues, workersIngestionQueue,
 				metricRegistry, flowConf.Compression, time.Now,
 			)
 			f.UploadWorkers = append(f.UploadWorkers, worker)
