@@ -89,14 +89,23 @@ flows:
           region: aws-region-here
           access_key: "access 1"
           secret_key: "secret 1"
-    object_storage:
-      type: s3
-      config:
-        bucket: some-bucket-name-here
-        region: some-region
-        endpoint: my-endpoint2
-        access_key: "access 2"
-        secret_key: "secret 2"
+      - type: sqs
+        config:
+          url: some-url-here2
+          region: aws-region-here2
+          access_key: "access 11"
+          secret_key: "secret 11"
+    object_storages:
+      - type: s3
+        config:
+          bucket: some-bucket-name-here
+          region: some-region
+          endpoint: my-endpoint2
+          access_key: "access 2"
+          secret_key: "secret 2"
+      - type: localstorage
+        config:
+          path: "/tmp/path/storage-that-is-local"
   - name: "myflow2"
     in_memory_queue_max_size: 11
     max_concurrent_uploads: 1
@@ -115,10 +124,10 @@ flows:
         open_interval_in_ms: 12345
     external_queues:
       - type: noop
-    object_storage:
-      type: localstorage
-      config:
-        path: "/tmp/path/storage"
+    object_storages:
+      - type: localstorage
+        config:
+          path: "/tmp/path/storage"
   - name: "myflow3"
     in_memory_queue_max_size: 1
     max_concurrent_uploads: 1
@@ -128,10 +137,10 @@ flows:
         open_interval_in_ms: 12
     external_queues:
       - type: noop
-    object_storage:
-      type: localstorage
-      config:
-        path: "/tmp/path/storage2"
+    object_storages:
+      - type: localstorage
+        config:
+          path: "/tmp/path/storage2"
 `
 
 	conf, err := config.New([]byte(configYaml))
@@ -183,8 +192,10 @@ flows:
 	assert.Equal(t, "sqs", conf.Flows[0].ExternalQueues[0].Type, "should have parsed the correct flow.external_queue.type")
 	assert.NotNil(t, conf.Flows[0].ExternalQueues[0].Config, "should maintain the value of flow.external_queue.config")
 
-	assert.Equal(t, "s3", conf.Flows[0].ObjectStorage.Type, "should have parsed the correct flow.object_storage.type")
-	assert.NotNil(t, conf.Flows[0].ObjectStorage.Config, "should maintain the value of flow.object_storage.config")
+	assert.Equal(t, "s3", conf.Flows[0].ObjectStorages[0].Type, "should have parsed the correct flow.object_storage.type")
+	assert.NotNil(t, conf.Flows[0].ObjectStorages[0].Config, "should maintain the value of flow.object_storage.config")
+	assert.Equal(t, "localstorage", conf.Flows[0].ObjectStorages[1].Type, "should have parsed the correct flow.object_storage.type")
+	assert.NotNil(t, conf.Flows[0].ObjectStorages[1].Config, "should maintain the value of flow.object_storage.config")
 
 	assert.Equal(t, "myflow2", conf.Flows[1].Name, "should have parsed the correct flow.name")
 	assert.Equal(t, 11, conf.Flows[1].QueueMaxSize, "should have parsed the correct flow.in_memory_queue_max_size")
@@ -217,8 +228,8 @@ flows:
 	assert.Equal(t, "noop", conf.Flows[1].ExternalQueues[0].Type, "should have parsed the correct flow.external_queue.type")
 	assert.Nil(t, conf.Flows[1].ExternalQueues[0].Config, "should maintain the value of flow.external_queue.config")
 
-	assert.Equal(t, "localstorage", conf.Flows[1].ObjectStorage.Type, "should have parsed the correct flow.object_storage.type")
-	assert.NotNil(t, conf.Flows[1].ObjectStorage.Config, "should maintain the value of flow.object_storage.config")
+	assert.Equal(t, "localstorage", conf.Flows[1].ObjectStorages[0].Type, "should have parsed the correct flow.object_storage.type")
+	assert.NotNil(t, conf.Flows[1].ObjectStorages[0].Config, "should maintain the value of flow.object_storage.config")
 
 	assert.NotNil(t, conf.Flows[2].Accumulator.QueueCapacity,
 		"should have zero value on flow.accumulator.queue_capacity when an accumulator is not declared in a flow")
@@ -312,14 +323,14 @@ flows:
           region: aws-region-here
           access_key: "access 1"
           secret_key: "secret 1"
-    object_storage:
-      type: s3
-      config:
-        bucket: some-bucket-name-here
-        region: some-region
-        endpoint: my-endpoint2
-        access_key: "access 2"
-        secret_key: "secret 2"
+    object_storages:
+      - type: s3
+        config:
+          bucket: some-bucket-name-here
+          region: some-region
+          endpoint: my-endpoint2
+          access_key: "access 2"
+          secret_key: "secret 2"
   - name: flow_2
     type: async
     in_memory_queue_max_size: 1000
@@ -336,14 +347,14 @@ flows:
           region: aws-region-here
           access_key: "access 1"
           secret_key: "secret 1"
-    object_storage:
-      type: s3
-      config:
-        bucket: some-bucket-name-here
-        region: some-region
-        endpoint: my-endpoint2
-        access_key: "access 2"
-        secret_key: "secret 2"
+    object_storages:
+      - type: s3
+        config:
+          bucket: some-bucket-name-here
+          region: some-region
+          endpoint: my-endpoint2
+          access_key: "access 2"
+          secret_key: "secret 2"
 `
 	_, err := config.New([]byte(configFlowWithNoNameYaml))
 	assert.Errorf(t, err, "return error when at least one flow has no name")

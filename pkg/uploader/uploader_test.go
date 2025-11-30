@@ -246,13 +246,13 @@ func testUploader(
 
 	waitG.Add(objectsToEnqueueCount)
 	for i := 0; i < workersCount; i++ {
-		objStorage := &mockCounterObjStorage{
+		objStorages := []worker.ObjStorage{&mockCounterObjStorage{
 			uploadDuration: uploadDuration,
 			counter:        &resultCounter,
 			wg:             &waitG,
-		}
+		}}
 
-		w := worker.NewWorker("someflow", llog, objStorage, []worker.ExternalQueue{&dummyExternalQueue{}},
+		w := worker.NewWorker("someflow", llog, objStorages, []worker.ExternalQueue{&dummyExternalQueue{}},
 			nextQueue, prometheus.NewRegistry(), noCompressionConf, time.Now)
 		go w.Run(ctx)
 	}
@@ -302,16 +302,16 @@ func testUploaderEnsuringEnqueuedItems(
 
 	waitG.Add(objectsToEnqueueCount)
 	for i := 0; i < workersCount; i++ {
-		objStorage := &mockObjStorageWithAppend{
+		objStorages := []worker.ObjStorage{&mockObjStorageWithAppend{
 			wg: &waitG,
 			work: func(workU *domain.WorkUnit) {
 				mu.Lock()
 				defer mu.Unlock()
 				result = append(result, string(workU.Data))
 			},
-		}
+		}}
 
-		w := worker.NewWorker("someflow", llog, objStorage, []worker.ExternalQueue{&dummyExternalQueue{}},
+		w := worker.NewWorker("someflow", llog, objStorages, []worker.ExternalQueue{&dummyExternalQueue{}},
 			nextQueue, prometheus.NewRegistry(), noCompressionConf, time.Now)
 		go w.Run(ctx)
 	}

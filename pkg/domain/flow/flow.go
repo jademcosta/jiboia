@@ -20,7 +20,7 @@ type DataFlowRunnable interface {
 
 type Flow struct {
 	Name                                string
-	ObjStorage                          worker.ObjStorage
+	ObjStorages                         []worker.ObjStorage
 	ExternalQueues                      []worker.ExternalQueue
 	Entrypoint                          domain.DataFlow
 	Uploader                            DataFlowRunnable
