@@ -19,14 +19,19 @@ type mockObjStorage struct {
 	calledWith []*domain.WorkUnit
 	returning  *domain.UploadResult
 	err        error
+	delay      time.Duration
 }
 
 func (objStorage *mockObjStorage) Upload(workU *domain.WorkUnit) (*domain.UploadResult, error) {
 	objStorage.mu.Lock()
 	defer objStorage.mu.Unlock()
+	defer objStorage.wg.Done()
+
+	if objStorage.delay > 0 {
+		time.Sleep(objStorage.delay)
+	}
 
 	objStorage.calledWith = append(objStorage.calledWith, workU)
-	objStorage.wg.Done()
 
 	if objStorage.err != nil {
 		return nil, objStorage.err
@@ -49,12 +54,17 @@ type mockExternalQueue struct {
 	mu         sync.Mutex
 	wg         *sync.WaitGroup
 	err        error
+	delay      time.Duration
 }
 
 func (queue *mockExternalQueue) Enqueue(data *domain.MessageContext) error {
 	queue.mu.Lock()
 	defer queue.mu.Unlock()
 	defer queue.wg.Done()
+
+	if queue.delay > 0 {
+		time.Sleep(queue.delay)
+	}
 
 	queue.calledWith = append(queue.calledWith, data)
 	return queue.err

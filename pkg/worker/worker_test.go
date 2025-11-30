@@ -604,3 +604,75 @@ func TestKeepsSendingMessagesEvenIfAQueueOrObjStorageIsFailing(t *testing.T) {
 	cancel()
 	<-sut.Done()
 }
+
+func TestKeepsSendingMessagesEvenWhenThingsAreSlow(t *testing.T) {
+
+	var wg sync.WaitGroup
+	ctx, cancel := context.WithCancel(context.Background())
+	objStorages := []worker.ObjStorage{
+		&mockObjStorage{
+			calledWith: make([]*domain.WorkUnit, 0),
+			returning: &domain.UploadResult{
+				Bucket: "some-new-bucket",
+			},
+			wg: &wg,
+		},
+		&mockObjStorage{
+			calledWith: make([]*domain.WorkUnit, 0),
+			returning: &domain.UploadResult{
+				Bucket: "some-new-bucket",
+			},
+			wg:    &wg,
+			delay: 500 * time.Millisecond,
+		},
+		&mockObjStorage{
+			calledWith: make([]*domain.WorkUnit, 0),
+			returning: &domain.UploadResult{
+				Bucket: "some-new-bucket",
+			},
+			wg: &wg,
+		},
+	}
+	queues := []worker.ExternalQueue{
+		&mockExternalQueue{calledWith: make([]*domain.MessageContext, 0), wg: &wg},
+		&mockExternalQueue{calledWith: make([]*domain.MessageContext, 0), wg: &wg},
+		&mockExternalQueue{calledWith: make([]*domain.MessageContext, 0), wg: &wg, delay: 100 * time.Millisecond},
+	}
+	workChan := make(chan *domain.WorkUnit, 100)
+
+	sut := worker.NewWorker("someflow", llog, objStorages, queues, workChan,
+		prometheus.NewRegistry(), noCompressionConf, constantTimeProvider(currentTime))
+	go sut.Run(ctx)
+	time.Sleep(time.Millisecond)
+
+	workUnitiesSent := 1
+	wg.Add(workUnitiesSent*len(objStorages) + workUnitiesSent*len(queues))
+	for i := 0; i < workUnitiesSent; i++ {
+		workU := &domain.WorkUnit{
+			Filename: "some-filename",
+			Prefix:   "some-prefix",
+			Data:     []byte(fmt.Sprint(i)),
+		}
+		workChan <- workU
+	}
+
+	wg.Wait()
+
+	for idx, objStorageIface := range objStorages {
+		objStorage := objStorageIface.(*mockObjStorage)
+		objStorage.mu.Lock()
+		defer objStorage.mu.Unlock()
+		assert.Len(t, objStorage.calledWith, workUnitiesSent,
+			"should have called obj storage on position %d", idx)
+
+		mockedQueue := queues[idx].(*mockExternalQueue)
+		mockedQueue.mu.Lock()
+		defer mockedQueue.mu.Unlock()
+		assert.Len(t, mockedQueue.calledWith, workUnitiesSent,
+			"should have called enqueue on position %d with all data", idx)
+	}
+
+	close(workChan)
+	cancel()
+	<-sut.Done()
+}
