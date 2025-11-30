@@ -68,6 +68,29 @@ flows:
       - type: httpstorage
         config:
           url: "http://non-existent-flow4.com"
+  - name: "int_flow5"
+    in_memory_queue_max_size: 4
+    max_concurrent_uploads: 3
+    timeout: 120
+    ingestion:
+      decompress:
+        active: ['gzip', 'snappy']
+    accumulator:
+      size: 19
+      separator: ""
+      queue_capacity: 10
+    external_queues:
+      - type: noop
+        config: ""
+      - type: noop
+        config: ""
+    object_storages:
+      - type: httpstorage
+        config:
+          url: "http://non-existent-flow5-1.com"
+      - type: httpstorage
+        config:
+          url: "http://non-existent-flow5-2.com"
 `
 
 const confForCompressionYaml = `
@@ -134,4 +157,40 @@ flows:
       - type: httpstorage
         config:
           url: "{{OBJ_STORAGE_URL}}"
+`
+
+const conf4HighConcurrencyYaml = `
+o11y:
+  log:
+    level: error
+    format: json
+
+api:
+  port: 9099
+  payload_size_limit: 120
+
+flows:
+  - name: "int_flow5"
+    in_memory_queue_max_size: 4
+    max_concurrent_uploads: 3
+    timeout: 120
+    ingestion:
+      decompress:
+        active: ['gzip', 'snappy']
+    accumulator:
+      size: 19
+      separator: ""
+      queue_capacity: 10
+    external_queues:
+      - type: noop
+        config: ""
+      - type: noop
+        config: ""
+    object_storages:
+      - type: httpstorage
+        config:
+          url: "http://non-existent-flow5-1.com"
+      - type: httpstorage
+        config:
+          url: "http://non-existent-flow5-2.com"
 `
