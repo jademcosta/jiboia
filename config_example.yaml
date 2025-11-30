@@ -135,6 +135,11 @@ flows:
         # data in bursts, then receives small amounts of data for a while, and then bursts again
         # (in loop). It accepts only seconds as time unit.
         force_flush_after_seconds: 1
+    # The external queue where you will inform that data has been uploaded.
+    # Check the documentation to see the JSON that is sent as the body of this message.
+    # Right now, if you have multiple object storages and multiple queues, the first storage
+    # path is going to be sent to the first queue in this list, the second to the second, and so on.
+    # The number of storages and queues need to be the same.
     external_queues:
       # Available values: noop, sqs. `noop` is for when you don't want to use any queue
       # (maybe because you just want to upload data into object storage)
@@ -145,16 +150,18 @@ flows:
           region: aws-region-here
           access_key: ""
           secret_key: ""
-    object_storage:
+    # The place where the data is going to be sent to. Notice that as it is an array, you are
+    # able to send to multiple places. The sending is going to be performed in parallel.
+    object_storages:
       # Available values: s3, localstorage.
-      type: s3
-      config:
-        # How much time to wait before considering that the upload failed and canceling it.
-        # Zero means no timeout.
-        timeout_milliseconds: 120000 #120sec
-        bucket: some-bucket-name-here
-        region: aws-region-here
-        endpoint: ""
-        prefix: ""
-        access_key: ""
-        secret_key: ""
+      - type: s3
+        config:
+          # How much time to wait before considering that the upload failed and canceling it.
+          # Zero means no timeout.
+          timeout_milliseconds: 120000 #120sec
+          bucket: some-bucket-name-here
+          region: aws-region-here
+          endpoint: ""
+          prefix: ""
+          access_key: ""
+          secret_key: ""

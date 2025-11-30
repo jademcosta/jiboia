@@ -10,5 +10,6 @@ func (objStgConf ObjectStorageConfig) fillDefaultValues() ObjectStorageConfig {
 }
 
 func (objStgConf ObjectStorageConfig) validate() error { //Validated further in the factory
+	//TODO: validate empty type
 	return nil
 }

@@ -14,7 +14,7 @@ type FlowConfig struct {
 	Ingestion            IngestionConfig       `yaml:"ingestion"`
 	Accumulator          AccumulatorConfig     `yaml:"accumulator"`
 	ExternalQueues       []ExternalQueueConfig `yaml:"external_queues"`
-	ObjectStorage        ObjectStorageConfig   `yaml:"object_storage"`
+	ObjectStorages       []ObjectStorageConfig `yaml:"object_storages"`
 	Compression          CompressionConfig     `yaml:"compression"`
 }
 
@@ -29,8 +29,12 @@ func (flwConf FlowConfig) fillDefaultValues() FlowConfig {
 
 	flwConf.Ingestion = flwConf.Ingestion.fillDefaultValues()
 	flwConf.Accumulator = flwConf.Accumulator.fillDefaultValues()
-	flwConf.ObjectStorage = flwConf.ObjectStorage.fillDefaultValues()
 	flwConf.Compression = flwConf.Compression.fillDefaultValues()
+
+	for idx, objStorage := range flwConf.ObjectStorages {
+		flwConf.ObjectStorages[idx] = objStorage.fillDefaultValues()
+	}
+
 	for idx, extQueue := range flwConf.ExternalQueues {
 		flwConf.ExternalQueues[idx] = extQueue.fillDefaultValues()
 	}
@@ -60,13 +64,16 @@ func (flwConf FlowConfig) validate() error {
 	if err != nil {
 		return err
 	}
-	err = flwConf.ObjectStorage.validate()
-	if err != nil {
-		return err
-	}
 	err = flwConf.Compression.validate()
 	if err != nil {
 		return err
+	}
+
+	for _, objStorage := range flwConf.ObjectStorages {
+		err = objStorage.validate()
+		if err != nil {
+			return err
+		}
 	}
 
 	for _, extQueue := range flwConf.ExternalQueues {
