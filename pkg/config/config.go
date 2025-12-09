@@ -31,6 +31,21 @@ func New(confData []byte) (*Config, error) {
 	return c, nil
 }
 
+// Creates a conpletelly empty config. Most useful for tests
+func NewEmpty() *Config {
+	return &Config{}
+}
+
+// Returns an error if the config is invalid
+func (c *Config) Validate() error {
+	return c.validate()
+}
+
+// Fill the current config with default values where applicable
+func (c *Config) FillDefaultValues() {
+	c.fillDefaultValues()
+}
+
 func (c *Config) validate() error {
 
 	if len(c.Flows) <= 0 {

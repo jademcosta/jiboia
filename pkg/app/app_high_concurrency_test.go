@@ -105,10 +105,12 @@ func sendPayloadsToJiboia(t *testing.T, payloads []string, allPayloadSent chan s
 	for idx, payload := range payloads {
 		concurrencyLimiter <- struct{}{}
 
-		response, err := http.Post("http://localhost:9099/int_flow5/async_ingestion", "application/json", strings.NewReader(payload))
-		assert.NoError(t, err, "enqueueing items should not return error on flow, request number %d", idx)
-		assert.Equal(t, 200, response.StatusCode, "data enqueueing should have been successful on flow")
-		response.Body.Close()
-		<-concurrencyLimiter
+		go func() {
+			response, err := http.Post("http://localhost:9099/int_flow5/async_ingestion", "application/json", strings.NewReader(payload))
+			assert.NoError(t, err, "enqueueing items should not return error on flow, request number %d", idx)
+			assert.Equal(t, 200, response.StatusCode, "data enqueueing should have been successful on flow")
+			response.Body.Close()
+			<-concurrencyLimiter
+		}()
 	}
 }
