@@ -89,7 +89,7 @@ func (handler *ingestionRoute) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	}
 
 	data := buf.Bytes()
-	handler.l.Debug("data received on async handler", "length", dataLen)
+	handler.l.Debug("data received on async handler", "size_bytes", dataLen)
 
 	decompressAlgorithm :=
 		selectDecompressionAlgorithm(handler.validDecompressionAlgorithms, r.Header["Content-Encoding"])

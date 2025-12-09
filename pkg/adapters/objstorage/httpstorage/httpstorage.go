@@ -109,16 +109,16 @@ func validateAndFormatURL(url string) (string, error) {
 	return url, nil
 }
 
-func assembleURL(url string, prefix string, filename string) (string, string) {
+func assembleURL(url string, filenamePathPrefix string, filename string) (string, string) {
 	if !strings.Contains(url, "%s") {
 		return url, ""
 	}
 
 	url = strings.TrimPrefix(url, "/")
-	prefix = strings.Trim(prefix, "/")
+	filenamePathPrefix = strings.Trim(filenamePathPrefix, "/")
 	filename = strings.Trim(filename, "/")
 
-	path := fmt.Sprintf("%s/%s", prefix, filename)
+	path := fmt.Sprintf("%s/%s", filenamePathPrefix, filename)
 	url = strings.Replace(url, "%s", path, 1)
 
 	return url, path
