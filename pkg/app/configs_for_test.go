@@ -162,7 +162,7 @@ flows:
 const conf4HighConcurrencyYaml = `
 o11y:
   log:
-    level: error
+    level: warn
     format: json
 
 api:
@@ -171,7 +171,7 @@ api:
 
 flows:
   - name: "int_flow5"
-    in_memory_queue_max_size: 4
+    in_memory_queue_max_size: 10000
     max_concurrent_uploads: 3
     timeout: 120
     ingestion:
@@ -180,7 +180,7 @@ flows:
     accumulator:
       size: 19
       separator: ""
-      queue_capacity: 10
+      queue_capacity: 10000
     external_queues:
       - type: noop
         config: ""

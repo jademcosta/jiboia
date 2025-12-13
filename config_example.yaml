@@ -121,7 +121,7 @@ flows:
       circuit_breaker:
         # [Optinal] The default is `false`. It is NOT recommended to disable it, as the
         # service can be overloaded with requests and waste of CPU, as the data being
-        # ingested will not be enqueued (which will result in am error status code).
+        # ingested will not be enqueued (which will result in an error status code).
         # Setting it to `true` will disable the circuit breaker
         disable: true
         # [Optinal] Once the circuit breaker is opened (meaning it is not
