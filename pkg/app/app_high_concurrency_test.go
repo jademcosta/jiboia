@@ -66,12 +66,11 @@ func TestAppHighConcurrencyScenario(t *testing.T) {
 	}
 
 	wg.Add(amountOfPayloads * 2) //times 2 because we have 2 obj storages on this flow
-	allPayloadsSent := make(chan struct{})
-	go sendPayloadsToJiboia(t, payloads, allPayloadsSent)
-	<-allPayloadsSent
-	//Wait for all payloads to be processed by "mocked external" HTTP receives
+	sendPayloadsToJiboia(t, payloads)
+	//Wait for all payloads to be processed by "mocked external" HTTP receiver
 	wg.Wait()
 
+	time.Sleep(1 * time.Second)
 	stopDone := app.Stop()
 	<-stopDone
 
@@ -96,21 +95,30 @@ func TestAppHighConcurrencyScenario(t *testing.T) {
 		"all the data sent should have been received on the second obj storage")
 }
 
-func sendPayloadsToJiboia(t *testing.T, payloads []string, allPayloadSent chan struct{}) {
-	defer close(allPayloadSent)
+func sendPayloadsToJiboia(t *testing.T, payloads []string) {
 	maxConcurrency := 10
-	concurrencyLimiter := make(chan struct{}, maxConcurrency)
-	defer close(concurrencyLimiter)
+	payloadPipe := make(chan string, 10)
+	localWg := sync.WaitGroup{}
+	localWg.Add(maxConcurrency)
 
-	for idx, payload := range payloads {
-		concurrencyLimiter <- struct{}{}
-
+	for range maxConcurrency {
 		go func() {
-			response, err := http.Post("http://localhost:9099/int_flow5/async_ingestion", "application/json", strings.NewReader(payload))
-			assert.NoError(t, err, "enqueueing items should not return error on flow, request number %d", idx)
-			assert.Equal(t, 200, response.StatusCode, "data enqueueing should have been successful on flow")
-			response.Body.Close()
-			<-concurrencyLimiter
+			defer localWg.Done()
+			for p := range payloadPipe {
+				response, err := http.Post(
+					"http://localhost:9099/int_flow5/async_ingestion", "application/json", strings.NewReader(p))
+				assert.NoError(t, err, "enqueueing items should not return error on flow, request number")
+				assert.Equal(t, 200, response.StatusCode, "data enqueueing should have been successful on flow")
+				response.Body.Close()
+				time.Sleep(10 * time.Millisecond)
+			}
 		}()
 	}
+
+	for _, payload := range payloads {
+		payloadPipe <- payload
+	}
+	close(payloadPipe)
+
+	localWg.Wait()
 }
