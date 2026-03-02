@@ -11,9 +11,9 @@ const defaultInitialBufferSize = "512"
 var allowedDecompressions = []string{"gzip", "zlib", "deflate", "zstd", "snappy"}
 
 type DescompressionConfig struct {
-	ActiveDecompressions []string `yaml:"active"`
-	MaxConcurrency       int      `yaml:"max_concurrency"`
-	InitialBufferSize    string   `yaml:"initial_buffer_size"`
+	ActiveDecompressions []string `json:"active"              yaml:"active"`
+	MaxConcurrency       int      `json:"max_concurrency"     yaml:"max_concurrency"`
+	InitialBufferSize    string   `json:"initial_buffer_size" yaml:"initial_buffer_size"`
 }
 
 func (decompConf DescompressionConfig) InitialBufferSizeAsBytes() (int64, error) {

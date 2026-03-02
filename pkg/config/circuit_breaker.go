@@ -8,8 +8,8 @@ import (
 const DefaultOpenInterval = 100
 
 type CircuitBreakerConfig struct {
-	Disable      bool  `yaml:"disable"`
-	OpenInterval int64 `yaml:"open_interval_in_ms"`
+	Disable      bool  `json:"disable"             yaml:"disable"`
+	OpenInterval int64 `json:"open_interval_in_ms" yaml:"open_interval_in_ms"`
 }
 
 func (cbConf CircuitBreakerConfig) OpenIntervalAsDuration() time.Duration {

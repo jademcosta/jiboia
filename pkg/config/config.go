@@ -6,12 +6,14 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+const RedactedValue = "<REDACTED>"
+
 type Config struct {
-	O11y            O11yConfig   `yaml:"o11y"`
-	Version         string       `yaml:"version"` //FIXME: fill the version
-	API             APIConfig    `yaml:"api"`
-	Flows           []FlowConfig `yaml:"flows"`
-	DisableMaxProcs bool         `yaml:"disable_max_procs"`
+	O11y            O11yConfig   `json:"o11y"              yaml:"o11y"`
+	Version         string       `json:"version"           yaml:"version"` //FIXME: fill the version
+	API             APIConfig    `json:"api"               yaml:"api"`
+	Flows           []FlowConfig `json:"flows"             yaml:"flows"`
+	DisableMaxProcs bool         `json:"disable_max_procs" yaml:"disable_max_procs"`
 }
 
 func New(confData []byte) (*Config, error) {
@@ -87,4 +89,17 @@ func (c *Config) fillDefaultValues() {
 	for idx, flow := range c.Flows {
 		c.Flows[idx] = flow.fillDefaultValues()
 	}
+}
+
+// Redacted returns a copy of the config with sensitive fields redacted
+func (c *Config) Redacted() Config {
+	redactedConf := *c
+
+	redactedFlows := make([]FlowConfig, len(c.Flows))
+	for i, flow := range c.Flows {
+		redactedFlows[i] = flow.redacted()
+	}
+	redactedConf.Flows = redactedFlows
+
+	return redactedConf
 }

@@ -3,9 +3,9 @@ package config
 const DefaultServiceNameOnO11y = "jiboia"
 
 type O11yConfig struct {
-	Tracing   TracingConfig   `yaml:"tracing"`
-	Log       LogConfig       `yaml:"log"`
-	Profiling ProfilingConfig `yaml:"profiling"`
+	Tracing   TracingConfig   `json:"tracing"   yaml:"tracing"`
+	Log       LogConfig       `json:"log"       yaml:"log"`
+	Profiling ProfilingConfig `json:"profiling" yaml:"profiling"`
 }
 
 func (o11yConf O11yConfig) fillDefaults() O11yConfig {

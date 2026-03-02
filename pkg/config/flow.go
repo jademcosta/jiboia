@@ -7,15 +7,15 @@ import (
 )
 
 type FlowConfig struct {
-	Name                 string                `yaml:"name"`
-	QueueMaxSize         int                   `yaml:"in_memory_queue_max_size"`
-	MaxConcurrentUploads int                   `yaml:"max_concurrent_uploads"`
-	PathPrefixCount      int                   `yaml:"path_prefix_count"`
-	Ingestion            IngestionConfig       `yaml:"ingestion"`
-	Accumulator          AccumulatorConfig     `yaml:"accumulator"`
-	ExternalQueues       []ExternalQueueConfig `yaml:"external_queues"`
-	ObjectStorages       []ObjectStorageConfig `yaml:"object_storages"`
-	Compression          CompressionConfig     `yaml:"compression"`
+	Name                 string                `json:"name"                     yaml:"name"`
+	QueueMaxSize         int                   `json:"in_memory_queue_max_size" yaml:"in_memory_queue_max_size"`
+	MaxConcurrentUploads int                   `json:"max_concurrent_uploads"   yaml:"max_concurrent_uploads"`
+	PathPrefixCount      int                   `json:"path_prefix_count"        yaml:"path_prefix_count"`
+	Ingestion            IngestionConfig       `json:"ingestion"                yaml:"ingestion"`
+	Accumulator          AccumulatorConfig     `json:"accumulator"              yaml:"accumulator"`
+	ExternalQueues       []ExternalQueueConfig `json:"external_queues"          yaml:"external_queues"`
+	ObjectStorages       []ObjectStorageConfig `json:"object_storages"          yaml:"object_storages"`
+	Compression          CompressionConfig     `json:"compression"              yaml:"compression"`
 }
 
 func (flwConf FlowConfig) fillDefaultValues() FlowConfig {
@@ -40,6 +40,12 @@ func (flwConf FlowConfig) fillDefaultValues() FlowConfig {
 	}
 
 	return flwConf
+}
+
+func (flwConf FlowConfig) redacted() FlowConfig {
+	redacted := flwConf
+	redacted.Ingestion = flwConf.Ingestion.redacted()
+	return redacted
 }
 
 func (flwConf FlowConfig) validate() error {
