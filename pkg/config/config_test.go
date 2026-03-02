@@ -473,3 +473,88 @@ func TestApiPayloadSizeLimitValidation(t *testing.T) {
 func TestErrorOnInvalidLogFormat(t *testing.T) {
 	//TODO: implement me
 }
+
+func TestRedacted(t *testing.T) {
+	t.Run("redacts token when non-empty", func(t *testing.T) {
+		configYaml := `
+flows:
+  - name: "my-flow"
+    ingestion:
+      token: "super-secret-token"
+`
+		conf, err := config.New([]byte(configYaml))
+		require.NoError(t, err)
+
+		redacted := conf.Redacted()
+
+		assert.Equal(t, config.RedactedValue, redacted.Flows[0].Ingestion.Token)
+	})
+
+	t.Run("leaves token empty when not set", func(t *testing.T) {
+		configYaml := `
+flows:
+  - name: "my-flow"
+`
+		conf, err := config.New([]byte(configYaml))
+		require.NoError(t, err)
+
+		redacted := conf.Redacted()
+
+		assert.Equal(t, "", redacted.Flows[0].Ingestion.Token)
+	})
+
+	t.Run("redacts tokens on all flows", func(t *testing.T) {
+		configYaml := `
+flows:
+  - name: "flow-1"
+    ingestion:
+      token: "token-1"
+  - name: "flow-2"
+    ingestion:
+      token: "token-2"
+  - name: "flow-3"
+`
+		conf, err := config.New([]byte(configYaml))
+		require.NoError(t, err)
+
+		redacted := conf.Redacted()
+
+		assert.Equal(t, config.RedactedValue, redacted.Flows[0].Ingestion.Token)
+		assert.Equal(t, config.RedactedValue, redacted.Flows[1].Ingestion.Token)
+		assert.Equal(t, "", redacted.Flows[2].Ingestion.Token)
+	})
+
+	t.Run("does not modify the original config", func(t *testing.T) {
+		configYaml := `
+flows:
+  - name: "my-flow"
+    ingestion:
+      token: "super-secret-token"
+`
+		conf, err := config.New([]byte(configYaml))
+		require.NoError(t, err)
+
+		_ = conf.Redacted()
+
+		assert.Equal(t, "super-secret-token", conf.Flows[0].Ingestion.Token)
+	})
+
+	t.Run("preserves non-sensitive fields", func(t *testing.T) {
+		configYaml := `
+flows:
+  - name: "my-flow"
+    in_memory_queue_max_size: 100
+    max_concurrent_uploads: 10
+    ingestion:
+      token: "secret"
+`
+		conf, err := config.New([]byte(configYaml))
+		require.NoError(t, err)
+
+		redacted := conf.Redacted()
+
+		assert.Equal(t, "my-flow", redacted.Flows[0].Name)
+		assert.Equal(t, 100, redacted.Flows[0].QueueMaxSize)
+		assert.Equal(t, 10, redacted.Flows[0].MaxConcurrentUploads)
+	})
+}
