@@ -21,8 +21,11 @@ func RegisterOperatinalRoutes(
 	metricHandler := promhttp.HandlerFor(metricRegistry, promhttp.HandlerOpts{Registry: metricRegistry})
 
 	api.mux.Get("/version", versionHandler(version, logg))
-	api.mux.Get("/config", configHandler(conf, logg))
 	api.mux.Handle("/metrics", metricHandler)
+
+	if conf.O11y.ConfigDumpEnabled {
+		api.mux.Get("/config", configHandler(conf, logg))
+	}
 
 	api.mux.Get("/healthy", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)

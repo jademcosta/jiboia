@@ -523,6 +523,11 @@ func TestConfigEndpointReturnsConfig(t *testing.T) {
 
 	mockDF := &dummyAlwaysFailDataFlow{}
 
+	confWithDumpEnabled := config.Config{
+		API:  config.APIConfig{Port: 9111},
+		O11y: config.O11yConfig{ConfigDumpEnabled: true},
+	}
+
 	flws := []flow.Flow{
 		{
 			Name:           "flow-1",
@@ -531,7 +536,7 @@ func TestConfigEndpointReturnsConfig(t *testing.T) {
 		},
 	}
 
-	api := NewAPI(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
+	api := NewAPI(llog, confWithDumpEnabled, prometheus.NewRegistry(), testTracer, version, flws)
 	srvr := httptest.NewServer(api.mux)
 	defer srvr.Close()
 
@@ -549,6 +554,29 @@ func TestConfigEndpointReturnsConfig(t *testing.T) {
 	assert.Contains(t, body, `"port":9111`, "config should contain the port")
 }
 
+func TestConfigEndpointDisabledByDefault(t *testing.T) {
+
+	mockDF := &dummyAlwaysFailDataFlow{}
+
+	flws := []flow.Flow{
+		{
+			Name:           "flow-1",
+			Entrypoint:     mockDF,
+			CircuitBreaker: createCircuitBreaker("flow-1", 10*time.Millisecond),
+		},
+	}
+
+	api := NewAPI(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
+	srvr := httptest.NewServer(api.mux)
+	defer srvr.Close()
+
+	resp, err := http.Get(fmt.Sprintf("%s/config", srvr.URL))
+	assert.NoError(t, err, "error on GETting config", err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode, "config endpoint should be disabled (404) by default")
+}
+
 func TestConfigEndpointRedactsSensitiveFields(t *testing.T) {
 
 	mockDF := &dummyAlwaysFailDataFlow{}
@@ -557,8 +585,9 @@ func TestConfigEndpointRedactsSensitiveFields(t *testing.T) {
 	confWithToken := config.Config{
 		API: config.APIConfig{Port: 9111},
 		O11y: config.O11yConfig{
-			Tracing: config.TracingConfig{Enabled: true},
-			Log:     config.LogConfig{Level: "info", Format: "json"},
+			Tracing:           config.TracingConfig{Enabled: true},
+			Log:               config.LogConfig{Level: "info", Format: "json"},
+			ConfigDumpEnabled: true,
 		},
 		Flows: []config.FlowConfig{
 			{
@@ -604,7 +633,8 @@ func TestConfigEndpointDoesNotRedactEmptyToken(t *testing.T) {
 	mockDF := &dummyAlwaysFailDataFlow{}
 
 	confWithoutToken := config.Config{
-		API: config.APIConfig{Port: 9111},
+		API:  config.APIConfig{Port: 9111},
+		O11y: config.O11yConfig{ConfigDumpEnabled: true},
 		Flows: []config.FlowConfig{
 			{
 				Name: "flow-without-token",

@@ -24,7 +24,8 @@ func TestDefaultValues(t *testing.T) {
 	assert.Equal(t, "json", conf.O11y.Log.Format, "default for o11y.log.format config doesn't match")
 	assert.Equal(t, "info", conf.O11y.Log.Level, "default for o11y.log.level config doesn't match")
 	assert.False(t, conf.O11y.Tracing.Enabled, "default for o11y.tracing.enabled is false")
-	assert.False(t, conf.O11y.Tracing.Enabled, "default for o11y.profiling.enabled_pprof is false")
+	assert.False(t, conf.O11y.Profiling.Enabled, "default for o11y.profiling.enabled_pprof is false")
+	assert.False(t, conf.O11y.ConfigDumpEnabled, "default for o11y.config_dump_enabled is false")
 
 	assert.Equal(t, "jiboia", conf.O11y.Tracing.ServiceName, "default for o11y.tracing.service_name is jiboia")
 	assert.Equal(t, 9199, conf.API.Port, "default for api.port config doesn't match")
