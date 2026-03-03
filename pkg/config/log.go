@@ -8,8 +8,8 @@ import (
 var allowedLogConfigLevels = []string{"debug", "info", "warn", "error"}
 
 type LogConfig struct {
-	Level  string `yaml:"level"`
-	Format string `yaml:"format"`
+	Level  string `json:"level"  yaml:"level"`
+	Format string `json:"format" yaml:"format"`
 }
 
 func (logConf LogConfig) fillDefaults() LogConfig {

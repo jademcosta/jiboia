@@ -11,9 +11,9 @@ var allowedCompressions = []string{"gzip", "zlib", "deflate", "zstd", "snappy"}
 const DefaultPreallocSlicePercentage = 2
 
 type CompressionConfig struct {
-	Level                   string `yaml:"level"`
-	Type                    string `yaml:"type"`
-	PreallocSlicePercentage int    `yaml:"prealloc_slice_percentage"`
+	Level                   string `json:"level"                     yaml:"level"`
+	Type                    string `json:"type"                      yaml:"type"`
+	PreallocSlicePercentage int    `json:"prealloc_slice_percentage" yaml:"prealloc_slice_percentage"`
 }
 
 func (compConf CompressionConfig) fillDefaultValues() CompressionConfig {

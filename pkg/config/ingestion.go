@@ -3,9 +3,17 @@ package config
 import "fmt"
 
 type IngestionConfig struct {
-	Token          string               `yaml:"token"`
-	Decompression  DescompressionConfig `yaml:"decompress"`
-	CircuitBreaker CircuitBreakerConfig `yaml:"circuit_breaker"`
+	Token          string               `json:"token"           yaml:"token"`
+	Decompression  DescompressionConfig `json:"decompress"      yaml:"decompress"`
+	CircuitBreaker CircuitBreakerConfig `json:"circuit_breaker" yaml:"circuit_breaker"`
+}
+
+func (ingConf IngestionConfig) redacted() IngestionConfig {
+	redactedIngestionConf := ingConf
+	if redactedIngestionConf.Token != "" {
+		redactedIngestionConf.Token = RedactedValue
+	}
+	return redactedIngestionConf
 }
 
 func (ingConf IngestionConfig) fillDefaultValues() IngestionConfig {

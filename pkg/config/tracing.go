@@ -1,8 +1,8 @@
 package config
 
 type TracingConfig struct {
-	Enabled     bool   `yaml:"enabled"`
-	ServiceName string `yaml:"service_name"`
+	Enabled     bool   `json:"enabled"      yaml:"enabled"`
+	ServiceName string `json:"service_name" yaml:"service_name"`
 }
 
 func (tracingConf TracingConfig) fillDefaults() TracingConfig {

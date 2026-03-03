@@ -1,8 +1,8 @@
 package config
 
 type ObjectStorageConfig struct {
-	Type   string      `yaml:"type"`
-	Config interface{} `yaml:"config"`
+	Type   string      `json:"type"   yaml:"type"`
+	Config interface{} `json:"config" yaml:"config"`
 }
 
 func (objStgConf ObjectStorageConfig) fillDefaultValues() ObjectStorageConfig {

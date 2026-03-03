@@ -5,11 +5,11 @@ import "fmt"
 const dontAccumulateByTime = 0
 
 type AccumulatorConfig struct {
-	Size                   string               `yaml:"size"`
-	Separator              string               `yaml:"separator"`
-	QueueCapacity          int                  `yaml:"queue_capacity"` //TODO: validate and test
-	CircuitBreaker         CircuitBreakerConfig `yaml:"circuit_breaker"`
-	ForceFlushAfterSeconds int                  `yaml:"force_flush_after_seconds"`
+	Size                   string               `json:"size"                      yaml:"size"`
+	Separator              string               `json:"separator"                 yaml:"separator"`
+	QueueCapacity          int                  `json:"queue_capacity"            yaml:"queue_capacity"` //TODO: validate and test
+	CircuitBreaker         CircuitBreakerConfig `json:"circuit_breaker"           yaml:"circuit_breaker"`
+	ForceFlushAfterSeconds int                  `json:"force_flush_after_seconds" yaml:"force_flush_after_seconds"`
 }
 
 func (accConf AccumulatorConfig) SizeAsBytes() (int64, error) {
