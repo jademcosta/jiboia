@@ -22,7 +22,7 @@ func TestExternalQueueConfigValidate(t *testing.T) {
 	err = sut.validate()
 	assert.Error(t, err, "random type type is invalid")
 
-	for _, queueType := range []string{"noop", "sqs"} {
+	for _, queueType := range []string{"noop", "sqs", "http"} {
 		sut.Type = queueType
 		err := sut.validate()
 		assert.NoError(t, err, "empty type %s is valid")

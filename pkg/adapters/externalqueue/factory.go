@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/jademcosta/jiboia/pkg/adapters/externalqueue/httpqueue"
 	"github.com/jademcosta/jiboia/pkg/adapters/externalqueue/noopqueue"
 	"github.com/jademcosta/jiboia/pkg/adapters/externalqueue/sqs"
 	"github.com/jademcosta/jiboia/pkg/config"
@@ -40,6 +41,16 @@ func New(
 		externalQueue, err = sqs.New(l, c, flowName)
 		if err != nil {
 			return nil, fmt.Errorf("error creating SQS: %w", err)
+		}
+	case httpqueue.TYPE:
+		c, err := httpqueue.ParseConfig(specificConf)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing HTTP queue-specific config: %w", err)
+		}
+
+		externalQueue, err = httpqueue.New(l, c, flowName)
+		if err != nil {
+			return nil, fmt.Errorf("error creating HTTP queue: %w", err)
 		}
 	default:
 		externalQueue, err = nil, fmt.Errorf("invalid external queue type %s", conf.Type)
