@@ -5,7 +5,7 @@ import (
 	"slices"
 )
 
-var externalQueueConfigAllowedValues = []string{"noop", "sqs"}
+var externalQueueConfigAllowedValues = []string{"noop", "sqs", "http"}
 
 type ExternalQueueConfig struct {
 	Type   string      `json:"type"   yaml:"type"`

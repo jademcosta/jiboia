@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	awsSqs "github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/jademcosta/jiboia/pkg/adapters/externalqueue/queuemessage"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"gopkg.in/yaml.v2"
@@ -19,25 +20,6 @@ const startupTimeout = 20 * time.Second
 
 type sqsSendMessageAPI interface {
 	SendMessage(context.Context, *awsSqs.SendMessageInput, ...func(*awsSqs.Options)) (*awsSqs.SendMessageOutput, error)
-}
-
-type Message struct {
-	SchemaVersion string `json:"schema_version"`
-	FlowName      string `json:"flow_name"`
-	Bucket        Bucket `json:"bucket"`
-	Object        Object `json:"object"`
-}
-
-type Object struct {
-	Path            string `json:"path"`
-	FullURL         string `json:"full_url"`
-	SizeInBytes     int    `json:"size_in_bytes"`
-	CompressionType string `json:"compression_algorithm,omitempty"`
-}
-
-type Bucket struct {
-	Name   string `json:"name"`
-	Region string `json:"region"`
 }
 
 type Config struct {
@@ -82,35 +64,11 @@ func New(l *slog.Logger, c *Config, flowName string) (*Queue, error) {
 	}, nil
 }
 
-func ParseConfig(confData []byte) (*Config, error) {
-	conf := &Config{}
-
-	err := yaml.Unmarshal(confData, conf)
-	if err != nil {
-		return conf, fmt.Errorf("error parsing SQS config: %w", err)
-	}
-
-	return conf, nil
-}
-
 func (internalSqs *Queue) Enqueue(msg *domain.MessageContext) error {
 	//TODO: allow to config timeout
 	ctx := context.Background()
 
-	message := Message{
-		SchemaVersion: domain.MsgSchemaVersion,
-		FlowName:      internalSqs.Name(),
-		Bucket: Bucket{
-			Name:   msg.Bucket,
-			Region: msg.Region,
-		},
-		Object: Object{
-			Path:            msg.Path,
-			FullURL:         msg.URL,
-			SizeInBytes:     msg.SizeInBytes,
-			CompressionType: msg.CompressionType,
-		},
-	}
+	message := queuemessage.NewMessage(internalSqs.Name(), msg)
 
 	bodyAsBytes, err := json.Marshal(message)
 	if err != nil {
@@ -131,6 +89,17 @@ func (internalSqs *Queue) Enqueue(msg *domain.MessageContext) error {
 	}
 
 	return err
+}
+
+func ParseConfig(confData []byte) (*Config, error) {
+	conf := &Config{}
+
+	err := yaml.Unmarshal(confData, conf)
+	if err != nil {
+		return conf, fmt.Errorf("error parsing SQS config: %w", err)
+	}
+
+	return conf, nil
 }
 
 func validURL(url string) bool {
