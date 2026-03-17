@@ -1,6 +1,9 @@
 # Jiboia
 
-Jiboia is an HTTP API that is able to move data into object storages for asynchronous processing.
+Jiboia is an HTTP API that is able to move data into object storages for asynchronous processing. It works like a memory buffer, with several improvements on reliability, like circuit breakers, rate-limiting, authorization. All that while focusing on 2 tenets:
+
+1- Simplicity - It tries to be a buffer + carrier of data from HTTP to object storage. Nothing more. It doesn't interpret the data it is receiving, as an example.
+2- Be fast. Being fast means being cheap, as it can handle more work, which means more load.
 
 An example of usage is if you want to ingest data into object storage but you want to do it using HTTP. You might decide to merge the data into larger chunks, which will increase the time it takes for data to be available but will reduce costs of the storage. Jiboia can do this, it is called accumulator!
 
@@ -21,11 +24,11 @@ flow:
       region: us-east-1
 ```
 
-With this config you'll have 5 workers uploading data that is being sent. If the internal queues get full, Jiboia will deny more work until it has space again. Jiboia stores the data on memory, but if you configure it correctly it will be always uploading data, and this means data will sit for a very small time (less than a second) on memory.
+With this config you'll have 5 (concurrent) workers uploading data that is being sent. If the internal queues get full, Jiboia will deny more work until it has space again. Jiboia stores the data on memory, but if you configure it correctly it will be always uploading data, and this means data will sit for a very small time (less than a second) on memory.
 
-The data will be able to be ingested on `http://localhost:9199/my-flow/async_ingestion` and will be sent into your bucket (considering that you have AWS keys configured on your machine).
+In the example above, the data will be able to be ingested on `http://localhost:9199/my-flow/async_ingestion` and will be sent into your bucket (considering that you have AWS keys configured on your machine).
 
-You can have as many flows as you want, the only limitation is how much memopry you want Jiboia to operate with.
+You can have as many flows as you want, the only limitation is how much memory you want Jiboia to operate with.
 
 Right now it only support AWS S3 but the plan is to support more object storages in the future.
 
@@ -36,7 +39,7 @@ Some features that will help you reuse Jiboia on multiple flows:
 * API key by flow - To avoid systems sending data into wrong paths.
 * Accumulator - To merge small chunks of data into bigger ones, making it easier and cheaper to process. The accumulation can be by size (mandatory) and by time (optional). WHen accumulating, you can define a string that will be used as separator.
 * Compression before uploading data to object storage - This will reduce the object storage costs and upload will be faster.
-* It allows you to use an external queue to send a message after the data is uploaded into the storage.
+* It allows you to use an external queue to send a message after the data is uploaded into the storage (helpful when you are using an S3 compatible storage and don't have the automatic SQS message generation).
 * Jiboia prefixes the data being stored with time-related folders, so you can have better management of the data, in case you need to audit it.
 * It has an optiuon to generate random prefixes so you can avoid being rate-limited by object storages services.
 * Data is correctly flushed when Jiboia receives a SIGTERM, which means no data is lost (graceful shutdown).
@@ -55,11 +58,11 @@ The best way to know all the available options for configuration is by reading t
 
 One important aspect of Jiboia is that it stores data in memory. This means that you need to give enough memory to have all internal queues filled. This can happen if, for example, the object storage starts to have a high latency for the upload. When this happens, the internal queues will probably fill, and if Jiboia doesn't have enough memory it will crash, which means data will be lost.
 
-To avoid it, multiply the average package size (which can be get from the metrics) by the `in_memory_queue_max_size` config + `max_concurrent_uploads` config +  `queue_capacity` config from accumulator. But this is not an easy config. You have to take into account that if you are using an accumulator in a flow, the data that enters accumulator is smaller than the data leaving. So a single "slot of data" in the queue waiting to be consumed by accumulator uses less memory than the data that accumulator sends forward to be uploaded.
+To avoid it, multiply the average package size (which can be get from the metrics) by the `in_memory_queue_max_size` config + `max_concurrent_uploads` config + `queue_capacity` config from accumulator. But this is not an easy config. You have to take into account that if you are using an accumulator in a flow, the data that enters accumulator is smaller than the data leaving. So a single "slot of data" in the queue waiting to be consumed by accumulator uses less memory than the data that accumulator sends forward to be uploaded.
 
 ## Why Jiboia and not  <your prefered streaming/queueing project here>
 
-Jiboia is a focused tool, built to deal with large volumes of data. It has a reduced number of features compared to other projects, and this allows it to be performant. So, when using it, it will probably be cheaper than alternatives. At the same time, it will probably have less features.
+Jiboia is a focused tool, built to deal with large volumes of data. It has a reduced number of features compared to other projects, and this allows it to be performant. So, when using it, it will probably be cheaper than alternatives. At the same time, it will probably have less features. It is a intentiona trade-off. Jiboia should be used as a "shield" for your data ingestion: it will receive all the varying load and put the data into a safe place, so any service/systems that want to used the data will be able to do it without the risk of receiving a large amount of requests and breaking/losing data as a consequence of the big load.
 
 ## Contributions
 
