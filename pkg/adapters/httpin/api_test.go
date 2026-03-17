@@ -519,6 +519,158 @@ func TestVersionEndpointInformsTheVersion(t *testing.T) {
 	assert.Equal(t, fmt.Sprintf("{\"version\":\"%s\"}", version), body, "version informed should be the current one")
 }
 
+func TestConfigEndpointReturnsConfig(t *testing.T) {
+
+	mockDF := &dummyAlwaysFailDataFlow{}
+
+	confWithDumpEnabled := config.Config{
+		API:  config.APIConfig{Port: 9111},
+		O11y: config.O11yConfig{ConfigDumpEnabled: true},
+	}
+
+	flws := []flow.Flow{
+		{
+			Name:           "flow-1",
+			Entrypoint:     mockDF,
+			CircuitBreaker: createCircuitBreaker("flow-1", 10*time.Millisecond),
+		},
+	}
+
+	api := NewAPI(llog, confWithDumpEnabled, prometheus.NewRegistry(), testTracer, version, flws)
+	srvr := httptest.NewServer(api.mux)
+	defer srvr.Close()
+
+	resp, err := http.Get(fmt.Sprintf("%s/config", srvr.URL))
+	assert.NoError(t, err, "error on GETting config", err)
+
+	buf := new(bytes.Buffer)
+	_, err = buf.ReadFrom(resp.Body)
+	assert.NoError(t, err, "should not err when reading body from http")
+	defer resp.Body.Close()
+	body := buf.String()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be Ok(200)")
+	assert.Equal(t, "application/json", resp.Header.Get("Content-Type"), "content type should be application/json")
+	assert.Contains(t, body, `"port":9111`, "config should contain the port")
+}
+
+func TestConfigEndpointDisabledByDefault(t *testing.T) {
+
+	mockDF := &dummyAlwaysFailDataFlow{}
+
+	flws := []flow.Flow{
+		{
+			Name:           "flow-1",
+			Entrypoint:     mockDF,
+			CircuitBreaker: createCircuitBreaker("flow-1", 10*time.Millisecond),
+		},
+	}
+
+	api := NewAPI(llog, localConf, prometheus.NewRegistry(), testTracer, version, flws)
+	srvr := httptest.NewServer(api.mux)
+	defer srvr.Close()
+
+	resp, err := http.Get(fmt.Sprintf("%s/config", srvr.URL))
+	assert.NoError(t, err, "error on GETting config", err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusNotFound, resp.StatusCode, "config endpoint should be disabled (404) by default")
+}
+
+func TestConfigEndpointRedactsSensitiveFields(t *testing.T) {
+
+	mockDF := &dummyAlwaysFailDataFlow{}
+	secretToken := "super-secret-token-12345"
+
+	confWithToken := config.Config{
+		API: config.APIConfig{Port: 9111},
+		O11y: config.O11yConfig{
+			Tracing:           config.TracingConfig{Enabled: true},
+			Log:               config.LogConfig{Level: "info", Format: "json"},
+			ConfigDumpEnabled: true,
+		},
+		Flows: []config.FlowConfig{
+			{
+				Name: "flow-with-token",
+				Ingestion: config.IngestionConfig{
+					Token: secretToken,
+				},
+			},
+		},
+	}
+
+	flws := []flow.Flow{
+		{
+			Name:           "flow-with-token",
+			Entrypoint:     mockDF,
+			Token:          secretToken,
+			CircuitBreaker: createCircuitBreaker("flow-with-token", 10*time.Millisecond),
+		},
+	}
+
+	api := NewAPI(llog, confWithToken, prometheus.NewRegistry(), testTracer, version, flws)
+	srvr := httptest.NewServer(api.mux)
+	defer srvr.Close()
+
+	resp, err := http.Get(fmt.Sprintf("%s/config", srvr.URL))
+	assert.NoError(t, err, "error on GETting config", err)
+
+	buf := new(bytes.Buffer)
+	_, err = buf.ReadFrom(resp.Body)
+	assert.NoError(t, err, "should not err when reading body from http")
+	defer resp.Body.Close()
+	body := buf.String()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be Ok(200)")
+	assert.NotContains(t, body, secretToken, "config should NOT contain the secret token")
+	// JSON escapes < and > as \u003c and \u003e
+	assert.Contains(t, body, `\u003cREDACTED\u003e`, "config should contain the redacted placeholder")
+	assert.Contains(t, body, `"flow-with-token"`, "config should contain the flow name")
+}
+
+func TestConfigEndpointDoesNotRedactEmptyToken(t *testing.T) {
+
+	mockDF := &dummyAlwaysFailDataFlow{}
+
+	confWithoutToken := config.Config{
+		API:  config.APIConfig{Port: 9111},
+		O11y: config.O11yConfig{ConfigDumpEnabled: true},
+		Flows: []config.FlowConfig{
+			{
+				Name: "flow-without-token",
+				Ingestion: config.IngestionConfig{
+					Token: "",
+				},
+			},
+		},
+	}
+
+	flws := []flow.Flow{
+		{
+			Name:           "flow-without-token",
+			Entrypoint:     mockDF,
+			CircuitBreaker: createCircuitBreaker("flow-without-token", 10*time.Millisecond),
+		},
+	}
+
+	api := NewAPI(llog, confWithoutToken, prometheus.NewRegistry(), testTracer, version, flws)
+	srvr := httptest.NewServer(api.mux)
+	defer srvr.Close()
+
+	resp, err := http.Get(fmt.Sprintf("%s/config", srvr.URL))
+	assert.NoError(t, err, "error on GETting config", err)
+
+	buf := new(bytes.Buffer)
+	_, err = buf.ReadFrom(resp.Body)
+	assert.NoError(t, err, "should not err when reading body from http")
+	defer resp.Body.Close()
+	body := buf.String()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "status should be Ok(200)")
+	assert.NotContains(t, body, config.RedactedValue, "config should NOT contain redacted placeholder when token is empty")
+	assert.Contains(t, body, `"token":""`, "config should contain empty token field")
+}
+
 func TestDecompressionOnIngestion(t *testing.T) {
 
 	t.Run("Happy path", func(t *testing.T) {

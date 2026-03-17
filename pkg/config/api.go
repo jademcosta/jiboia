@@ -8,8 +8,8 @@ import (
 const DefaultPort = 9199
 
 type APIConfig struct {
-	Port             int    `yaml:"port"`
-	PayloadSizeLimit string `yaml:"payload_size_limit"`
+	Port             int    `json:"port"               yaml:"port"`
+	PayloadSizeLimit string `json:"payload_size_limit" yaml:"payload_size_limit"`
 }
 
 func (apiConf APIConfig) fillDefaults() APIConfig {

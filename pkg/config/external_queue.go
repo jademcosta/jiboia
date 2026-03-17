@@ -5,11 +5,11 @@ import (
 	"slices"
 )
 
-var externalQueueConfigAllowedValues = []string{"noop", "sqs"}
+var externalQueueConfigAllowedValues = []string{"noop", "sqs", "http"}
 
 type ExternalQueueConfig struct {
-	Type   string      `yaml:"type"`
-	Config interface{} `yaml:"config"`
+	Type   string      `json:"type"   yaml:"type"`
+	Config interface{} `json:"config" yaml:"config"`
 }
 
 func (extQConf ExternalQueueConfig) fillDefaultValues() ExternalQueueConfig {

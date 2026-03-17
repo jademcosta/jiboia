@@ -8,8 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
 	"github.com/stretchr/testify/assert"
@@ -18,14 +17,14 @@ import (
 var llog = logger.NewDummy()
 
 type mockedAWSS3Uploader struct {
-	calledWith        []*s3.PutObjectInput
+	calledWith        []*transfermanager.UploadObjectInput
 	calledWithContext []context.Context
 	location          string
 	err               error
-	answer            *manager.UploadOutput
+	answer            *transfermanager.UploadObjectOutput
 }
 
-func (mock *mockedAWSS3Uploader) Upload(ctx context.Context, input *s3.PutObjectInput, _ ...func(*manager.Uploader)) (*manager.UploadOutput, error) {
+func (mock *mockedAWSS3Uploader) UploadObject(ctx context.Context, input *transfermanager.UploadObjectInput, _ ...func(*transfermanager.Options)) (*transfermanager.UploadObjectOutput, error) {
 	mock.calledWith = append(mock.calledWith, input)
 	mock.calledWithContext = append(mock.calledWithContext, ctx)
 	if mock.err != nil {
@@ -35,7 +34,7 @@ func (mock *mockedAWSS3Uploader) Upload(ctx context.Context, input *s3.PutObject
 	if mock.answer != nil {
 		return mock.answer, nil
 	}
-	return &manager.UploadOutput{Location: mock.location}, nil
+	return &transfermanager.UploadObjectOutput{Location: &mock.location}, nil
 }
 
 func TestItParsesWorkUnitIntoUploadInput(t *testing.T) {
@@ -44,7 +43,7 @@ func TestItParsesWorkUnitIntoUploadInput(t *testing.T) {
 
 	sut, err := New(llog, c)
 	assert.NoError(t, err, "should not error on New")
-	mockUploader := &mockedAWSS3Uploader{calledWith: make([]*s3.PutObjectInput, 0)}
+	mockUploader := &mockedAWSS3Uploader{calledWith: make([]*transfermanager.UploadObjectInput, 0)}
 	sut.uploader = mockUploader
 
 	workU := &domain.WorkUnit{
@@ -96,7 +95,7 @@ func TestItWorksWithDifferentPrefixConfigs(t *testing.T) {
 
 		sut, err := New(llog, c)
 		assert.NoError(t, err, "should not error on New")
-		mockUploader := &mockedAWSS3Uploader{calledWith: make([]*s3.PutObjectInput, 0)}
+		mockUploader := &mockedAWSS3Uploader{calledWith: make([]*transfermanager.UploadObjectInput, 0)}
 		sut.uploader = mockUploader
 
 		workU := &domain.WorkUnit{
@@ -129,7 +128,7 @@ func TestReturnsTheUploadError(t *testing.T) {
 	c := &Config{Bucket: "some_bucket_name"}
 
 	uploadErr := errors.New("some random error")
-	mockUploader := &mockedAWSS3Uploader{calledWith: make([]*s3.PutObjectInput, 0), err: uploadErr}
+	mockUploader := &mockedAWSS3Uploader{calledWith: make([]*transfermanager.UploadObjectInput, 0), err: uploadErr}
 
 	sut, err := New(llog, c)
 	assert.NoError(t, err, "should not error on New")
@@ -154,9 +153,10 @@ func TestReturnsDataBasedOnUploadReturn(t *testing.T) {
 
 	c := &Config{Bucket: "some_bucket_name", Region: "my_region", Prefix: "mypref"}
 
+	loc := "some_location"
 	mockUploader := &mockedAWSS3Uploader{
-		calledWith: make([]*s3.PutObjectInput, 0),
-		answer:     &manager.UploadOutput{Location: "some_location"},
+		calledWith: make([]*transfermanager.UploadObjectInput, 0),
+		answer:     &transfermanager.UploadObjectOutput{Location: &loc},
 	}
 
 	sut, err := New(llog, c)
@@ -186,10 +186,11 @@ func TestBuildsAContextWithTimeoutAndSendItForward(t *testing.T) {
 
 	c := &Config{Bucket: "some_bucket_name", Region: "my_region", Prefix: "mypref", TimeoutInMillis: 1000}
 
+	loc2 := "some_location"
 	mockUploader := &mockedAWSS3Uploader{
-		calledWith:        make([]*s3.PutObjectInput, 0),
+		calledWith:        make([]*transfermanager.UploadObjectInput, 0),
 		calledWithContext: make([]context.Context, 0),
-		answer:            &manager.UploadOutput{Location: "some_location"},
+		answer:            &transfermanager.UploadObjectOutput{Location: &loc2},
 	}
 
 	sut, err := New(llog, c)

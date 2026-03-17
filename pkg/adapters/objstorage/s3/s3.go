@@ -8,8 +8,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/transfermanager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/jademcosta/jiboia/pkg/domain"
 	"github.com/jademcosta/jiboia/pkg/logger"
@@ -20,7 +21,7 @@ const TYPE string = "s3"
 const startupTimeout = 20 * time.Second
 
 type s3UploaderAPI interface {
-	Upload(context.Context, *s3.PutObjectInput, ...func(*manager.Uploader)) (*manager.UploadOutput, error)
+	UploadObject(context.Context, *transfermanager.UploadObjectInput, ...func(*transfermanager.Options)) (*transfermanager.UploadObjectOutput, error)
 }
 
 type Config struct {
@@ -61,7 +62,7 @@ func New(l *slog.Logger, c *Config) (*Bucket, error) {
 			o.BaseEndpoint = &c.Endpoint
 		}
 	})
-	uploader := manager.NewUploader(s3Cli)
+	uploader := transfermanager.New(s3Cli)
 
 	return &Bucket{
 		uploader:        uploader,
@@ -87,7 +88,7 @@ func ParseConfig(confData []byte) (*Config, error) {
 func (bucket *Bucket) Upload(workU *domain.WorkUnit) (*domain.UploadResult, error) {
 	key := mergeParts(bucket.fixedPrefix, workU.Prefix, workU.Filename)
 
-	uploadInput := &s3.PutObjectInput{
+	uploadInput := &transfermanager.UploadObjectInput{
 		Bucket: &bucket.name,
 		Key:    &key,
 		Body:   bytes.NewReader(workU.Data),
@@ -102,7 +103,7 @@ func (bucket *Bucket) Upload(workU *domain.WorkUnit) (*domain.UploadResult, erro
 		Bucket:      bucket.name,
 		Region:      bucket.region,
 		Path:        key,
-		URL:         uploadInfo.Location,
+		URL:         aws.ToString(uploadInfo.Location),
 		SizeInBytes: len(workU.Data),
 	}
 
@@ -127,7 +128,7 @@ func mergeParts(fixedPrefix string, dynamicPrefix string, key string) string {
 	return strings.Trim(result, "/")
 }
 
-func (bucket *Bucket) doUpload(input *s3.PutObjectInput) (*manager.UploadOutput, error) {
+func (bucket *Bucket) doUpload(input *transfermanager.UploadObjectInput) (*transfermanager.UploadObjectOutput, error) {
 	hasTimeout := bucket.timeoutInMillis != 0
 
 	ctx := context.Background()
@@ -137,5 +138,5 @@ func (bucket *Bucket) doUpload(input *s3.PutObjectInput) (*manager.UploadOutput,
 		ctx = ctx2
 	}
 
-	return bucket.uploader.Upload(ctx, input)
+	return bucket.uploader.UploadObject(ctx, input)
 }
